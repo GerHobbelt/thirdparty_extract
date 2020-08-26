@@ -189,16 +189,16 @@
 #define MEMENTO_H
 
 #ifndef MEMENTO_UNDERLYING_MALLOC
-#define MEMENTO_UNDERLYING_MALLOC(size) (malloc)(size)
+#define MEMENTO_UNDERLYING_MALLOC malloc
 #endif
 #ifndef MEMENTO_UNDERLYING_FREE
-#define MEMENTO_UNDERLYING_FREE(ptr) (free)(ptr)
+#define MEMENTO_UNDERLYING_FREE free
 #endif
 #ifndef MEMENTO_UNDERLYING_REALLOC
-#define MEMENTO_UNDERLYING_REALLOC(ptr, size) (realloc)(ptr, size)
+#define MEMENTO_UNDERLYING_REALLOC realloc
 #endif
 #ifndef MEMENTO_UNDERLYING_CALLOC
-#define MEMENTO_UNDERLYING_CALLOC(nmemb, size) (calloc)(nmemb, size)
+#define MEMENTO_UNDERLYING_CALLOC calloc
 #endif
 
 #ifndef MEMENTO_MAXALIGN
@@ -270,10 +270,10 @@ void Memento_bt(void);
 #ifdef MEMENTO
 
 #ifndef COMPILING_MEMENTO_C
-#define malloc(size)        Memento_malloc(size)
-#define free(ptr)           Memento_free(ptr)
-#define realloc(ptr, size)  Memento_realloc(ptr, size)
-#define calloc(nmemb, size) Memento_calloc(nmemb, size)
+#define malloc  Memento_malloc
+#define free    Memento_free
+#define realloc Memento_realloc
+#define calloc  Memento_calloc
 #endif
 
 #else

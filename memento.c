@@ -93,12 +93,6 @@ int atexit(void (*)(void));
 
 #ifndef MEMENTO_CPP_EXTRAS_ONLY
 
-#ifdef __OpenBSD__
-/* libbacktrace not available. */
-#define MEMENTO_STACKTRACE_METHOD 0
-#define MEMENTO_BACKTRACE_MAX 1
-#endif
-
 #ifdef MEMENTO_ANDROID
 #include <android/log.h>
 
@@ -1548,6 +1542,7 @@ void Memento_stats(void)
 static int showInfo(Memento_BlkHeader *b, void *arg)
 {
     Memento_BlkDetails *details;
+    const char* hide_multiple_reallocs = getenv("MEMENTO_HIDE_MULTIPLE_REALLOCS");
 
     fprintf(stderr, FMTP":(size="FMTZ",num=%d)",
             MEMBLK_TOBLK(b), (FMTZ_CAST)b->rawsize, b->sequence);
@@ -1555,7 +1550,6 @@ static int showInfo(Memento_BlkHeader *b, void *arg)
         fprintf(stderr, " (%s)", b->label);
     fprintf(stderr, "\nEvents:\n");
 
-    const char* hide_multiple_reallocs = getenv("MEMENTO_HIDE_MULTIPLE_REALLOCS");
     for (details = b->details; details; details = details->next)
     {
         if (hide_multiple_reallocs
