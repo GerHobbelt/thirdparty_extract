@@ -5,7 +5,15 @@ Unless otherwise stated, all functions return 0 on success or -1 with errno
 set.
 */
 
-void extract_outf(const char* file, int line, const char* fn, int ln, const char* format, ...);
+/* Simple debug output. */
+void (extract_outf)(
+        const char* file, int line,
+        const char* fn,
+        int ln,
+        const char* format,
+        ...
+        )
+;
 
 #define extract_outf(format, ...) (extract_outf)(__FILE__, __LINE__, __FUNCTION__, 1 /*ln*/, format, ##__VA_ARGS__)
 #define extract_outfx(format, ...)
@@ -71,7 +79,7 @@ typedef struct extract_span_t
 typedef struct
 {
     extract_span_t**    spans;
-    int         spans_num;
+    int                 spans_num;
 } extract_line_t;
 
 /* A list of lines that are aligned and adjacent to each other so as to form a
@@ -79,27 +87,27 @@ paragraph. */
 typedef struct
 {
     extract_line_t**    lines;
-    int         lines_num;
+    int                 lines_num;
 } extract_paragraph_t;
 
 /* A page. */
 typedef struct
 {
-    extract_span_t**        spans;
-    int             spans_num;
+    extract_span_t**    spans;
+    int                 spans_num;
 
     /* .lines[] eventually points to items in .spans. */
-    extract_line_t**        lines;
-    int             lines_num;
+    extract_line_t**    lines;
+    int                 lines_num;
 
     /* .paragraphs[] eventually points to items in .lines. */
     extract_paragraph_t**   paragraphs;
-    int             paragraphs_num;
+    int                     paragraphs_num;
 } extract_page_t;
 
 typedef struct {
     extract_page_t**    pages;
-    int         pages_num;
+    int                 pages_num;
 } extract_document_t;
 
 void extract_document_init(extract_document_t* document);
@@ -122,8 +130,8 @@ int extract_read_spans_raw(
 *content points to zero-terminated content, allocated by realloc(). */
 int extract_document_to_docx_content(
         extract_document_t* document,
-        extract_string_t* content,
-        int spacing
+        extract_string_t*   content,
+        int                 spacing
         );
 
 /*
@@ -142,12 +150,11 @@ preserve_dir:
 
 Returns 0 on success or -1 with errno set.
 
-We use the 'zip' and 'unzip' commands.
+Uses the 'zip' and 'unzip' commands internally.
 */
-
 int extract_docx_create(
-        extract_string_t* content,
-        const char* path_template,
-        const char* path_out,
-        int preserve_dir
+        extract_string_t*   content,
+        const char*         path_template,
+        const char*         path_out,
+        int                 preserve_dir
         );
