@@ -46,6 +46,7 @@ typedef struct
     float f;
 } extract_matrix_t;
 
+/* A single char in a span. */
 typedef struct
 {
     /* (x,y) before transformation by ctm and trm. */
@@ -60,6 +61,7 @@ typedef struct
     float       adv;
 } extract_char_t;
 
+/* List of chars that have same font. */
 typedef struct extract_span_t
 {
     extract_matrix_t    ctm;
@@ -90,7 +92,7 @@ typedef struct
     int                 lines_num;
 } extract_paragraph_t;
 
-/* A page. */
+/* A page. Contains different representations of the same list of spans. */
 typedef struct
 {
     extract_span_t**    spans;
@@ -105,6 +107,7 @@ typedef struct
     int                     paragraphs_num;
 } extract_page_t;
 
+/* List of pages. */
 typedef struct {
     extract_page_t**    pages;
     int                 pages_num;
@@ -115,19 +118,31 @@ void extract_document_init(extract_document_t* document);
 void extract_document_free(extract_document_t* document);
 
 
-/* Reads from intermediate format in file <path> into document_t.
+/* Reads from intermediate format in file <path> into document.
 
+path;
+    Path of file containng intermediate format.
+document:
+    Is populated with pages etc from intermediate format.
 autosplit:
-    If true, we split spans when y coordinate changes.
+    If true, we split spans when y coordinate changes, in order to stress out
+    joining algorithms.
 */
 int extract_read_spans_raw(
-        const char* path,
+        const char*         path,
         extract_document_t* document,
-        int autosplit
+        int                 autosplit
         );
 
-/* Reads from intermediate data and converts into docx content. On return
-*content points to zero-terminated content, allocated by realloc(). */
+/* Reads from document and converts into docx content.
+
+document:
+    Should contain raw intermediate data e.g. from extract_read_spans_raw().
+content:
+    Out-param. On return will contain docx content.
+spacing:
+    If non-zero, we add extra vertical space between paragraphs.
+*/
 int extract_document_to_docx_content(
         extract_document_t* document,
         extract_string_t*   content,
@@ -135,15 +150,14 @@ int extract_document_to_docx_content(
         );
 
 /*
-Creates a .docx file based on a template, by inserting <content> into
-word/document.xml.
+Writes docx content into a new .docx document.
 
 content:
-    E.g. from process().
-path_out:
-    Name of .docx file to create. Must not contain single-quote character.
+    E.g. from extract_document_to_docx_content().
 path_template:
     Name of .docx file to use as a template.
+path_out:
+    Name of .docx file to create. Must not contain single-quote character.
 preserve_dir:
     If true, we don't delete the temporary directory <path_out>.dir containing
     unzipped .docx content.
