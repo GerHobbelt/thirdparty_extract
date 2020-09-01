@@ -15,7 +15,6 @@ int main(int argc, char** argv)
     int         preserve_dir        = 0;
     int         spacing             = 1;
     int         autosplit           = 0;
-    float       debugscale          = 0;
 
     for (int i=1; i<argc; ++i) {
         const char* arg = argv[i];
@@ -74,9 +73,6 @@ int main(int argc, char** argv)
         else if (!strcmp(arg, "-t")) {
             docx_template_path = argv[++i];
         }
-        else if (!strcmp(arg, "--scale")) {
-            debugscale = atof(argv[++i]);
-        }
         else {
             extract_outf("Unrecognised arg: '%s'", arg);
             return 1;
@@ -95,13 +91,13 @@ int main(int argc, char** argv)
     extract_document_t  document;
     extract_document_init(&document);
 
-    if (extract_read_spans_raw(input_path, &document, autosplit, debugscale)) {
+    if (extract_read_spans_raw(input_path, &document, autosplit)) {
         extract_outf("Failed to read 'raw' output from: %s", input_path);
         goto end;
     }
     
     if (document.pages_num) {
-        if (extract_document_to_docx_content(&document, &content, spacing, debugscale)) {
+        if (extract_document_to_docx_content(&document, &content, spacing)) {
             extract_outf("Failed to create docx content errno=%i: %s", errno, strerror(errno));
             goto end;
         }

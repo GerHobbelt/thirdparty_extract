@@ -40,10 +40,13 @@ typedef struct
 
 typedef struct
 {
+    /* (x,y) before transformation by ctm and trm. */
     float       pre_x;
     float       pre_y;
+    
     float       x;
     float       y;
+    
     int         gid;
     unsigned    ucs;
     float       adv;
@@ -53,13 +56,15 @@ typedef struct extract_span_t
 {
     extract_matrix_t    ctm;
     extract_matrix_t    trm;
-    char*       font_name;
+    char*               font_name;
+    
     /* font size is matrix_expansion(trm). */
-    int         font_bold;
-    int         font_italic;
-    int         wmode;
+    
+    int                 font_bold;
+    int                 font_italic;
+    int                 wmode;
     extract_char_t*     chars;
-    int         chars_num;
+    int                 chars_num;
 } extract_span_t;
 
 /* List of spans that are aligned on same line. */
@@ -106,15 +111,11 @@ void extract_document_free(extract_document_t* document);
 
 autosplit:
     If true, we split spans when y coordinate changes.
-debugscale:
-    If not zero, scale ctm by debugscale and trm by 1/debugscale; intended for
-    use with ghostscript output, but this doesn't work yet.
 */
 int extract_read_spans_raw(
         const char* path,
         extract_document_t* document,
-        int autosplit,
-        float debugscale
+        int autosplit
         );
 
 /* Reads from intermediate data and converts into docx content. On return
@@ -122,8 +123,7 @@ int extract_read_spans_raw(
 int extract_document_to_docx_content(
         extract_document_t* document,
         extract_string_t* content,
-        int spacing,
-        float debugscale
+        int spacing
         );
 
 /*

@@ -495,6 +495,8 @@ static int xml_pparse_next(FILE* in, xml_tag_t* out)
     return ret;
 }
 
+/* Unused but usefult o keep code here. */
+#if 0
 static void extract_matrix_scale(extract_matrix_t* matrix, float scale)
 {
     matrix->a *= scale;
@@ -512,6 +514,7 @@ static void extract_matrix_scale4(extract_matrix_t* matrix, float scale)
     matrix->c *= scale;
     matrix->d *= scale;
 }
+#endif
 
 static const char* extract_matrix_string(const extract_matrix_t* matrix)
 {
@@ -1174,8 +1177,7 @@ static int make_lines(
         extract_span_t** spans,
         int spans_num,
         extract_line_t*** o_lines,
-        int* o_lines_num,
-        float debugscale
+        int* o_lines_num
         )
 {
     int ret = -1;
@@ -1331,9 +1333,6 @@ static int make_lines(
                         (span_a->chars_num + span_b->chars_num)
                         );
 
-                if (debugscale) {
-                    average_adv *= sqrt(extract_matrix_expansion(span_a->trm) * extract_matrix_expansion(span_b->trm));
-                }
                 int insert_space = (nearest_adv > 0.25 * average_adv);
                 if (insert_space) {
                     /* Append space to extract_span_a before concatenation. */
@@ -1966,8 +1965,7 @@ static int extract_page_span_end_clean(extract_page_t* page)
 int extract_read_spans_raw(
         const char* path,
         extract_document_t* document,
-        int autosplit,
-        float debugscale
+        int autosplit
         )
 {
     int ret = -1;
@@ -2049,10 +2047,6 @@ int extract_read_spans_raw(
             if (s_matrix_read(xml_tag_attributes_find(&tag, "ctm"), &span->ctm)) goto end;
             if (s_matrix_read(xml_tag_attributes_find(&tag, "trm"), &span->trm)) goto end;
             
-            if (debugscale) {
-                extract_matrix_scale(&span->ctm, debugscale);
-                extract_matrix_scale4(&span->trm, 1/debugscale);
-            }
             char* f = xml_tag_attributes_find(&tag, "font_name");
             if (!f) {
                 extract_outf("Failed to find attribute 'font_name'");
@@ -2132,15 +2126,7 @@ int extract_read_spans_raw(
                 char_->x = span->ctm.a * char_->pre_x + span->ctm.b * char_->pre_y;
                 char_->y = span->ctm.c * char_->pre_x + span->ctm.d * char_->pre_y;
 
-                if (debugscale) {
-                    //char_->x *= extract_matrix_expansion(span->trm);
-                    //char_->y *= extract_matrix_expansion(span->trm);
-                }
-                
                 if (xml_tag_attributes_find_float(&tag, "adv", &char_->adv)) goto end;
-                if (debugscale) {
-                    char_->adv *= debugscale;
-                }
                 
                 if (xml_tag_attributes_find_int(&tag, "ucs", &char_->ucs)) goto end;
 
@@ -2333,8 +2319,7 @@ static int paragraphs_to_content(extract_document_t* document, extract_string_t*
 int extract_document_to_docx_content(
         extract_document_t* document,
         extract_string_t* content,
-        int spacing,
-        float debugscale
+        int spacing
         )
 {
     int ret = -1;
@@ -2351,8 +2336,7 @@ int extract_document_to_docx_content(
                 page->spans,
                 page->spans_num,
                 &page->lines,
-                &page->lines_num,
-                debugscale
+                &page->lines_num
                 )) goto end;
 
         if (make_paragraphs(
