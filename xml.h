@@ -57,14 +57,14 @@ char* extract_xml_tag_attributes_find(extract_xml_tag_t* tag, const char* name);
 use atof() and don't check for non-numeric attribute value. */
 int extract_xml_tag_attributes_find_float(
         extract_xml_tag_t*  tag,
-        const char* name,
-        float*      o_out
+        const char*         name,
+        float*              o_out
         );
 
 int extract_xml_tag_attributes_find_int(
         extract_xml_tag_t*  tag,
-        const char* name,
-        int*        o_out
+        const char*         name,
+        int*                o_out
         );
 
 #endif

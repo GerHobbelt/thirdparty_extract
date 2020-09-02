@@ -51,19 +51,19 @@ static int local_asprintf(char** out, const char* format, ...)
 }
 
 
-int docx_paragraph_start(extract_astring_t* content)
+int extract_docx_paragraph_start(extract_astring_t* content)
 {
     return extract_astring_cat(content, "\n\n<w:p>");
 }
 
-int docx_paragraph_finish(extract_astring_t* content)
+int extract_docx_paragraph_finish(extract_astring_t* content)
 {
     return extract_astring_cat(content, "\n</w:p>");
 }
 
-/* Starts a new run. Caller must ensure that docx_run_finish() was called to
+/* Starts a new run. Caller must ensure that extract_docx_run_finish() was called to
 terminate any previous run. */
-int docx_run_start(
+int extract_docx_run_start(
         extract_astring_t* content,
         const char* font_name,
         float font_size,
@@ -98,30 +98,30 @@ int docx_run_start(
     return e;
 
 }
-int docx_run_finish(extract_astring_t* content)
+int extract_docx_run_finish(extract_astring_t* content)
 {
     return extract_astring_cat(content, "</w:t></w:r>");
 }
 
-int docx_char_append_string(extract_astring_t* content, char* text)
+int extract_docx_char_append_string(extract_astring_t* content, char* text)
 {
     return extract_astring_cat(content, text);
 }
 
-int docx_char_append_char(extract_astring_t* content, char c)
+int extract_docx_char_append_char(extract_astring_t* content, char c)
 {
     return extract_astring_catc(content, c);
 }
 
-int docx_paragraph_empty(extract_astring_t* content)
+int extract_docx_paragraph_empty(extract_astring_t* content)
 {
     int e = -1;
-    if (docx_paragraph_start(content)) goto end;
+    if (extract_docx_paragraph_start(content)) goto end;
     /* It seems like our choice of font size here doesn't make any difference
     to the ammount of vertical space, unless we include a non-space
     character. Presumably something to do with the styles in the template
     document. */
-    if (docx_run_start(
+    if (extract_docx_run_start(
             content,
             "OpenSans",
             10 /*font_size*/,
@@ -129,8 +129,8 @@ int docx_paragraph_empty(extract_astring_t* content)
             0 /*font_italic*/
             )) goto end;
     //docx_char_append_string(content, "&#160;");   /* &#160; is non-break space. */
-    if (docx_run_finish(content)) goto end;
-    if (docx_paragraph_finish(content)) goto end;
+    if (extract_docx_run_finish(content)) goto end;
+    if (extract_docx_paragraph_finish(content)) goto end;
     e = 0;
     end:
     return e;
@@ -145,7 +145,7 @@ static int docx_char_truncate(extract_astring_t* content, int len)
     return 0;
 }
 
-int docx_char_truncate_if(extract_astring_t* content, char c)
+int extract_docx_char_truncate_if(extract_astring_t* content, char c)
 {
     if (content->chars_num && content->chars[content->chars_num-1] == c) {
         docx_char_truncate(content, 1);

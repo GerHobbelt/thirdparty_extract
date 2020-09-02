@@ -1742,14 +1742,14 @@ int extract_document_to_docx_content(
                     ) {
                 /* Extra vertical space between paragraphs that were at
                 different angles in the original document. */
-                if (docx_paragraph_empty(&content)) goto end;
+                if (extract_docx_paragraph_empty(&content)) goto end;
             }
 
             if (spacing) {
                 /* Extra vertical space between paragraphs. */
-                if (docx_paragraph_empty(&content)) goto end;
+                if (extract_docx_paragraph_empty(&content)) goto end;
             }
-            if (docx_paragraph_start(&content)) goto end;
+            if (extract_docx_paragraph_start(&content)) goto end;
 
             int l;
             for (l=0; l<paragraph->lines_num; ++l) {
@@ -1768,13 +1768,13 @@ int extract_document_to_docx_content(
                             || font_size_new != font_size
                             ) {
                         if (font_name) {
-                            if (docx_run_finish(&content)) goto end;
+                            if (extract_docx_run_finish(&content)) goto end;
                         }
                         font_name = span->font_name;
                         font_bold = span->font_bold;
                         font_italic = span->font_italic;
                         font_size = font_size_new;
-                        if (docx_run_start(
+                        if (extract_docx_run_start(
                                 &content,
                                 font_name,
                                 font_size,
@@ -1791,50 +1791,50 @@ int extract_document_to_docx_content(
                         if (0) {}
 
                         /* Escape XML special characters. */
-                        else if (c == '<')  docx_char_append_string(&content, "&lt;");
-                        else if (c == '>')  docx_char_append_string(&content, "&gt;");
-                        else if (c == '&')  docx_char_append_string(&content, "&amp;");
-                        else if (c == '"')  docx_char_append_string(&content, "&quot;");
-                        else if (c == '\'') docx_char_append_string(&content, "&apos;");
+                        else if (c == '<')  extract_docx_char_append_string(&content, "&lt;");
+                        else if (c == '>')  extract_docx_char_append_string(&content, "&gt;");
+                        else if (c == '&')  extract_docx_char_append_string(&content, "&amp;");
+                        else if (c == '"')  extract_docx_char_append_string(&content, "&quot;");
+                        else if (c == '\'') extract_docx_char_append_string(&content, "&apos;");
 
                         /* Expand ligatures. */
                         else if (c == 0xFB00) {
-                            if (docx_char_append_string(&content, "ff")) goto end;
+                            if (extract_docx_char_append_string(&content, "ff")) goto end;
                         }
                         else if (c == 0xFB01) {
-                            if (docx_char_append_string(&content, "fi")) goto end;
+                            if (extract_docx_char_append_string(&content, "fi")) goto end;
                         }
                         else if (c == 0xFB02) {
-                            if (docx_char_append_string(&content, "fl")) goto end;
+                            if (extract_docx_char_append_string(&content, "fl")) goto end;
                         }
                         else if (c == 0xFB03) {
-                            if (docx_char_append_string(&content, "ffi")) goto end;
+                            if (extract_docx_char_append_string(&content, "ffi")) goto end;
                         }
                         else if (c == 0xFB04) {
-                            if (docx_char_append_string(&content, "ffl")) goto end;
+                            if (extract_docx_char_append_string(&content, "ffl")) goto end;
                         }
 
                         /* Output ASCII verbatim. */
                         else if (c >= 32 && c <= 127) {
-                            if (docx_char_append_char(&content, c)) goto end;
+                            if (extract_docx_char_append_char(&content, c)) goto end;
                         }
 
                         /* Escape all other characters. */
                         else {
                             char    buffer[32];
                             snprintf(buffer, sizeof(buffer), "&#x%x;", c);
-                            if (docx_char_append_string(&content, buffer)) goto end;
+                            if (extract_docx_char_append_string(&content, buffer)) goto end;
                         }
                     }
                     /* Remove any trailing '-' at end of line. */
-                    if (docx_char_truncate_if(&content, '-')) goto end;
+                    if (extract_docx_char_truncate_if(&content, '-')) goto end;
                 }
             }
             if (font_name) {
-                if (docx_run_finish(&content)) goto end;
+                if (extract_docx_run_finish(&content)) goto end;
                 font_name = NULL;
             }
-            if (docx_paragraph_finish(&content)) goto end;
+            if (extract_docx_paragraph_finish(&content)) goto end;
         }
     }
     ret = 0;
