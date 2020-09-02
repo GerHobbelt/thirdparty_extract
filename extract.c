@@ -176,6 +176,47 @@ typedef struct
     float   f;
 } matrix_t;
 
+static float matrix_expansion(matrix_t m)
+{
+    return sqrtf(fabsf(m.a * m.d - m.b * m.c));
+}
+
+/* Unused but usefult o keep code here. */
+#if 0
+static void matrix_scale(matrix_t* matrix, float scale)
+{
+    matrix->a *= scale;
+    matrix->b *= scale;
+    matrix->c *= scale;
+    matrix->d *= scale;
+    matrix->e *= scale;
+    matrix->f *= scale;
+}
+
+static void matrix_scale4(matrix_t* matrix, float scale)
+{
+    matrix->a *= scale;
+    matrix->b *= scale;
+    matrix->c *= scale;
+    matrix->d *= scale;
+}
+#endif
+
+static const char* matrix_string(const matrix_t* matrix)
+{
+    static char ret[64];
+    snprintf(ret, sizeof(ret), "{%f %f %f %f %f %f}",
+            matrix->a,
+            matrix->b,
+            matrix->c,
+            matrix->d,
+            matrix->e,
+            matrix->f
+            );
+    return ret;
+}
+
+
 /* A single char in a span.
 */
 typedef struct
@@ -192,6 +233,18 @@ typedef struct
     unsigned    ucs;
     float       adv;
 } char_t;
+
+static void char_init(char_t* item)
+{
+    item->pre_x = 0;
+    item->pre_y = 0;
+    item->x = 0;
+    item->y = 0;
+    item->gid = 0;
+    item->ucs = 0;
+    item->adv = 0;
+}
+
 
 /* Array of chars that have same font and are usually adjacent.
 */
@@ -213,6 +266,146 @@ typedef struct
     int         chars_num;
 } span_t;
 
+/* Returns static string containing info about span_t. */
+static const char* span_string(span_t* span)
+{
+    float x0 = 0;
+    float y0 = 0;
+    float x1 = 0;
+    float y1 = 0;
+    int c0 = 0;
+    int c1 = 0;
+    if (span->chars_num) {
+        c0 = span->chars[0].ucs;
+        x0 = span->chars[0].x;
+        y0 = span->chars[0].y;
+        c1 = span->chars[span->chars_num-1].ucs;
+        x1 = span->chars[span->chars_num-1].x;
+        y1 = span->chars[span->chars_num-1].y;
+    }
+    static string_t ret = {0};
+    string_free(&ret);
+    char buffer[200];
+    snprintf(buffer, sizeof(buffer),
+            "span chars_num=%i (%c:%f,%f)..(%c:%f,%f) font=%s:(%f,%f) wmode=%i chars_num=%i: ",
+            span->chars_num,
+            c0, x0, y0,
+            c1, x1, y1,
+            span->font_name,
+            span->trm.a,
+            span->trm.d,
+            span->wmode,
+            span->chars_num
+            );
+    string_cat(&ret, buffer);
+    int i;
+    for (i=0; i<span->chars_num; ++i) {
+        snprintf(
+                buffer,
+                sizeof(buffer),
+                " i=%i {x=%f adv=%f}",
+                i,
+                span->chars[i].x,
+                span->chars[i].adv
+                );
+        string_cat(&ret, buffer);
+    }
+    string_cat(&ret, ": ");
+    string_catc(&ret, '"');
+    for (i=0; i<span->chars_num; ++i) {
+        string_catc(&ret, span->chars[i].ucs);
+    }
+    string_catc(&ret, '"');
+    return ret.chars;
+}
+
+/* Returns static string containing brief info about span_t. */
+static const char* span_string2(span_t* span)
+{
+    static string_t ret = {0};
+    string_free(&ret);
+    string_catc(&ret, '"');
+    int i;
+    for (i=0; i<span->chars_num; ++i) {
+        string_catc(&ret, span->chars[i].ucs);
+    }
+    string_catc(&ret, '"');
+    return ret.chars;
+}
+
+/* Appends new char_t to an span_t with .ucs=c and all other
+fields zeroed. */
+static int span_append_c(span_t* span, int c)
+{
+    char_t* items = realloc(
+            span->chars,
+            sizeof(*items) * (span->chars_num + 1)
+            );
+    if (!items) return -1;
+    span->chars = items;
+    char_t* item = &span->chars[span->chars_num];
+    span->chars_num += 1;
+    char_init(item);
+    item->ucs = c;
+    return 0;
+}
+
+static char_t* span_char_first(span_t* span)
+{
+    assert(span->chars_num);
+    return &span->chars[0];
+}
+
+static char_t* span_char_last(span_t* span)
+{
+    assert(span->chars_num);
+    return &span->chars[span->chars_num-1];
+}
+
+static float span_angle(span_t* span)
+{
+    /* Assume ctm is a rotation matix. */
+    float ret = atan2f(-span->ctm.c, span->ctm.a);
+    outfx("ctm.a=%f ctm.b=%f ret=%f", span->ctm.a, span->ctm.b, ret);
+    return ret;
+    /* Not sure whether this is right. Inclined text seems to be done by
+    setting the ctm matrix, so not really sure what trm matrix does. This code
+    assumes that it also inclines text, but maybe it only rotates individual
+    glyphs? */
+    /*if (span->wmode == 0) {
+        return atan2(span->trm.b, span->trm.a);
+    }
+    else {
+        return atan2(span->trm.d, span->trm.c);
+    }*/
+}
+
+/* Returns total width of span. */
+static float span_adv_total(span_t* span)
+{
+    float dx = span_char_last(span)->x - span_char_first(span)->x;
+    float dy = span_char_last(span)->y - span_char_first(span)->y;
+    /* We add on the advance of the last item; this avoids us returning zero if
+    there's only one item. */
+    float adv = span_char_last(span)->adv * matrix_expansion(span->trm);
+    return sqrt(dx*dx + dy*dy) + adv;
+}
+
+/* Returns distance between end of <a> and beginning of <b>. */
+static float spans_adv(
+        span_t* a_span,
+        char_t* a,
+        char_t* b
+        )
+{
+    float delta_x = b->x - a->x;
+    float delta_y = b->y - a->y;
+    float s = sqrt( delta_x*delta_x + delta_y*delta_y);
+    float a_size = a->adv * matrix_expansion(a_span->trm);
+    s -= a_size;
+    return s;
+}
+
 /* Array of pointers to spans that are aligned on same line.
 */
 typedef struct
@@ -221,6 +414,82 @@ typedef struct
     int         spans_num;
 } line_t;
 
+/* Unused but usefult o keep code here. */
+#if 0
+/* Returns static string containing info about line_t. */
+static const char* line_string(line_t* line)
+{
+    static string_t ret = {0};
+    char    buffer[32];
+    string_free(&ret);
+    snprintf(buffer, sizeof(buffer), "line spans_num=%i:", line->spans_num);
+    string_cat(&ret, buffer);
+    int i;
+    for (i=0; i<line->spans_num; ++i) {
+        string_cat(&ret, " ");
+        string_cat(&ret, span_string(line->spans[i]));
+    }
+    return ret.chars;
+}
+#endif
+
+/* Returns static string containing brief info about line_t. */
+static const char* line_string2(line_t* line)
+{
+    static string_t ret = {0};
+    char    buffer[256];
+    string_free(&ret);
+    snprintf(buffer, sizeof(buffer), "line x=%f y=%f spans_num=%i:",
+            line->spans[0]->chars[0].x,
+            line->spans[0]->chars[0].y,
+            line->spans_num
+            );
+    string_cat(&ret, buffer);
+    int i;
+    for (i=0; i<line->spans_num; ++i) {
+        string_cat(&ret, " ");
+        string_cat(&ret, span_string2(line->spans[i]));
+    }
+    return ret.chars;
+}
+
+/* Returns first span in a line. */
+static span_t* line_span_last(line_t* line)
+{
+    assert(line->spans_num > 0);
+    return line->spans[line->spans_num - 1];
+}
+
+/* Returns list span in a line. */
+static span_t* line_span_first(line_t* line)
+{
+    assert(line->spans_num > 0);
+    return line->spans[0];
+}
+
+/* Returns first char_t in a line. */
+static char_t* line_item_first(line_t* line)
+{
+    span_t* span = line_span_first(line);
+    return span_char_first(span);
+}
+
+/* Returns last char_t in a line. */
+static char_t* line_item_last(line_t* line)
+{
+    span_t* span = line_span_last(line);
+    return span_char_last(span);
+}
+
+/* Returns angle of <line>. */
+static float line_angle(line_t* line)
+{
+    /* All spans in a line must have same angle, so just use the first span. */
+    assert(line->spans_num > 0);
+    return span_angle(line->spans[0]);
+}
+
+
 /* Array of pointers to lines that are aligned and adjacent to each other so as
 to form a paragraph. */
 typedef struct
@@ -228,6 +497,43 @@ typedef struct
     line_t**    lines;
     int         lines_num;
 } paragraph_t;
+
+static const char* paragraph_string(paragraph_t* paragraph)
+{
+    static string_t ret = {0};
+    string_free(&ret);
+    string_cat(&ret, "paragraph: ");
+    if (paragraph->lines_num) {
+        string_cat(&ret, line_string2(paragraph->lines[0]));
+        if (paragraph->lines_num > 1) {
+            string_cat(&ret, "..");
+            string_cat(
+                    &ret,
+                    line_string2(paragraph->lines[paragraph->lines_num-1])
+                    );
+        }
+    }
+    return ret.chars;
+}
+
+/* Returns first line in paragraph. */
+static line_t* paragraph_line_first(
+        const paragraph_t* paragraph
+        )
+{
+    assert(paragraph->lines_num);
+    return paragraph->lines[0];
+}
+
+/* Returns last line in paragraph. */
+static line_t* paragraph_line_last(
+        const paragraph_t* paragraph
+        )
+{
+    assert(paragraph->lines_num);
+    return paragraph->lines[ paragraph->lines_num-1];
+}
+
 
 /* A page. Contains different representations of the same list of spans.
 */
@@ -245,6 +551,74 @@ typedef struct
     int             paragraphs_num;
 } page_t;
 
+static void page_init(page_t* page)
+{
+    page->spans = NULL;
+    page->spans_num = 0;
+    page->lines = NULL;
+    page->lines_num = 0;
+    page->paragraphs = NULL;
+    page->paragraphs_num = 0;
+}
+
+static void page_free(page_t* page)
+{
+    if (!page) return;
+
+    int s;
+    for (s=0; s<page->spans_num; ++s) {
+        span_t* span = page->spans[s];
+        if (span) {
+            free(span->chars);
+            free(span->font_name);
+        }
+        free(span);
+    }
+    free(page->spans);
+
+    int l;
+    for (l=0; l<page->lines_num; ++l) {
+        line_t* line = page->lines[l];
+        free(line->spans);
+        free(line);
+        /* We don't free line->spans->chars[] because already freed via
+        page->spans. */
+    }
+    free(page->lines);
+
+    int p;
+    for (p=0; p<page->paragraphs_num; ++p) {
+        paragraph_t* paragraph = page->paragraphs[p];
+        if (paragraph) free(paragraph->lines);
+        free(paragraph);
+    }
+    free(page->paragraphs);
+}
+
+/* Appends new empty span_ to an page_t; returns NULL with errno set on error.
+*/
+static span_t* page_span_append(page_t* page)
+{
+    span_t* span = malloc(sizeof(*span));
+    if (!span) return NULL;
+    span->font_name = NULL;
+    span->chars = NULL;
+    span->chars_num = 0;
+    span_t** s = realloc(
+            page->spans,
+            sizeof(*s) * (page->spans_num + 1)
+            );
+    if (!s) {
+        free(span);
+        return NULL;
+    }
+    page->spans = s;
+    page->spans[page->spans_num] = span;
+    page->spans_num += 1;
+    return span;
+}
+
+
 /* Array of pointers to pages.
 */
 struct extract_document_t
@@ -252,6 +626,46 @@ struct extract_document_t
     page_t**    pages;
     int         pages_num;
 };
+
+/* Appends new empty page_t to an extract_document_t; returns NULL with errno
+set on error. */
+static page_t* document_page_append(extract_document_t* document)
+{
+    page_t* page = malloc(sizeof(page_t));
+    if (!page) return NULL;
+    page->spans = NULL;
+    page->spans_num = 0;
+    page->lines = NULL;
+    page->lines_num = 0;
+    page->paragraphs = NULL;
+    page->paragraphs_num = 0;
+    page_t** pages = realloc(
+            document->pages,
+            sizeof(page_t*) * (document->pages_num + 1)
+            );
+    if (!pages) {
+        free(page);
+        return NULL;
+    }
+    document->pages = pages;
+    page_init(page);
+    document->pages[document->pages_num] = page;
+    document->pages_num += 1;
+    return page;
+}
+
+void extract_document_free(extract_document_t* document)
+{
+    int p;
+    for (p=0; p<document->pages_num; ++p) {
+        page_t* page = document->pages[p];
+        page_free(page);
+        free(page);
+    }
+    free(document->pages);
+    document->pages = NULL;
+    document->pages_num = 0;
+}
 
 
 /* Reads bytes until EOF and returns zero-terminated string in memory allocated
@@ -382,7 +796,7 @@ static void xml_tag_free(xml_tag_t* tag)
     xml_tag_init(tag);
 }
 
-/* Unused but usefult o keep code here. */
+/* Unused but useful to keep code here. */
 #if 0
 /* Like strcmp() but also handles NULL. */
 static int xml_strcmp_null(const char* a, const char* b)
@@ -601,41 +1015,6 @@ static int xml_pparse_next(FILE* in, xml_tag_t* out)
     return ret;
 }
 
-/* Unused but usefult o keep code here. */
-#if 0
-static void matrix_scale(matrix_t* matrix, float scale)
-{
-    matrix->a *= scale;
-    matrix->b *= scale;
-    matrix->c *= scale;
-    matrix->d *= scale;
-    matrix->e *= scale;
-    matrix->f *= scale;
-}
-
-static void matrix_scale4(matrix_t* matrix, float scale)
-{
-    matrix->a *= scale;
-    matrix->b *= scale;
-    matrix->c *= scale;
-    matrix->d *= scale;
-}
-#endif
-
-static const char* matrix_string(const matrix_t* matrix)
-{
-    static char ret[64];
-    snprintf(ret, sizeof(ret), "{%f %f %f %f %f %f}",
-            matrix->a,
-            matrix->b,
-            matrix->c,
-            matrix->d,
-            matrix->e,
-            matrix->f
-            );
-    return ret;
-}
-
 /* Returns +1, 0 or -1 depending on sign of x. */
 static int s_sign(float x)
 {
@@ -676,11 +1055,6 @@ static int matrix_cmp4(
     ret = s_sign(lhs->c - rhs->c);  if (ret) return ret;
     ret = s_sign(lhs->d - rhs->d);  if (ret) return ret;
     return 0;
-}
-
-static float matrix_expansion(matrix_t m)
-{
-    return sqrtf(fabsf(m.a * m.d - m.b * m.c));
 }
 
 typedef struct
@@ -824,7 +1198,13 @@ static int docx_paragraph_empty(string_t* content)
     to the ammount of vertical space, unless we include a non-space
     character. Presumably something to do with the styles in the template
     document. */
-    if (docx_run_start(content, "OpenSans", 10, 0 /*font_bold*/, 0 /*font_italic*/)) goto end;
+    if (docx_run_start(
+            content,
+            "OpenSans",
+            10 /*font_size*/,
+            0 /*font_bold*/,
+            0 /*font_italic*/
+            )) goto end;
     //docx_char_append_string(content, "&#160;");   /* &#160; is non-break space. */
     if (docx_run_finish(content)) goto end;
     if (docx_paragraph_finish(content)) goto end;
@@ -991,272 +1371,7 @@ int extract_docx_content_to_docx(
 
 
 
-/* Things for direct conversion of text spans into lines and paragraphs,
-without using mupdf's stext device. */
-
-static void char_init(char_t* item)
-{
-    item->pre_x = 0;
-    item->pre_y = 0;
-    item->x = 0;
-    item->y = 0;
-    item->gid = 0;
-    item->ucs = 0;
-    item->adv = 0;
-}
-
-/* Returns static string containing info about span_t. */
-static const char* span_string(span_t* span)
-{
-    float x0 = 0;
-    float y0 = 0;
-    float x1 = 0;
-    float y1 = 0;
-    int c0 = 0;
-    int c1 = 0;
-    if (span->chars_num) {
-        c0 = span->chars[0].ucs;
-        x0 = span->chars[0].x;
-        y0 = span->chars[0].y;
-        c1 = span->chars[span->chars_num-1].ucs;
-        x1 = span->chars[span->chars_num-1].x;
-        y1 = span->chars[span->chars_num-1].y;
-    }
-    static string_t ret = {0};
-    string_free(&ret);
-    char buffer[200];
-    snprintf(buffer, sizeof(buffer),
-            "span chars_num=%i (%c:%f,%f)..(%c:%f,%f) font=%s:(%f,%f) wmode=%i chars_num=%i: ",
-            span->chars_num,
-            c0, x0, y0,
-            c1, x1, y1,
-            span->font_name,
-            span->trm.a,
-            span->trm.d,
-            span->wmode,
-            span->chars_num
-            );
-    string_cat(&ret, buffer);
-    int i;
-    for (i=0; i<span->chars_num; ++i) {
-        snprintf(
-                buffer,
-                sizeof(buffer),
-                " i=%i {x=%f adv=%f}",
-                i,
-                span->chars[i].x,
-                span->chars[i].adv
-                );
-        string_cat(&ret, buffer);
-    }
-    string_cat(&ret, ": ");
-    string_catc(&ret, '"');
-    for (i=0; i<span->chars_num; ++i) {
-        string_catc(&ret, span->chars[i].ucs);
-    }
-    string_catc(&ret, '"');
-    return ret.chars;
-}
-
-/* Returns static string containing brief info about span_t. */
-static const char* span_string2(span_t* span)
-{
-    static string_t ret = {0};
-    string_free(&ret);
-    string_catc(&ret, '"');
-    int i;
-    for (i=0; i<span->chars_num; ++i) {
-        string_catc(&ret, span->chars[i].ucs);
-    }
-    string_catc(&ret, '"');
-    return ret.chars;
-}
-
-/* Appends new char_t to an span_t with .ucs=c and all other
-fields zeroed. */
-static int span_append_c(span_t* span, int c)
-{
-    char_t* items = realloc(
-            span->chars,
-            sizeof(*items) * (span->chars_num + 1)
-            );
-    if (!items) return -1;
-    span->chars = items;
-    char_t* item = &span->chars[span->chars_num];
-    span->chars_num += 1;
-    char_init(item);
-    item->ucs = c;
-    return 0;
-}
-
-static char_t* span_char_first(span_t* span)
-{
-    assert(span->chars_num);
-    return &span->chars[0];
-}
-
-static char_t* span_char_last(span_t* span)
-{
-    assert(span->chars_num);
-    return &span->chars[span->chars_num-1];
-}
-
-/* Unused but usefult o keep code here. */
-#if 0
-/* Returns static string containing info about line_t. */
-static const char* line_string(line_t* line)
-{
-    static string_t ret = {0};
-    char    buffer[32];
-    string_free(&ret);
-    snprintf(buffer, sizeof(buffer), "line spans_num=%i:", line->spans_num);
-    string_cat(&ret, buffer);
-    int i;
-    for (i=0; i<line->spans_num; ++i) {
-        string_cat(&ret, " ");
-        string_cat(&ret, span_string(line->spans[i]));
-    }
-    return ret.chars;
-}
-#endif
-
-/* Returns static string containing brief info about line_t. */
-static const char* line_string2(line_t* line)
-{
-    static string_t ret = {0};
-    char    buffer[256];
-    string_free(&ret);
-    snprintf(buffer, sizeof(buffer), "line x=%f y=%f spans_num=%i:",
-            line->spans[0]->chars[0].x,
-            line->spans[0]->chars[0].y,
-            line->spans_num
-            );
-    string_cat(&ret, buffer);
-    int i;
-    for (i=0; i<line->spans_num; ++i) {
-        string_cat(&ret, " ");
-        string_cat(&ret, span_string2(line->spans[i]));
-    }
-    return ret.chars;
-}
-
-/* Returns first span in a line. */
-static span_t* line_span_last(line_t* line)
-{
-    assert(line->spans_num > 0);
-    return line->spans[line->spans_num - 1];
-}
-
-/* Returns list span in a line. */
-static span_t* line_span_first(line_t* line)
-{
-    assert(line->spans_num > 0);
-    return line->spans[0];
-}
-
-/* Returns first char_t in a line. */
-static char_t* line_item_first(line_t* line)
-{
-    span_t* span = line_span_first(line);
-    return span_char_first(span);
-}
-
-/* Returns last char_t in a line. */
-static char_t* line_item_last(line_t* line)
-{
-    span_t* span = line_span_last(line);
-    return span_char_last(span);
-}
-
-static const char* paragraph_string(paragraph_t* paragraph)
-{
-    static string_t ret = {0};
-    string_free(&ret);
-    string_cat(&ret, "paragraph: ");
-    if (paragraph->lines_num) {
-        string_cat(&ret, line_string2(paragraph->lines[0]));
-        if (paragraph->lines_num > 1) {
-            string_cat(&ret, "..");
-            string_cat(
-                    &ret,
-                    line_string2(paragraph->lines[paragraph->lines_num-1])
-                    );
-        }
-    }
-    return ret.chars;
-}
-
-/* Returns first line in paragraph. */
-static line_t* paragraph_line_first(
-        const paragraph_t* paragraph
-        )
-{
-    assert(paragraph->lines_num);
-    return paragraph->lines[0];
-}
-
-/* Returns last line in paragraph. */
-static line_t* paragraph_line_last(
-        const paragraph_t* paragraph
-        )
-{
-    assert(paragraph->lines_num);
-    return paragraph->lines[ paragraph->lines_num-1];
-}
-
-
-
-static float span_angle(span_t* span)
-{
-    /* Assume ctm is a rotation matix. */
-    float ret = atan2f(-span->ctm.c, span->ctm.a);
-    outfx("ctm.a=%f ctm.b=%f ret=%f", span->ctm.a, span->ctm.b, ret);
-    return ret;
-    /* Not sure whether this is right. Inclined text seems to be done by
-    setting the ctm matrix, so not really sure what trm matrix does. This code
-    assumes that it also inclines text, but maybe it only rotates individual
-    glyphs? */
-    /*if (span->wmode == 0) {
-        return atan2(span->trm.b, span->trm.a);
-    }
-    else {
-        return atan2(span->trm.d, span->trm.c);
-    }*/
-}
-
-/* Returns angle of <line>. */
-static float line_angle(line_t* line)
-{
-    /* All spans in a line must have same angle, so just use the first span. */
-    assert(line->spans_num > 0);
-    return span_angle(line->spans[0]);
-}
-
-/* Returns total width of span. */
-static float span_adv_total(span_t* span)
-{
-    float dx = span_char_last(span)->x - span_char_first(span)->x;
-    float dy = span_char_last(span)->y - span_char_first(span)->y;
-    /* We add on the advance of the last item; this avoids us returning zero if
-    there's only one item. */
-    float adv = span_char_last(span)->adv * matrix_expansion(span->trm);
-    return sqrt(dx*dx + dy*dy) + adv;
-}
-
-/* Returns distance between end of <a> and beginning of <b>. */
-static float spans_adv(
-        span_t* a_span,
-        char_t* a,
-        char_t* b
-        )
-{
-    float delta_x = b->x - a->x;
-    float delta_y = b->y - a->y;
-    float s = sqrt( delta_x*delta_x + delta_y*delta_y);
-    float a_size = a->adv * matrix_expansion(a_span->trm);
-    s -= a_size;
-    return s;
-}
+/* Things for direct conversion of text spans into lines and paragraphs. */
 
 /* Returns 1 if lines have same wmode and are at the same angle, else 0. */
 static int lines_are_compatible(
@@ -1949,116 +2064,8 @@ static int make_paragraphs(
 }
 
 
-static void page_init(page_t* page)
-{
-    page->spans = NULL;
-    page->spans_num = 0;
-    page->lines = NULL;
-    page->lines_num = 0;
-    page->paragraphs = NULL;
-    page->paragraphs_num = 0;
-}
-
-static void page_free(page_t* page)
-{
-    if (!page) return;
-
-    int s;
-    for (s=0; s<page->spans_num; ++s) {
-        span_t* span = page->spans[s];
-        if (span) {
-            free(span->chars);
-            free(span->font_name);
-        }
-        free(span);
-    }
-    free(page->spans);
-
-    int l;
-    for (l=0; l<page->lines_num; ++l) {
-        line_t* line = page->lines[l];
-        free(line->spans);
-        free(line);
-        /* We don't free line->spans->chars[] because already freed via
-        page->spans. */
-    }
-    free(page->lines);
-
-    int p;
-    for (p=0; p<page->paragraphs_num; ++p) {
-        paragraph_t* paragraph = page->paragraphs[p];
-        if (paragraph) free(paragraph->lines);
-        free(paragraph);
-    }
-    free(page->paragraphs);
-}
-
-/* Appends new empty span_ to an page_t; returns NULL with errno set on error.
-*/
-static span_t* page_span_append(page_t* page)
-{
-    span_t* span = malloc(sizeof(*span));
-    if (!span) return NULL;
-    span->font_name = NULL;
-    span->chars = NULL;
-    span->chars_num = 0;
-    span_t** s = realloc(
-            page->spans,
-            sizeof(*s) * (page->spans_num + 1)
-            );
-    if (!s) {
-        free(span);
-        return NULL;
-    }
-    page->spans = s;
-    page->spans[page->spans_num] = span;
-    page->spans_num += 1;
-    return span;
-}
-
-
 static void extract_document_init(extract_document_t* document)
 {
-    document->pages = NULL;
-    document->pages_num = 0;
-}
-
-/* Appends new empty page_t to an extract_document_t; returns NULL with errno
-set on error. */
-static page_t* document_page_append(extract_document_t* document)
-{
-    page_t* page = malloc(sizeof(page_t));
-    if (!page) return NULL;
-    page->spans = NULL;
-    page->spans_num = 0;
-    page->lines = NULL;
-    page->lines_num = 0;
-    page->paragraphs = NULL;
-    page->paragraphs_num = 0;
-    page_t** pages = realloc(
-            document->pages,
-            sizeof(page_t*) * (document->pages_num + 1)
-            );
-    if (!pages) {
-        free(page);
-        return NULL;
-    }
-    document->pages = pages;
-    page_init(page);
-    document->pages[document->pages_num] = page;
-    document->pages_num += 1;
-    return page;
-}
-
-void extract_document_free(extract_document_t* document)
-{
-    int p;
-    for (p=0; p<document->pages_num; ++p) {
-        page_t* page = document->pages[p];
-        page_free(page);
-        free(page);
-    }
-    free(document->pages);
     document->pages = NULL;
     document->pages_num = 0;
 }
