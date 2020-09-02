@@ -119,7 +119,8 @@ path;
     Path of file containg intermediate format.
 document:
     Is populated with pages from intermediate format. Each page will have
-    spans, but no lines or paragraphs.
+    spans, but no lines or paragraphs; use extract_document_join() to create
+    lines and paragraphs.
 autosplit:
     If true, we split spans when the y coordinate changes, in order to stress
     out joining algorithms.
@@ -142,6 +143,7 @@ Returns with *document containing lines and paragraphs.
 */
 int extract_document_join(extract_document_t* document);
 
+
 /* Reads from document and converts into docx content.
 
 document:
@@ -156,6 +158,7 @@ int extract_document_to_docx_content(
         extract_string_t*   content,
         int                 spacing
         );
+
 
 /* Writes docx content (e.g. from extract_document_to_docx_content()) into a
 new .docx file.
@@ -174,7 +177,7 @@ Returns 0 on success or -1 with errno set.
 
 Uses the 'zip' and 'unzip' commands internally.
 */
-int extract_docx_create(
+int extract_docx_content_to_docx(
         extract_string_t*   content,
         const char*         path_template,
         const char*         path_out,

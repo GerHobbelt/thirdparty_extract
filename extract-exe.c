@@ -143,11 +143,14 @@ int main(int argc, char** argv)
         goto end;
     }
     
-    if (document.pages_num) {
-        if (extract_document_to_docx_content(&document, &content, spacing)) {
-            printf("Failed to create docx content.\n");
-            goto end;
-        }
+    if (extract_document_join(&document)) {
+        printf("Failed to join spans into lines and paragraphs.\n");
+        goto end;
+    }
+    
+    if (extract_document_to_docx_content(&document, &content, spacing)) {
+        printf("Failed to create docx content.\n");
+        goto end;
     }
 
     if (content_path) {
@@ -166,13 +169,8 @@ int main(int argc, char** argv)
         fclose(f);
     }
     
-    if (extract_document_join(&document)) {
-        printf("Failed to join spans into lines and paragraphs.\n");
-        goto end;
-    }
-    
     printf("Creating .docx file: %s\n", docx_out_path);
-    if (extract_docx_create(&content, docx_template_path, docx_out_path, preserve_dir)) {
+    if (extract_content_to_docx(&content, docx_template_path, docx_out_path, preserve_dir)) {
         printf("Failed to create .docx file: %s\n", docx_out_path);
         goto end;
     }

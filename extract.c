@@ -776,7 +776,7 @@ static int systemf(const char* format, ...)
     return e;
 }
 
-int extract_docx_create(
+int extract_docx_content_to_docx(
         extract_string_t*   content,
         const char*         path_template,
         const char*         path_out,
@@ -2327,7 +2327,7 @@ static float matrices_to_font_size(extract_matrix_t* ctm, extract_matrix_t* trm)
 points to zero-terminated content, allocated by realloc().
 
 spacing: if true, we insert extra vertical space between paragraphs. */
-static int paragraphs_to_docx_content(
+int extract_document_to_docx_content(
         extract_document_t* document,
         extract_string_t*   content,
         int                 spacing
@@ -2496,17 +2496,4 @@ int extract_document_join(extract_document_t* document)
     end:
 
     return ret;
-}
-
-/* Reads from intermediate data and converts into docx content. On return
-*content points to zero-terminated content, allocated by realloc(). */
-int extract_document_to_docx_content(
-        extract_document_t* document,
-        extract_string_t*   content,
-        int                 spacing
-        )
-{
-    if (extract_document_join(document)) return -1;
-    if (paragraphs_to_docx_content(document, content, spacing)) return -1;
-    return 0;
 }
