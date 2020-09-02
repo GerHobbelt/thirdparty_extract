@@ -2,6 +2,7 @@
     #include "memento.h"
 #endif
 
+#include "autostring.h"
 #include "extract.h"
 
 #include <assert.h>
@@ -122,48 +123,6 @@ static int str_cat(char** p, const char* s)
     return str_catl(p, s, strlen(s));
 }
 #endif
-
-
-
-/* A simple string struct that reallocs as required. */
-typedef struct
-{
-    char*   chars;      /* NULL or zero-terminated. */
-    int     chars_num;  /* Length of string pointed to by .chars. */
-} string_t;
-
-static void string_init(string_t* string)
-{
-    string->chars = NULL;
-    string->chars_num = 0;
-}
-
-static void string_free(string_t* string)
-{
-    free(string->chars);
-    string_init(string);
-}
-
-static int string_catl(string_t* string, const char* s, int s_len)
-{
-    char* chars = realloc(string->chars, string->chars_num + s_len + 1);
-    if (!chars) return -1;
-    memcpy(chars + string->chars_num, s, s_len);
-    chars[string->chars_num + s_len] = 0;
-    string->chars = chars;
-    string->chars_num += s_len;
-    return 0;
-}
-
-static int string_catc(string_t* string, char c)
-{
-    return string_catl(string, &c, 1);
-}
-
-static int string_cat(string_t* string, const char* s)
-{
-    return string_catl(string, s, strlen(s));
-}
 
 
 typedef struct
