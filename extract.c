@@ -22,8 +22,6 @@ set.
 #include <string.h>
 #include <sys/stat.h>
 
-static const float g_pi = 3.14159265;
-
 /* Simple printf-style debug output. */
 static void (extract_outf)(
         const char* file, int line,
@@ -52,6 +50,8 @@ static void (extract_outf)(
         (extract_outf)(__FILE__, __LINE__, __FUNCTION__, 1 /*ln*/, format, ##__VA_ARGS__)
 
 #define extract_outfx(format, ...)
+
+static const float g_pi = 3.14159265;
 
 
 /* These local_*() functions should be used to ensure that Memento works. */
@@ -130,6 +130,140 @@ static int str_cat(char** p, const char* s)
     return str_catl(p, s, strlen(s));
 }
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+/* A simple string struct that reallocs as required. */
+typedef struct extract_string_t
+{
+    char*   chars;      /* NULL or zero-terminated. */
+    int     chars_num;  /* Length of string pointed to by .chars. */
+} extract_string_t;
+
+void extract_string_init(extract_string_t* string);
+
+void extract_string_free(extract_string_t* string);
+
+int extract_string_catl(extract_string_t* string, const char* s, int s_len);
+
+int extract_string_catc(extract_string_t* string, char c);
+
+int extract_string_cat(extract_string_t* string, const char* s);
+
+typedef struct
+{
+    float a;
+    float b;
+    float c;
+    float d;
+    float e;
+    float f;
+} extract_matrix_t;
+
+/* A single char in a span.
+*/
+typedef struct
+{
+    /* (x,y) before transformation by ctm and trm. */
+    float       pre_x;
+    float       pre_y;
+    
+    /* (x,y) after transformation by ctm and trm. */
+    float       x;
+    float       y;
+    
+    int         gid;
+    unsigned    ucs;
+    float       adv;
+} extract_char_t;
+
+/* Array of chars that have same font and are usually adjacent.
+*/
+typedef struct extract_span_t
+{
+    extract_matrix_t    ctm;
+    extract_matrix_t    trm;
+    char*               font_name;
+    
+    /* font size is matrix_expansion(trm). */
+    
+    struct {
+        int font_bold   : 1;
+        int font_italic : 1;
+        int wmode       : 1;
+    };
+    
+    extract_char_t*     chars;
+    int                 chars_num;
+} extract_span_t;
+
+/* Array of pointers to spans that are aligned on same line.
+*/
+typedef struct
+{
+    extract_span_t**    spans;
+    int                 spans_num;
+} extract_line_t;
+
+/* Array of pointers to lines that are aligned and adjacent to each other so as
+to form a paragraph. */
+typedef struct
+{
+    extract_line_t**    lines;
+    int                 lines_num;
+} extract_paragraph_t;
+
+/* A page. Contains different representations of the same list of spans.
+*/
+typedef struct extract_page_t
+{
+    extract_span_t**    spans;
+    int                 spans_num;
+
+    /* .lines[] refers to items in .spans. */
+    extract_line_t**    lines;
+    int                 lines_num;
+
+    /* .paragraphs[] refers to items in .lines. */
+    extract_paragraph_t**   paragraphs;
+    int                     paragraphs_num;
+} extract_page_t;
+
+/* Array of pointers to pages.
+*/
+typedef struct extract_document_t
+{
+    extract_page_t**    pages;
+    int                 pages_num;
+} extract_document_t;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void extract_string_init(extract_string_t* string)
 {
@@ -777,10 +911,11 @@ static int systemf(const char* format, ...)
 }
 
 int extract_docx_content_to_docx(
-        extract_string_t*   content,
-        const char*         path_template,
-        const char*         path_out,
-        int                 preserve_dir
+        const char* content,
+        int         content_length,
+        const char* path_template,
+        const char* path_out,
+        int         preserve_dir
         )
 {
     assert(path_out);
@@ -855,7 +990,7 @@ int extract_docx_content_to_docx(
     }
     if (0
             || fwrite(original, original_pos - original, 1 /*nmemb*/, f) != 1
-            || fwrite(content->chars, content->chars_num, 1 /*nmemb*/, f) != 1
+            || fwrite(content, content_length, 1 /*nmemb*/, f) != 1
             || fwrite(original_pos, strlen(original_pos), 1 /*nmemb*/, f) != 1
             || fclose(f) < 0
             ) {
@@ -1925,7 +2060,7 @@ static extract_span_t* extract_page_span_append(extract_page_t* page)
     return span;
 }
 
-void extract_document_init(extract_document_t* document)
+static void extract_document_init(extract_document_t* document)
 {
     document->pages = NULL;
     document->pages_num = 0;
@@ -2078,15 +2213,14 @@ static int extract_page_span_end_clean(extract_page_t* page)
 }
 
 int extract_intermediate_to_document(
-        const char*         path,
-        extract_document_t* document,
-        int                 autosplit
+        const char*             path,
+        extract_document_t**    o_document,
+        int                     autosplit
         )
 {
     int ret = -1;
 
     FILE* in = NULL;
-    extract_document_init(document);
     int num_spans = 0;
 
     /* Num extra spns from extract_page_span_end_clean(). */
@@ -2098,6 +2232,10 @@ int extract_intermediate_to_document(
     xml_tag_t   tag;
     xml_tag_init(&tag);
 
+    extract_document_t* document = malloc(sizeof(**o_document));
+    if (!document) goto end;
+    extract_document_init(document);
+    
     in = xml_pparse_init(path, NULL);
     if (!in) {
         extract_outf("Failed to open: %s", path);
@@ -2308,6 +2446,11 @@ int extract_intermediate_to_document(
     if (ret) {
         extract_outf("read_spans_raw() returning error");
         extract_document_free(document);
+        free(document);
+        *o_document = NULL;
+    }
+    else {
+        *o_document = document;
     }
 
     return ret;
@@ -2329,11 +2472,15 @@ points to zero-terminated content, allocated by realloc().
 spacing: if true, we insert extra vertical space between paragraphs. */
 int extract_document_to_docx_content(
         extract_document_t* document,
-        extract_string_t*   content,
-        int                 spacing
+        int                 spacing,
+        char**              o_content,
+        int*                o_content_length
         )
 {
     int ret = -1;
+    
+    extract_string_t    content;
+    extract_string_init(&content);
 
     /* Write paragraphs into <content>. */
     int p;
@@ -2359,14 +2506,14 @@ int extract_document_to_docx_content(
                     ) {
                 /* Extra vertical space between paragraphs that were at
                 different angles in the original document. */
-                if (docx_paragraph_empty(content)) goto end;
+                if (docx_paragraph_empty(&content)) goto end;
             }
 
             if (spacing) {
                 /* Extra vertical space between paragraphs. */
-                if (docx_paragraph_empty(content)) goto end;
+                if (docx_paragraph_empty(&content)) goto end;
             }
-            if (docx_paragraph_start(content)) goto end;
+            if (docx_paragraph_start(&content)) goto end;
 
             int l;
             for (l=0; l<paragraph->lines_num; ++l) {
@@ -2385,14 +2532,14 @@ int extract_document_to_docx_content(
                             || font_size_new != font_size
                             ) {
                         if (font_name) {
-                            if (docx_run_finish(content)) goto end;
+                            if (docx_run_finish(&content)) goto end;
                         }
                         font_name = span->font_name;
                         font_bold = span->font_bold;
                         font_italic = span->font_italic;
                         font_size = font_size_new;
                         if (docx_run_start(
-                                content,
+                                &content,
                                 font_name,
                                 font_size,
                                 font_bold,
@@ -2408,58 +2555,67 @@ int extract_document_to_docx_content(
                         if (0) {}
 
                         /* Escape XML special characters. */
-                        else if (c == '<')  docx_char_append_string(content, "&lt;");
-                        else if (c == '>')  docx_char_append_string(content, "&gt;");
-                        else if (c == '&')  docx_char_append_string(content, "&amp;");
-                        else if (c == '"')  docx_char_append_string(content, "&quot;");
-                        else if (c == '\'') docx_char_append_string(content, "&apos;");
+                        else if (c == '<')  docx_char_append_string(&content, "&lt;");
+                        else if (c == '>')  docx_char_append_string(&content, "&gt;");
+                        else if (c == '&')  docx_char_append_string(&content, "&amp;");
+                        else if (c == '"')  docx_char_append_string(&content, "&quot;");
+                        else if (c == '\'') docx_char_append_string(&content, "&apos;");
 
                         /* Expand ligatures. */
                         else if (c == 0xFB00) {
-                            if (docx_char_append_string(content, "ff")) goto end;
+                            if (docx_char_append_string(&content, "ff")) goto end;
                         }
                         else if (c == 0xFB01) {
-                            if (docx_char_append_string(content, "fi")) goto end;
+                            if (docx_char_append_string(&content, "fi")) goto end;
                         }
                         else if (c == 0xFB02) {
-                            if (docx_char_append_string(content, "fl")) goto end;
+                            if (docx_char_append_string(&content, "fl")) goto end;
                         }
                         else if (c == 0xFB03) {
-                            if (docx_char_append_string(content, "ffi")) goto end;
+                            if (docx_char_append_string(&content, "ffi")) goto end;
                         }
                         else if (c == 0xFB04) {
-                            if (docx_char_append_string(content, "ffl")) goto end;
+                            if (docx_char_append_string(&content, "ffl")) goto end;
                         }
 
                         /* Output ASCII verbatim. */
                         else if (c >= 32 && c <= 127) {
-                            if (docx_char_append_char(content, c)) goto end;
+                            if (docx_char_append_char(&content, c)) goto end;
                         }
 
                         /* Escape all other characters. */
                         else {
                             char    buffer[32];
                             snprintf(buffer, sizeof(buffer), "&#x%x;", c);
-                            if (docx_char_append_string(content, buffer)) goto end;
+                            if (docx_char_append_string(&content, buffer)) goto end;
                         }
                     }
                     /* Remove any trailing '-' at end of line. */
-                    if (docx_char_truncate_if(content, '-')) goto end;
+                    if (docx_char_truncate_if(&content, '-')) goto end;
                 }
             }
             if (font_name) {
-                if (docx_run_finish(content)) goto end;
+                if (docx_run_finish(&content)) goto end;
                 font_name = NULL;
             }
-            if (docx_paragraph_finish(content)) goto end;
+            if (docx_paragraph_finish(&content)) goto end;
         }
     }
     ret = 0;
 
     end:
 
-    /* Free everything. */
-    extract_document_free(document);
+    if (ret) {
+        extract_string_free(&content);
+        *o_content = NULL;
+        *o_content_length = 0;
+    }
+    else {
+        *o_content = content.chars;
+        *o_content_length = content.chars_num;
+        content.chars = NULL;
+        content.chars_num = 0;
+    }
 
     return ret;
 }
