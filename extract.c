@@ -4,6 +4,8 @@
 
 #include "astring.h"
 #include "extract.h"
+#include "outf.h"
+#include "xml.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -14,30 +16,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-
-/* Simple printf-style debug output. */
-static void (outf)(
-        const char* file, int line,
-        const char* fn,
-        int ln,
-        const char* format,
-        ...
-        )
-{
-    va_list va;
-    if (ln) {
-        fprintf(stderr, "%s:%i:%s: ", file, line, fn);
-    }
-    va_start(va, format);
-    vfprintf(stderr, format, va);
-    va_end(va);
-    if (ln) {
-        size_t len = strlen(format);
-        if (len == 0 || format[len-1] != '\n') {
-            fprintf(stderr, "\n");
-        }
-    }
-}
 
 #define outf(format, ...) \
         (outf)(__FILE__, __LINE__, __FUNCTION__, 1 /*ln*/, format, ##__VA_ARGS__)
@@ -92,37 +70,6 @@ static int local_asprintf(char** out, const char* format, ...)
     va_end(va);
     return ret;
 }
-
-
-/* These str_*() functions realloc buffer as required. All return 0 or -1 with
-errno set. */
-
-/* Appends first <s_len> chars of string <s> to *p. */
-static int str_catl(char** p, const char* s, int s_len)
-{
-    int p_len = (*p) ? strlen(*p) : 0;
-    char* pp = realloc(*p, p_len + s_len + 1);
-    if (!pp)    return -1;
-    memcpy(pp + p_len, s, s_len);
-    pp[p_len + s_len] = 0;
-    *p = pp;
-    return 0;
-}
-
-/* Appends a char.  */
-static int str_catc(char** p, char c)
-{
-    return str_catl(p, &c, 1);
-}
-
-/* Unused but usefult o keep code here. */
-#if 0
-/* Appends a string. */
-static int str_cat(char** p, const char* s)
-{
-    return str_catl(p, s, strlen(s));
-}
-#endif
 
 
 typedef struct
@@ -476,18 +423,14 @@ static const char* paragraph_string(paragraph_t* paragraph)
 }
 
 /* Returns first line in paragraph. */
-static line_t* paragraph_line_first(
-        const paragraph_t* paragraph
-        )
+static line_t* paragraph_line_first(const paragraph_t* paragraph)
 {
     assert(paragraph->lines_num);
     return paragraph->lines[0];
 }
 
 /* Returns last line in paragraph. */
-static line_t* paragraph_line_last(
-        const paragraph_t* paragraph
-        )
+static line_t* paragraph_line_last(const paragraph_t* paragraph)
 {
     assert(paragraph->lines_num);
     return paragraph->lines[ paragraph->lines_num-1];
@@ -656,323 +599,6 @@ static char* read_all(FILE* in)
     }
 }
 
-
-/* Things for representing XML. */
-
-typedef struct {
-    char*   name;
-    char*   value;
-} xml_attribute_t;
-
-/* Represents a single <...> XML tag plus trailing text. */
-typedef struct {
-    char*               name;
-    xml_attribute_t*    attributes;
-    int                 attributes_num;
-    extract_astring_t    text;
-} xml_tag_t;
-
-/* Returns pointer to value of specified attribute, or NULL if not found. */
-static char* xml_tag_attributes_find(xml_tag_t* tag, const char* name)
-{
-    for (int i=0; i<tag->attributes_num; ++i) {
-        if (!strcmp(tag->attributes[i].name, name)) {
-            char* ret = tag->attributes[i].value;
-            return ret;
-        }
-    }
-    outf("Failed to find attribute '%s'",name);
-    return NULL;
-}
-
-/* Finds float value of specified attribute, returning error if not found. We
-use atof() and don't check for non-numeric attribute value. */
-static int xml_tag_attributes_find_float(
-        xml_tag_t*  tag,
-        const char* name,
-        float*      o_out
-        )
-{
-    const char* value = xml_tag_attributes_find(tag, name);
-    if (!value) {
-        errno = ESRCH;
-        return -1;
-    }
-    *o_out = atof(value);
-    return 0;
-}
-
-static int xml_tag_attributes_find_int(
-        xml_tag_t*  tag,
-        const char* name,
-        int*        o_out
-        )
-{
-    const char* value = xml_tag_attributes_find(tag, name);
-    if (!value) {
-        errno = ESRCH;
-        return -1;
-    }
-    *o_out = atoi(value);
-    return 0;
-}
-
-static int xml_tag_attributes_append(xml_tag_t* tag, char* name, char* value)
-{
-    xml_attribute_t* a = realloc(
-            tag->attributes,
-            (tag->attributes_num+1) * sizeof(xml_attribute_t)
-            );
-    if (!a) return -1;
-    tag->attributes = a;
-    tag->attributes[tag->attributes_num].name = name;
-    tag->attributes[tag->attributes_num].value = value;
-    tag->attributes_num += 1;
-    return 0;
-}
-
-/* Sets all fields to NULL, so will cause memory leaks if fields have not been
-freed. */
-static void xml_tag_init(xml_tag_t* tag)
-{
-    tag->name = NULL;
-    tag->attributes = NULL;
-    tag->attributes_num = 0;
-    extract_astring_init(&tag->text);
-}
-
-static void xml_tag_free(xml_tag_t* tag)
-{
-    free(tag->name);
-    int i;
-    for (i=0; i<tag->attributes_num; ++i) {
-        xml_attribute_t* attribute = &tag->attributes[i];
-        free(attribute->name);
-        free(attribute->value);
-    }
-    free(tag->attributes);
-    extract_astring_free(&tag->text);
-    xml_tag_init(tag);
-}
-
-/* Unused but useful to keep code here. */
-#if 0
-/* Like strcmp() but also handles NULL. */
-static int xml_strcmp_null(const char* a, const char* b)
-{
-    if (!a && !b) return 0;
-    if (!a) return -1;
-    if (!b) return 1;
-    return strcmp(a, b);
-}
-#endif
-
-/* Unused but usefult o keep code here. */
-#if 0
-/* Compares tag name, then attributes; returns -1, 0 or +1. Does not compare
-xml_tag_t::text members. */
-static int xml_compare_tags(const xml_tag_t* lhs, const xml_tag_t* rhs)
-{
-    int d;
-    d = xml_strcmp_null(lhs->name, rhs->name);
-    if (d)  return d;
-    for(int i=0;; ++i) {
-        if (i >= lhs->attributes_num || i >= rhs->attributes_num) {
-            break;
-        }
-        const xml_attribute_t* lhs_attribute = &lhs->attributes[i];
-        const xml_attribute_t* rhs_attribute = &rhs->attributes[i];
-        d = xml_strcmp_null(lhs_attribute->name, rhs_attribute->name);
-        if (d)  return d;
-        d = xml_strcmp_null(lhs_attribute->value, rhs_attribute->value);
-        if (d)  return d;
-    }
-    if (lhs->attributes_num > rhs->attributes_num) return +1;
-    if (lhs->attributes_num < rhs->attributes_num) return -1;
-    return 0;
-}
-#endif
-
-
-/* xml_pparse_*(): simple XML 'pull' parser.
-
-xml_pparse_init() merely consumes the initial '<'. Thereafter xml_pparse_next()
-consumes the next '<' before returning the previous tag. */
-
-/* Opens specified file.
-
-If first_line is not NULL, we check that it matches the first line in the file.
-
-Returns NULL with errno set if error. */
-static FILE* xml_pparse_init(const char* path, const char* first_line)
-{
-    FILE* in = NULL;
-    char* buffer = NULL;
-    int e = 1;
-
-    in = fopen(path, "r");
-    if (!in) {
-        outf("error: Could not open filename=%s", path);
-        goto end;
-    }
-
-    if (first_line) {
-        size_t first_line_len = strlen(first_line);
-        buffer = malloc(first_line_len + 1);
-        if (!buffer) goto end;
-
-        ssize_t n = fread(buffer, first_line_len, 1 /*nmemb*/, in);
-        if (n != 1) {
-            outf("error: fread() failed. n=%zi. path='%s'", n, path);
-            goto end;
-        }
-        buffer[first_line_len] = 0;
-        if (strcmp(first_line, buffer)) {
-            outf("Unrecognised prefix in path=%s: %s", path, buffer);
-            errno = ESRCH;
-            goto end;
-        }
-    }
-
-    {
-        int c = getc(in);
-        if (c != '<') {
-            outf("Expected '<' but found c=%i", c);
-            goto end;
-        }
-    }
-    e = 0;
-
-    end:
-    free(buffer);
-    if (e) {
-        if (in) {
-            fclose(in);
-            in = NULL;
-        }
-    }
-    return in;
-}
-
-/* Returns the next XML tag.
-
-Returns 0 with *out containing next tag; or -1 with errno set if error; or +1
-with errno=ESRCH if EOF.
-
-*out is initially passed to xml_tag_free(), so *out must have been initialised,
-e.g. by by xml_tag_init(). */
-static int xml_pparse_next(FILE* in, xml_tag_t* out)
-{
-    int ret = -1;
-    xml_tag_free(out);
-
-    char*   attribute_name = NULL;
-    char*   attribute_value = NULL;
-
-    xml_tag_init(out);
-    char c;
-
-    assert(in);
-
-    /* Read tag name. */
-    int i = 0;
-    for( i=0;; ++i) {
-        c = getc(in);
-        if (c == EOF) {
-            if (i == 0 && feof(in)) {
-                /* Legitimate EOF. We provide a reasonable errno value if
-                caller isn't expecting EOF and doesn't test explicitly for +1.
-                */
-                ret = +1;
-                errno = ESRCH;
-            }
-            goto end;
-        }
-        if (c == '>' || c == ' ')  break;
-        if (str_catc(&out->name, c)) goto end;
-    }
-    if (c == ' ') {
-
-        /* Read attributes. */
-        for(;;) {
-
-            /* Read attribute name. */
-            for(;;) {
-                c = getc(in);
-                if (c == EOF) {
-                    errno = -ESRCH;
-                    goto end;
-                }
-                if (c == '=' || c == '>' || c == ' ') break;
-                if (str_catc(&attribute_name, c)) goto end;
-            }
-            if (c == '>') break;
-
-            if (c == '=') {
-                /* Read attribute value. */
-                int quote_single = 0;
-                int quote_double = 0;
-                for(;;) {
-                    c = getc(in);
-                    if (c == '\'')      quote_single = !quote_single;
-                    else if (c == '"')  quote_double = !quote_double;
-                    else if (!quote_single && !quote_double
-                            && (c == ' ' || c == '/' || c == '>')
-                            ) {
-                        /* We are at end of attribute value. */
-                        break;
-                    }
-                    else if (c == '\\') {
-                        // Escape next character.
-                        c = getc(in);
-                        if (c == EOF) {
-                            errno = ESRCH;
-                            goto end;
-                        }
-                    }
-                    if (str_catc(&attribute_value, c)) goto end;
-                }
-
-                /* Remove any enclosing quotes. */
-                int l = strlen(attribute_value);
-                if (l >= 2) {
-                    if (
-                            (attribute_value[0] == '"' && attribute_value[l-1] == '"')
-                            ||
-                            (attribute_value[0] == '\'' && attribute_value[l-1] == '\'')
-                            ) {
-                        memmove(attribute_value, attribute_value+1, l-2);
-                        attribute_value[l-2] = 0;
-                    }
-                }
-            }
-
-            if (xml_tag_attributes_append(out, attribute_name, attribute_value)) goto end;
-            attribute_name = NULL;
-            attribute_value = NULL;
-            if (c == '/') c = getc(in);
-            if (c == '>') break;
-        }
-    }
-
-    /* Read plain text until next '<'. */
-    for(;;) {
-        c = getc(in);
-        if (c == '<' || feof(in)) break;
-        if (extract_astring_catc(&out->text, c)) goto end;
-    }
-
-    ret = 0;
-
-    end:
-
-    free(attribute_name);
-    free(attribute_value);
-    if (ret) {
-        xml_tag_free(out);
-    }
-    return ret;
-}
 
 /* Returns +1, 0 or -1 depending on sign of x. */
 static int s_sign(float x)
@@ -2150,14 +1776,14 @@ int extract_intermediate_to_document(
     /* Num extra spans from autosplit=1. */
     int num_spans_autosplit = 0;
 
-    xml_tag_t   tag;
-    xml_tag_init(&tag);
+    extract_xml_tag_t   tag;
+    extract_xml_tag_init(&tag);
 
     extract_document_t* document = malloc(sizeof(**o_document));
     if (!document) goto end;
     extract_document_init(document);
     
-    in = xml_pparse_init(path, NULL);
+    in = extract_xml_pparse_init(path, NULL);
     if (!in) {
         outf("Failed to open: %s", path);
         goto end;
@@ -2189,7 +1815,7 @@ int extract_intermediate_to_document(
         Split spans in two where there seem to be large gaps between glyphs.
     */
     for(;;) {
-        int e = xml_pparse_next(in, &tag);
+        int e = extract_xml_pparse_next(in, &tag);
         if (e == 1) break; /* EOF. */
         if (e) goto end;
         if (!strcmp(tag.name, "?xml")) {
@@ -2208,7 +1834,7 @@ int extract_intermediate_to_document(
         if (!page) goto end;
 
         for(;;) {
-            if (xml_pparse_next(in, &tag)) goto end;
+            if (extract_xml_pparse_next(in, &tag)) goto end;
             if (!strcmp(tag.name, "/page")) {
                 num_spans += page->spans_num;
                 break;
@@ -2222,10 +1848,10 @@ int extract_intermediate_to_document(
             span_t* span = page_span_append(page);
             if (!span) goto end;
 
-            if (s_matrix_read(xml_tag_attributes_find(&tag, "ctm"), &span->ctm)) goto end;
-            if (s_matrix_read(xml_tag_attributes_find(&tag, "trm"), &span->trm)) goto end;
+            if (s_matrix_read(extract_xml_tag_attributes_find(&tag, "ctm"), &span->ctm)) goto end;
+            if (s_matrix_read(extract_xml_tag_attributes_find(&tag, "trm"), &span->trm)) goto end;
 
-            char* f = xml_tag_attributes_find(&tag, "font_name");
+            char* f = extract_xml_tag_attributes_find(&tag, "font_name");
             if (!f) {
                 outf("Failed to find attribute 'font_name'");
                 goto end;
@@ -2243,7 +1869,7 @@ int extract_intermediate_to_document(
             {
                 /* Need to use temporary int because span->wmode is a bitfield. */
                 int wmode;
-                if (xml_tag_attributes_find_int(&tag, "wmode", &wmode)) {
+                if (extract_xml_tag_attributes_find_int(&tag, "wmode", &wmode)) {
                     outf("Failed to find attribute 'wmode'");
                     goto end;
                 }
@@ -2253,7 +1879,7 @@ int extract_intermediate_to_document(
             float   offset_x = 0;
             float   offset_y = 0;
             for(;;) {
-                if (xml_pparse_next(in, &tag)) {
+                if (extract_xml_pparse_next(in, &tag)) {
                     outf("Failed to find <char or </span");
                     goto end;
                 }
@@ -2268,8 +1894,8 @@ int extract_intermediate_to_document(
 
                 float char_pre_x;
                 float char_pre_y;
-                if (xml_tag_attributes_find_float(&tag, "x", &char_pre_x)) goto end;
-                if (xml_tag_attributes_find_float(&tag, "y", &char_pre_y)) goto end;
+                if (extract_xml_tag_attributes_find_float(&tag, "x", &char_pre_x)) goto end;
+                if (extract_xml_tag_attributes_find_float(&tag, "y", &char_pre_y)) goto end;
 
                 if (autosplit && char_pre_y - offset_y != 0) {
                     outfx("autosplit: char_pre_y=%f offset_y=%f",
@@ -2316,9 +1942,9 @@ int extract_intermediate_to_document(
                 char_->x = span->ctm.a * char_->pre_x + span->ctm.b * char_->pre_y;
                 char_->y = span->ctm.c * char_->pre_x + span->ctm.d * char_->pre_y;
 
-                if (xml_tag_attributes_find_float(&tag, "adv", &char_->adv)) goto end;
+                if (extract_xml_tag_attributes_find_float(&tag, "adv", &char_->adv)) goto end;
 
-                if (xml_tag_attributes_find_int(&tag, "ucs", &char_->ucs)) goto end;
+                if (extract_xml_tag_attributes_find_int(&tag, "ucs", &char_->ucs)) goto end;
 
                 char    trm[64];
                 snprintf(trm, sizeof(trm), "%s", matrix_string(&span->trm));
@@ -2345,7 +1971,7 @@ int extract_intermediate_to_document(
                     num_spans_split += 1;
                 }
             }
-            xml_tag_free(&tag);
+            extract_xml_tag_free(&tag);
         }
         outf("page=%i page->num_spans=%i",
                 document->pages_num, page->spans_num);
@@ -2360,7 +1986,7 @@ int extract_intermediate_to_document(
     ret = 0;
 
     end:
-    xml_tag_free(&tag);
+    extract_xml_tag_free(&tag);
     if (in) {
         fclose(in);
         in = NULL;
