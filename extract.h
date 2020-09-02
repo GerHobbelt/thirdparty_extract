@@ -5,20 +5,6 @@ Unless otherwise stated, all functions return 0 on success or -1 with errno
 set.
 */
 
-/* Simple debug output. */
-void (extract_outf)(
-        const char* file, int line,
-        const char* fn,
-        int ln,
-        const char* format,
-        ...
-        )
-;
-
-#define extract_outf(format, ...) (extract_outf)(__FILE__, __LINE__, __FUNCTION__, 1 /*ln*/, format, ##__VA_ARGS__)
-#define extract_outfx(format, ...)
-
-
 /* A simple string struct that reallocs as required. */
 typedef struct
 {
@@ -46,13 +32,15 @@ typedef struct
     float f;
 } extract_matrix_t;
 
-/* A single char in a span. */
+/* A single char in a span.
+*/
 typedef struct
 {
     /* (x,y) before transformation by ctm and trm. */
     float       pre_x;
     float       pre_y;
     
+    /* (x,y) after transformation by ctm and trm. */
     float       x;
     float       y;
     
@@ -61,7 +49,8 @@ typedef struct
     float       adv;
 } extract_char_t;
 
-/* List of chars that have same font. */
+/* Array of chars that have same font and are usually adjacent.
+*/
 typedef struct extract_span_t
 {
     extract_matrix_t    ctm;
@@ -70,44 +59,50 @@ typedef struct extract_span_t
     
     /* font size is matrix_expansion(trm). */
     
-    int                 font_bold;
-    int                 font_italic;
-    int                 wmode;
+    struct {
+        int font_bold   : 1;
+        int font_italic : 1;
+        int wmode       : 1;
+    };
+    
     extract_char_t*     chars;
     int                 chars_num;
 } extract_span_t;
 
-/* List of spans that are aligned on same line. */
+/* Array of pointers to spans that are aligned on same line.
+*/
 typedef struct
 {
     extract_span_t**    spans;
     int                 spans_num;
 } extract_line_t;
 
-/* A list of lines that are aligned and adjacent to each other so as to form a
-paragraph. */
+/* Array of pointers to lines that are aligned and adjacent to each other so as
+to form a paragraph. */
 typedef struct
 {
     extract_line_t**    lines;
     int                 lines_num;
 } extract_paragraph_t;
 
-/* A page. Contains different representations of the same list of spans. */
+/* A page. Contains different representations of the same list of spans.
+*/
 typedef struct
 {
     extract_span_t**    spans;
     int                 spans_num;
 
-    /* .lines[] eventually points to items in .spans. */
+    /* .lines[] refers to items in .spans. */
     extract_line_t**    lines;
     int                 lines_num;
 
-    /* .paragraphs[] eventually points to items in .lines. */
+    /* .paragraphs[] refers to items in .lines. */
     extract_paragraph_t**   paragraphs;
     int                     paragraphs_num;
 } extract_page_t;
 
-/* List of pages. */
+/* Array of pointers to pages.
+*/
 typedef struct {
     extract_page_t**    pages;
     int                 pages_num;
@@ -118,26 +113,39 @@ void extract_document_init(extract_document_t* document);
 void extract_document_free(extract_document_t* document);
 
 
-/* Reads from intermediate format in file <path> into document.
+/* Reads from intermediate format file into a document.
 
 path;
-    Path of file containng intermediate format.
+    Path of file containg intermediate format.
 document:
-    Is populated with pages etc from intermediate format.
+    Is populated with pages from intermediate format. Each page will have
+    spans, but no lines or paragraphs.
 autosplit:
-    If true, we split spans when y coordinate changes, in order to stress out
-    joining algorithms.
+    If true, we split spans when the y coordinate changes, in order to stress
+    out joining algorithms.
+
+Returns with *document's pages containing spans, but no lines or paragraphs.
 */
-int extract_read_spans_raw(
+int extract_intermediate_to_document(
         const char*         path,
         extract_document_t* document,
         int                 autosplit
         );
 
+/* Finds lines and paragraphs in document (e.g. from
+extract_intermediate_to_document()).
+
+document:
+    Should have spans, but no lines or paragraphs.
+    
+Returns with *document containing lines and paragraphs.
+*/
+int extract_document_join(extract_document_t* document);
+
 /* Reads from document and converts into docx content.
 
 document:
-    Should contain raw intermediate data e.g. from extract_read_spans_raw().
+    Should contain paragraphs e.g. from extract_document_join().
 content:
     Out-param. On return will contain docx content.
 spacing:
@@ -149,8 +157,8 @@ int extract_document_to_docx_content(
         int                 spacing
         );
 
-/*
-Writes docx content into a new .docx document.
+/* Writes docx content (e.g. from extract_document_to_docx_content()) into a
+new .docx file.
 
 content:
     E.g. from extract_document_to_docx_content().

@@ -25,7 +25,7 @@ set.
 static const float g_pi = 3.14159265;
 
 /* Simple printf-style debug output. */
-void (extract_outf)(
+static void (extract_outf)(
         const char* file, int line,
         const char* fn,
         int ln,
@@ -47,6 +47,12 @@ void (extract_outf)(
         }
     }
 }
+
+#define extract_outf(format, ...) \
+        (extract_outf)(__FILE__, __LINE__, __FUNCTION__, 1 /*ln*/, format, ##__VA_ARGS__)
+
+#define extract_outfx(format, ...)
+
 
 /* These local_*() functions should be used to ensure that Memento works. */
 
@@ -2071,7 +2077,7 @@ static int extract_page_span_end_clean(extract_page_t* page)
     return ret;
 }
 
-int extract_read_spans_raw(
+int extract_intermediate_to_document(
         const char*         path,
         extract_document_t* document,
         int                 autosplit
@@ -2174,9 +2180,15 @@ int extract_read_spans_raw(
             }
             span->font_bold = strstr(span->font_name, "-Bold") ? 1 : 0;
             span->font_italic = strstr(span->font_name, "-Oblique") ? 1 : 0;
-            if (xml_tag_attributes_find_int(&tag, "wmode", &span->wmode)) {
-                extract_outf("Failed to find attribute 'wmode'");
-                goto end;
+            
+            {
+                /* Need to use temporary int because span->wmode is a bitfield. */
+                int wmode;
+                if (xml_tag_attributes_find_int(&tag, "wmode", &wmode)) {
+                    extract_outf("Failed to find attribute 'wmode'");
+                    goto end;
+                }
+                span->wmode = wmode;
             }
 
             float   offset_x = 0;
@@ -2315,7 +2327,7 @@ static float matrices_to_font_size(extract_matrix_t* ctm, extract_matrix_t* trm)
 points to zero-terminated content, allocated by realloc().
 
 spacing: if true, we insert extra vertical space between paragraphs. */
-static int paragraphs_to_content(
+static int paragraphs_to_docx_content(
         extract_document_t* document,
         extract_string_t*   content,
         int                 spacing
@@ -2452,13 +2464,7 @@ static int paragraphs_to_content(
     return ret;
 }
 
-/* Reads from intermediate data and converts into docx content. On return
-*content points to zero-terminated content, allocated by realloc(). */
-int extract_document_to_docx_content(
-        extract_document_t* document,
-        extract_string_t*   content,
-        int                 spacing
-        )
+int extract_document_join(extract_document_t* document)
 {
     int ret = -1;
 
@@ -2485,14 +2491,22 @@ int extract_document_to_docx_content(
                 )) goto end;
     }
 
-    if (paragraphs_to_content(document, content, spacing)) goto end;
-
     ret = 0;
 
     end:
 
-    /* Free everything. */
-    extract_document_free(document);
-
     return ret;
+}
+
+/* Reads from intermediate data and converts into docx content. On return
+*content points to zero-terminated content, allocated by realloc(). */
+int extract_document_to_docx_content(
+        extract_document_t* document,
+        extract_string_t*   content,
+        int                 spacing
+        )
+{
+    if (extract_document_join(document)) return -1;
+    if (paragraphs_to_docx_content(document, content, spacing)) return -1;
+    return 0;
 }

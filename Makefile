@@ -2,7 +2,7 @@
 #   make
 #   make test
 #   make build=debug-opt
-#   make build=opt
+#   make build=opt test
 #
 
 
@@ -49,14 +49,14 @@ endif
 # Build files.
 #
 exe = build/extract-$(build).exe
-obj = $(src:.c=.c-$(build).o)
-obj := $(addprefix build/, $(obj))
+obj = $(addprefix build/, $(src:.c=.c-$(build).o))
 dep = $(obj:.o=.d)
 
 
 # Test rules.
 #
 
+# Default target.
 test: test-mu test-gs test-mu-as
 
 test-mu: Python2.pdf-test-mu zlib.3.pdf-test-mu
@@ -110,16 +110,25 @@ test-mu-as: Python2.pdf-test-mu-as zlib.3.pdf-test-mu-as
 
 # Build rules.
 #
+
+# Convenience target to build main executable.
+#
+exe: $(exe)
+
+# Rule for main executble.
+#
 $(exe): $(obj)
 	mkdir -p build
 	cc $(flags_link) -o $@ $^
 
+# Compile rule.
+#
 build/%.c-$(build).o: %.c
 	mkdir -p build
 	cc -c $(flags_compile) -o $@ $<
 
 
-# Clean rule.
+# Clean rules.
 #
 .PHONY: clean
 clean:
