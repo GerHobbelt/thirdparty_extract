@@ -133,31 +133,46 @@ static int str_cat(char** p, const char* s)
 
 
 
-
-
-
-
-
-
-
-
-
 /* A simple string struct that reallocs as required. */
-typedef struct extract_string_t
+typedef struct
 {
     char*   chars;      /* NULL or zero-terminated. */
     int     chars_num;  /* Length of string pointed to by .chars. */
 } extract_string_t;
 
-void extract_string_init(extract_string_t* string);
+static void extract_string_init(extract_string_t* string)
+{
+    string->chars = NULL;
+    string->chars_num = 0;
+}
 
-void extract_string_free(extract_string_t* string);
+static void extract_string_free(extract_string_t* string)
+{
+    free(string->chars);
+    extract_string_init(string);
+}
 
-int extract_string_catl(extract_string_t* string, const char* s, int s_len);
+static int extract_string_catl(extract_string_t* string, const char* s, int s_len)
+{
+    char* chars = realloc(string->chars, string->chars_num + s_len + 1);
+    if (!chars) return -1;
+    memcpy(chars + string->chars_num, s, s_len);
+    chars[string->chars_num + s_len] = 0;
+    string->chars = chars;
+    string->chars_num += s_len;
+    return 0;
+}
 
-int extract_string_catc(extract_string_t* string, char c);
+static int extract_string_catc(extract_string_t* string, char c)
+{
+    return extract_string_catl(string, &c, 1);
+}
 
-int extract_string_cat(extract_string_t* string, const char* s);
+static int extract_string_cat(extract_string_t* string, const char* s)
+{
+    return extract_string_catl(string, s, strlen(s));
+}
+
 
 typedef struct
 {
@@ -240,63 +255,12 @@ typedef struct extract_page_t
 
 /* Array of pointers to pages.
 */
-typedef struct extract_document_t
+struct extract_document_t
 {
     extract_page_t**    pages;
     int                 pages_num;
-} extract_document_t;
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void extract_string_init(extract_string_t* string)
-{
-    string->chars = NULL;
-    string->chars_num = 0;
-}
-
-void extract_string_free(extract_string_t* string)
-{
-    free(string->chars);
-    extract_string_init(string);
-}
-
-int extract_string_catl(extract_string_t* string, const char* s, int s_len)
-{
-    char* chars = realloc(string->chars, string->chars_num + s_len + 1);
-    if (!chars) return -1;
-    memcpy(chars + string->chars_num, s, s_len);
-    chars[string->chars_num + s_len] = 0;
-    string->chars = chars;
-    string->chars_num += s_len;
-    return 0;
-}
-
-int extract_string_catc(extract_string_t* string, char c)
-{
-    return extract_string_catl(string, &c, 1);
-}
-
-int extract_string_cat(extract_string_t* string, const char* s)
-{
-    return extract_string_catl(string, s, strlen(s));
-}
 
 /* Reads bytes until EOF and returns zero-terminated string in memory allocated
 with realloc(). If error, we return NULL with errno set. */
@@ -2214,8 +2178,8 @@ static int extract_page_span_end_clean(extract_page_t* page)
 
 int extract_intermediate_to_document(
         const char*             path,
-        extract_document_t**    o_document,
-        int                     autosplit
+        int                     autosplit,
+        extract_document_t**    o_document
         )
 {
     int ret = -1;

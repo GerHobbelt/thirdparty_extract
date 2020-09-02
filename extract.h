@@ -1,42 +1,56 @@
 #pragma once
 
-/*
+/* Functions for extracting paragraphs of text from intermediate format data
+created by these commands:
+
+    mutool draw -F xmltext ...
+    gs -sDEVICE=txtwrite -dTextFormat=4 ... 
+
 Unless otherwise stated, all functions return 0 on success or -1 with errno
 set.
 */
 
 
+/* Contains characters, spans, lines, paragraphs and pages. */
 typedef struct extract_document_t extract_document_t;
+
+/* Frees a document created by extract_intermediate_to_document().
+*/
 void extract_document_free(extract_document_t* document);
 
 
 /* Reads from intermediate format file into a document.
 
 path;
-    Path of file containg intermediate format.
-document:
-    Is populated with pages from intermediate format. Each page will have
-    spans, but no lines or paragraphs; use extract_document_join() to create
-    lines and paragraphs.
+    Path of file containg intermediate format. Intermediate format can be
+    created with these commands:
+        mutool draw -F xmltext ...
+        gs -sDEVICE=txtwrite -dTextFormat=4 ...
+o_document:
+    Out-param: *o_document is set to internal data populated with pages from
+    intermediate format. Each page will have spans, but no lines or paragraphs;
+    use extract_document_join() to create lines and paragraphs.
+
+    *o_document should be freed with extract_document_free().
 autosplit:
     If true, we split spans when the y coordinate changes, in order to stress
     out joining algorithms.
 
-Returns with *document's pages containing spans, but no lines or paragraphs.
+Returns with *o_document set. On error *o_document=NULL.
 */
 int extract_intermediate_to_document(
         const char*             path,
-        extract_document_t**    o_document,
-        int                     autosplit
+        int                     autosplit,
+        extract_document_t**    o_document
         );
 
-/* Finds lines and paragraphs in document (e.g. from
-extract_intermediate_to_document()).
+/* Finds lines and paragraphs in document.
 
 document:
-    Should have spans, but no lines or paragraphs.
+    Should have spans, but no lines or paragraphs, e.g. from
+    extract_intermediate_to_document().
     
-Returns with *document containing lines and paragraphs.
+Returns with document containing lines and paragraphs.
 */
 int extract_document_join(extract_document_t* document);
 
@@ -45,10 +59,14 @@ int extract_document_join(extract_document_t* document);
 
 document:
     Should contain paragraphs e.g. from extract_document_join().
-content:
-    Out-param. On return will contain docx content.
 spacing:
     If non-zero, we add extra vertical space between paragraphs.
+o_content:
+    Out param: set to point to zero-terminated text in buffer from malloc().
+o_content_length:
+    Out-param: set to length of returned string.
+
+On error *o_content=NULL and *o_content_length=0.
 */
 int extract_document_to_docx_content(
         extract_document_t* document,
@@ -63,13 +81,16 @@ new .docx file.
 
 content:
     E.g. from extract_document_to_docx_content().
+content_length:
+    Length of content.
 path_template:
     Name of .docx file to use as a template.
-path_out:
-    Name of .docx file to create. Must not contain single-quote character.
 preserve_dir:
     If true, we don't delete the temporary directory <path_out>.dir containing
     unzipped .docx content.
+path_out:
+    Name of .docx file to create. Must not contain single-quote character or
+    '..'.
 
 Returns 0 on success or -1 with errno set.
 

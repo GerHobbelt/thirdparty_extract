@@ -136,7 +136,7 @@ int main(int argc, char** argv)
         goto end;
     }
 
-    if (extract_intermediate_to_document(input_path, &document, autosplit)) {
+    if (extract_intermediate_to_document(input_path, autosplit, &document)) {
         printf("Failed to read 'raw' output from: %s\n", input_path);
         goto end;
     }
