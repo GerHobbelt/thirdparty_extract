@@ -2,7 +2,7 @@
     #include "memento.h"
 #endif
 
-#include "autostring.h"
+#include "astring.h"
 #include "extract.h"
 
 #include <assert.h>
@@ -242,8 +242,8 @@ static const char* span_string(span_t* span)
         x1 = span->chars[span->chars_num-1].x;
         y1 = span->chars[span->chars_num-1].y;
     }
-    static string_t ret = {0};
-    string_free(&ret);
+    static extract_astring_t ret = {0};
+    extract_astring_free(&ret);
     char buffer[200];
     snprintf(buffer, sizeof(buffer),
             "span chars_num=%i (%c:%f,%f)..(%c:%f,%f) font=%s:(%f,%f) wmode=%i chars_num=%i: ",
@@ -256,7 +256,7 @@ static const char* span_string(span_t* span)
             span->wmode,
             span->chars_num
             );
-    string_cat(&ret, buffer);
+    extract_astring_cat(&ret, buffer);
     int i;
     for (i=0; i<span->chars_num; ++i) {
         snprintf(
@@ -267,28 +267,28 @@ static const char* span_string(span_t* span)
                 span->chars[i].x,
                 span->chars[i].adv
                 );
-        string_cat(&ret, buffer);
+        extract_astring_cat(&ret, buffer);
     }
-    string_cat(&ret, ": ");
-    string_catc(&ret, '"');
+    extract_astring_cat(&ret, ": ");
+    extract_astring_catc(&ret, '"');
     for (i=0; i<span->chars_num; ++i) {
-        string_catc(&ret, span->chars[i].ucs);
+        extract_astring_catc(&ret, span->chars[i].ucs);
     }
-    string_catc(&ret, '"');
+    extract_astring_catc(&ret, '"');
     return ret.chars;
 }
 
 /* Returns static string containing brief info about span_t. */
 static const char* span_string2(span_t* span)
 {
-    static string_t ret = {0};
-    string_free(&ret);
-    string_catc(&ret, '"');
+    static extract_astring_t ret = {0};
+    extract_astring_free(&ret);
+    extract_astring_catc(&ret, '"');
     int i;
     for (i=0; i<span->chars_num; ++i) {
-        string_catc(&ret, span->chars[i].ucs);
+        extract_astring_catc(&ret, span->chars[i].ucs);
     }
-    string_catc(&ret, '"');
+    extract_astring_catc(&ret, '"');
     return ret.chars;
 }
 
@@ -378,15 +378,15 @@ typedef struct
 /* Returns static string containing info about line_t. */
 static const char* line_string(line_t* line)
 {
-    static string_t ret = {0};
+    static extract_astring_t ret = {0};
     char    buffer[32];
-    string_free(&ret);
+    extract_astring_free(&ret);
     snprintf(buffer, sizeof(buffer), "line spans_num=%i:", line->spans_num);
-    string_cat(&ret, buffer);
+    extract_astring_cat(&ret, buffer);
     int i;
     for (i=0; i<line->spans_num; ++i) {
-        string_cat(&ret, " ");
-        string_cat(&ret, span_string(line->spans[i]));
+        extract_astring_cat(&ret, " ");
+        extract_astring_cat(&ret, span_string(line->spans[i]));
     }
     return ret.chars;
 }
@@ -395,19 +395,19 @@ static const char* line_string(line_t* line)
 /* Returns static string containing brief info about line_t. */
 static const char* line_string2(line_t* line)
 {
-    static string_t ret = {0};
+    static extract_astring_t ret = {0};
     char    buffer[256];
-    string_free(&ret);
+    extract_astring_free(&ret);
     snprintf(buffer, sizeof(buffer), "line x=%f y=%f spans_num=%i:",
             line->spans[0]->chars[0].x,
             line->spans[0]->chars[0].y,
             line->spans_num
             );
-    string_cat(&ret, buffer);
+    extract_astring_cat(&ret, buffer);
     int i;
     for (i=0; i<line->spans_num; ++i) {
-        string_cat(&ret, " ");
-        string_cat(&ret, span_string2(line->spans[i]));
+        extract_astring_cat(&ret, " ");
+        extract_astring_cat(&ret, span_string2(line->spans[i]));
     }
     return ret.chars;
 }
@@ -459,14 +459,14 @@ typedef struct
 
 static const char* paragraph_string(paragraph_t* paragraph)
 {
-    static string_t ret = {0};
-    string_free(&ret);
-    string_cat(&ret, "paragraph: ");
+    static extract_astring_t ret = {0};
+    extract_astring_free(&ret);
+    extract_astring_cat(&ret, "paragraph: ");
     if (paragraph->lines_num) {
-        string_cat(&ret, line_string2(paragraph->lines[0]));
+        extract_astring_cat(&ret, line_string2(paragraph->lines[0]));
         if (paragraph->lines_num > 1) {
-            string_cat(&ret, "..");
-            string_cat(
+            extract_astring_cat(&ret, "..");
+            extract_astring_cat(
                     &ret,
                     line_string2(paragraph->lines[paragraph->lines_num-1])
                     );
@@ -669,7 +669,7 @@ typedef struct {
     char*               name;
     xml_attribute_t*    attributes;
     int                 attributes_num;
-    string_t    text;
+    extract_astring_t    text;
 } xml_tag_t;
 
 /* Returns pointer to value of specified attribute, or NULL if not found. */
@@ -738,7 +738,7 @@ static void xml_tag_init(xml_tag_t* tag)
     tag->name = NULL;
     tag->attributes = NULL;
     tag->attributes_num = 0;
-    string_init(&tag->text);
+    extract_astring_init(&tag->text);
 }
 
 static void xml_tag_free(xml_tag_t* tag)
@@ -751,7 +751,7 @@ static void xml_tag_free(xml_tag_t* tag)
         free(attribute->value);
     }
     free(tag->attributes);
-    string_free(&tag->text);
+    extract_astring_free(&tag->text);
     xml_tag_init(tag);
 }
 
@@ -959,7 +959,7 @@ static int xml_pparse_next(FILE* in, xml_tag_t* out)
     for(;;) {
         c = getc(in);
         if (c == '<' || feof(in)) break;
-        if (string_catc(&out->text, c)) goto end;
+        if (extract_astring_catc(&out->text, c)) goto end;
     }
 
     ret = 0;
@@ -1086,20 +1086,20 @@ static int s_matrix_read4(const char* text, matrix_t* matrix)
 sensible order to create valid content - e.g. don't call docx_paragraph_start()
 twice without intervening call to docx_paragraph_finish(). */
 
-static int docx_paragraph_start(string_t* content)
+static int docx_paragraph_start(extract_astring_t* content)
 {
-    return string_cat(content, "\n\n<w:p>");
+    return extract_astring_cat(content, "\n\n<w:p>");
 }
 
-static int docx_paragraph_finish(string_t* content)
+static int docx_paragraph_finish(extract_astring_t* content)
 {
-    return string_cat(content, "\n</w:p>");
+    return extract_astring_cat(content, "\n</w:p>");
 }
 
 /* Starts a new run. Caller must ensure that docx_run_finish() was called to
 terminate any previous run. */
 static int docx_run_start(
-        string_t* content,
+        extract_astring_t* content,
         const char* font_name,
         float font_size,
         int bold,
@@ -1107,49 +1107,49 @@ static int docx_run_start(
         )
 {
     int e = 0;
-    if (!e) e = string_cat(content, "\n<w:r><w:rPr><w:rFonts w:ascii=\"");
-    if (!e) e = string_cat(content, font_name);
-    if (!e) e = string_cat(content, "\" w:hAnsi=\"");
-    if (!e) e = string_cat(content, font_name);
-    if (!e) e = string_cat(content, "\"/>");
-    if (!e && bold) e = string_cat(content, "<w:b/>");
-    if (!e && italic) e = string_cat(content, "<w:i/>");
+    if (!e) e = extract_astring_cat(content, "\n<w:r><w:rPr><w:rFonts w:ascii=\"");
+    if (!e) e = extract_astring_cat(content, font_name);
+    if (!e) e = extract_astring_cat(content, "\" w:hAnsi=\"");
+    if (!e) e = extract_astring_cat(content, font_name);
+    if (!e) e = extract_astring_cat(content, "\"/>");
+    if (!e && bold) e = extract_astring_cat(content, "<w:b/>");
+    if (!e && italic) e = extract_astring_cat(content, "<w:i/>");
     {
         char   font_size_text[32];
         if (0) font_size = 10;
 
-        if (!e) e = string_cat(content, "<w:sz w:val=\"");
+        if (!e) e = extract_astring_cat(content, "<w:sz w:val=\"");
         snprintf(font_size_text, sizeof(font_size_text), "%f", font_size * 2);
-        string_cat(content, font_size_text);
-        string_cat(content, "\"/>");
+        extract_astring_cat(content, font_size_text);
+        extract_astring_cat(content, "\"/>");
 
-        if (!e) e = string_cat(content, "<w:szCs w:val=\"");
+        if (!e) e = extract_astring_cat(content, "<w:szCs w:val=\"");
         snprintf(font_size_text, sizeof(font_size_text), "%f", font_size * 1.5);
-        string_cat(content, font_size_text);
-        string_cat(content, "\"/>");
+        extract_astring_cat(content, font_size_text);
+        extract_astring_cat(content, "\"/>");
     }
-    if (!e) e = string_cat(content, "</w:rPr><w:t xml:space=\"preserve\">");
+    if (!e) e = extract_astring_cat(content, "</w:rPr><w:t xml:space=\"preserve\">");
     assert(!e);
     return e;
 
 }
-static int docx_run_finish(string_t* content)
+static int docx_run_finish(extract_astring_t* content)
 {
-    return string_cat(content, "</w:t></w:r>");
+    return extract_astring_cat(content, "</w:t></w:r>");
 }
 
-static int docx_char_append_string(string_t* content, char* text)
+static int docx_char_append_string(extract_astring_t* content, char* text)
 {
-    return string_cat(content, text);
+    return extract_astring_cat(content, text);
 }
 
-static int docx_char_append_char(string_t* content, char c)
+static int docx_char_append_char(extract_astring_t* content, char c)
 {
-    return string_catc(content, c);
+    return extract_astring_catc(content, c);
 }
 
 /* Append an empty paragraph. */
-static int docx_paragraph_empty(string_t* content)
+static int docx_paragraph_empty(extract_astring_t* content)
 {
     int e = -1;
     if (docx_paragraph_start(content)) goto end;
@@ -1173,7 +1173,7 @@ static int docx_paragraph_empty(string_t* content)
 }
 
 /* Removes last <len> chars. */
-static int docx_char_truncate(string_t* content, int len)
+static int docx_char_truncate(extract_astring_t* content, int len)
 {
     assert(len <= content->chars_num);
     content->chars_num -= len;
@@ -1182,7 +1182,7 @@ static int docx_char_truncate(string_t* content, int len)
 }
 
 /* Removes last char if it is <c>. */
-static int docx_char_truncate_if(string_t* content, char c)
+static int docx_char_truncate_if(extract_astring_t* content, char c)
 {
     if (content->chars_num && content->chars[content->chars_num-1] == c) {
         docx_char_truncate(content, 1);
@@ -2402,8 +2402,8 @@ int extract_document_to_docx_content(
 {
     int ret = -1;
     
-    string_t    content;
-    string_init(&content);
+    extract_astring_t    content;
+    extract_astring_init(&content);
 
     /* Write paragraphs into <content>. */
     int p;
@@ -2529,7 +2529,7 @@ int extract_document_to_docx_content(
     end:
 
     if (ret) {
-        string_free(&content);
+        extract_astring_free(&content);
         *o_content = NULL;
         *o_content_length = 0;
     }

@@ -39,7 +39,7 @@ endif
 
 # Source code.
 #
-src = extract-exe.c extract.c autostring.c
+src = extract-exe.c extract.c astring.c
 
 ifeq ($(build),memento)
     src += memento.c
