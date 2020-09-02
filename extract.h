@@ -1,4 +1,5 @@
-#pragma once
+#ifndef ARITFEX_EXTRACT_H
+#define ARITFEX_EXTRACT_H
 
 /* Functions for extracting paragraphs of text from intermediate format data
 created by these commands:
@@ -43,6 +44,7 @@ int extract_intermediate_to_document(
         int                     autosplit,
         extract_document_t**    o_document
         );
+
 
 /* Finds lines and paragraphs in document.
 
@@ -97,9 +99,11 @@ Returns 0 on success or -1 with errno set.
 Uses the 'zip' and 'unzip' commands internally.
 */
 int extract_docx_content_to_docx(
-        const char*         content,
-        int                 content_length,
-        const char*         path_template,
-        const char*         path_out,
-        int                 preserve_dir
+        const char* content,
+        int         content_length,
+        const char* path_template,
+        const char* path_out,
+        int         preserve_dir
         );
+
+#endif

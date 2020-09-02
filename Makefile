@@ -11,7 +11,7 @@
 build = debug
 
 flags_link      = -W -Wall -lm
-flags_compile   = -W -Wall -Werror -MMD -MP
+flags_compile   = -W -Wall -Wmissing-declarations -Wmissing-prototypes -Werror -MMD -MP
 
 # We assume that mutool and gs are available at hard-coded paths.
 #
