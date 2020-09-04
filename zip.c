@@ -1,4 +1,7 @@
+#include "zip.h"
+
 #include <zlib.h>
+/* For crc32(). */
 
 #include <assert.h>
 #include <errno.h>
@@ -19,13 +22,13 @@ typedef struct
     
 } extract_zip_cd_file_t;
 
-typedef struct
+struct extract_zip_t
 {
     FILE*                   stream;
     extract_zip_cd_file_t*  cd_files;
     int                     cd_files_num;
     
-} extract_zip_t;
+};
 
 int extract_zip_open(
         const char* path,
@@ -238,7 +241,8 @@ int main(int argc, char** argv)
     extract_zip_t* zip;
     if (extract_zip_open("ziptest.zip", "w", &zip)) goto end;
     const char hw[] = "hello world\n";
-    if (extract_zip_write_file(zip, hw, sizeof(hw)-1, "hw.txt")) goto end;
+    if (extract_zip_write_file(zip, hw, sizeof(hw)-1, "ziptest/hw.txt")) goto end;
+    if (extract_zip_write_file(zip, hw, sizeof(hw)-1, "ziptest/foo/hw2.txt")) goto end;
     if (extract_zip_close(zip)) goto end;
     
     e = 0;
