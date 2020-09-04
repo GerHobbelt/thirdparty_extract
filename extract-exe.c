@@ -1,3 +1,5 @@
+/* Command-line for extract_ API. */
+
 #include "extract.h"
 
 #include <assert.h>
@@ -125,13 +127,8 @@ int main(int argc, char** argv)
         errno = EINVAL;
         goto end;
     }
-    if (!docx_out_path) {
-        printf("-o <docx-path> not specified.\n");
-        errno = EINVAL;
-        goto end;
-    }
-    if (!docx_template_path) {
-        printf("-t <docx-template> not specified.\n");
+    if (docx_out_path && !docx_template_path) {
+        printf("Must specify '-t <docx-template>' with -o.\n");
         errno = EINVAL;
         goto end;
     }
@@ -167,16 +164,18 @@ int main(int argc, char** argv)
         fclose(f);
     }
     
-    printf("Creating .docx file: %s\n", docx_out_path);
-    if (extract_docx_content_to_docx(
-            content,
-            content_length,
-            docx_template_path,
-            docx_out_path,
-            preserve_dir
-            )) {
-        printf("Failed to create .docx file: %s\n", docx_out_path);
-        goto end;
+    if (docx_out_path) {
+        printf("Creating .docx file: %s\n", docx_out_path);
+        if (extract_docx_content_to_docx(
+                content,
+                content_length,
+                docx_template_path,
+                docx_out_path,
+                preserve_dir
+                )) {
+            printf("Failed to create .docx file: %s\n", docx_out_path);
+            goto end;
+        }
     }
 
     e = 0;
