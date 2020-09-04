@@ -39,7 +39,7 @@ endif
 
 # Source code.
 #
-src = extract-exe.c extract.c astring.c docx.c outf.c xml.c
+src = extract-exe.c extract.c astring.c docx.c outf.c xml.c zip.c
 
 ifeq ($(build),memento)
     src += memento.c
@@ -119,7 +119,7 @@ exe: $(exe)
 #
 $(exe): $(obj)
 	mkdir -p build
-	cc $(flags_link) -o $@ $^
+	cc $(flags_link) -o $@ $^ -lz
 
 # Compile rule.
 #

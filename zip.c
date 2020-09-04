@@ -233,6 +233,7 @@ int extract_zip_close(extract_zip_t* zip)
     return e;
 }
 
+/*
 int main(int argc, char** argv)
 {
     (void) argc;
@@ -255,3 +256,4 @@ int main(int argc, char** argv)
     }
     return 0;
 }
+*/
