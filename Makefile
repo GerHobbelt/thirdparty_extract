@@ -49,7 +49,7 @@ endif
 # Build files.
 #
 exe = build/extract-$(build).exe
-obj = $(addprefix build/, $(src:.c=.c-$(build).o))
+obj = $(addprefix build/, $(src:.c=.c-$(build).o)) build/docx_template.c-$(build).o
 dep = $(obj:.o=.d)
 
 
@@ -127,6 +127,10 @@ build/%.c-$(build).o: %.c
 	mkdir -p build
 	cc -c $(flags_compile) -o $@ $<
 
+build/%.c-$(build).o: build/%.c
+	mkdir -p build
+	cc -c $(flags_compile) -o $@ $<
+
 
 # Clean rules.
 #
@@ -137,6 +141,12 @@ clean:
 clean-all:
 	rm -r build test 
 
+
+# Rule for build/docx_template.c.
+#
+build/docx_template.c: .ALWAYS
+	./docx_template_build.py -i template.docx -o build/docx_template
+.ALWAYS:
 
 # Copy generated files to website.
 #
