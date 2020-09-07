@@ -6,7 +6,7 @@
 
 /* Functions for creating zip files.
 
-Zip files are currenlty uncompressed only.
+Content is uncompressed.
 
 Unless otherwise stated, all functions return 0 on success or -1 with errno
 set.

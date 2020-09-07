@@ -268,7 +268,7 @@ int extract_docx_content_to_docx(
     return e;
 }
 
-int extract_template_docx_content_to_docx(
+int extract_docx_content_to_docx_template(
         const char* content,
         int         content_length,
         const char* path_template,

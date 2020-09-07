@@ -162,7 +162,7 @@ int main(int argc, char** argv)
     if (docx_out_path) {
         printf("Creating .docx file: %s\n", docx_out_path);
         if (docx_template_path) {
-            if (extract_template_docx_content_to_docx(
+            if (extract_docx_content_to_docx_template(
                     content,
                     content_length,
                     docx_template_path,

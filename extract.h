@@ -87,6 +87,8 @@ int extract_docx_content_to_docx(
 /* Writes docx content (e.g. from extract_document_to_docx_content()) into a
 new .docx file.
 
+Uses internal template docx files.
+
 content:
     E.g. from extract_document_to_docx_content().
 content_length:
@@ -96,7 +98,7 @@ path_out:
 */
 
 
-int extract_template_docx_content_to_docx(
+int extract_docx_content_to_docx_template(
         const char* content,
         int         content_length,
         const char* path_template,
@@ -104,7 +106,9 @@ int extract_template_docx_content_to_docx(
         int         preserve_dir
         );
 /* Writes docx content (e.g. from extract_document_to_docx_content()) into a
-new .docx file.
+new .docx file using a provided template document.
+
+Uses the 'zip' and 'unzip' commands internally.
 
 content:
     E.g. from extract_document_to_docx_content().
@@ -118,8 +122,6 @@ preserve_dir:
 path_out:
     Name of .docx file to create. Must not contain single-quote character or
     '..'.
-
-Uses the 'zip' and 'unzip' commands internally.
 */
 
 #endif
