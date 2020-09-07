@@ -4,7 +4,9 @@ twice without intervening call to docx_paragraph_finish(). */
 
 #include "astring.h"
 #include "docx.h"
+#include "build/docx_template.h"
 #include "outf.h"
+#include "zip.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -197,6 +199,48 @@ static char* read_all(FILE* in)
     }
 }
 
+
+
+static int extract_docx_content_replace(
+        const char* original,
+        const char* content,
+        char**      o_out
+        )
+/*
+original:
+    Contents of word/document.xml from template.
+content:
+    Text to insert into <original>
+o_out:
+    Out-param, points to zero-terminated text allocated with malloc().
+*/
+{
+    int e = -1;
+    const char* original_marker = "<w:body>";
+    const char* original_pos = strstr(original, original_marker);
+    if (!original_pos) {
+        outf("error: could not find '%s' in docx content",
+                original_marker);
+        errno = ESRCH;
+        goto end;
+    }
+    original_pos += strlen(original_marker);
+
+    extract_astring_t   out;
+    extract_astring_init(&out);
+    if (extract_astring_catl(&out, original, original_pos - original)) goto end;
+    if (extract_astring_cat(&out, content)) goto end;
+    if (extract_astring_cat(&out, original_pos)) goto end;
+    
+    *o_out = out.chars;
+    out.chars = NULL;
+    e = 0;
+    
+    end:
+    return e;
+}
+
+
 int extract_docx_content_to_docx(
         const char* content,
         int         content_length,
@@ -207,6 +251,7 @@ int extract_docx_content_to_docx(
 {
     assert(path_out);
     assert(path_template);
+    assert(content_length = strlen(content));
 
     /* This gets set to zero only if everything succeeds. */
     int ret = -1;
@@ -258,6 +303,13 @@ int extract_docx_content_to_docx(
     if (fclose(f)) goto end;
     f = NULL;
 
+    char*   content2;
+    if (extract_docx_content_replace(original, content, &content2)) goto end;
+    f = fopen(word_document_xml, "w");
+    if (fwrite(content2, strlen(content2), 1 /*nmemb*/, f) != 1) goto end;
+    if (fclose(f) < 0) goto end;
+    f = NULL;
+    #if 0
     const char* original_marker = "<w:body>";
     const char* original_pos = strstr(original, original_marker);
     if (!original_pos) {
@@ -285,6 +337,7 @@ int extract_docx_content_to_docx(
         goto end;
     }
     f = NULL;
+    #endif
 
     outf("Zipping tempdir to create %s", path_out);
     const char* path_out_leaf = strrchr(path_out, '/');
