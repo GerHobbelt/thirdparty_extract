@@ -241,6 +241,7 @@ o_out:
 }
 
 
+
 int extract_docx_content_to_docx(
         const char* content,
         int         content_length,
@@ -252,7 +253,7 @@ int extract_docx_content_to_docx(
     assert(path_out);
     assert(path_template);
     assert(content_length = strlen(content));
-
+    
     /* This gets set to zero only if everything succeeds. */
     int ret = -1;
 
@@ -260,6 +261,19 @@ int extract_docx_content_to_docx(
     char*   word_document_xml = NULL;
     char*   original = NULL;
     FILE*   f = NULL;
+
+    if (1) {
+        char* content2;
+        if (extract_docx_content_replace(extract_docx_word_document_xml, content, &content2)) goto end;
+        
+        extract_zip_t*  zip;
+        if (extract_zip_open(path_out, "w", &zip)) goto end;
+        
+        if (extract_docx_write(zip, content2, strlen(content2))) goto end;
+        if (extract_zip_close(zip)) goto end;
+        ret = 0;
+        goto end;
+    }
 
     int e;
 
