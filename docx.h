@@ -1,6 +1,8 @@
 #ifndef ARTIFEX_DOCX_H
 #define ARTIFEX_DOCX_H
 
+/* Only for internal use by extract code.  */
+
 /* Things for creating .docx files. */
 
 int extract_docx_run_start(

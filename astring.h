@@ -1,6 +1,8 @@
 #ifndef ARTIFEX_AUTOSTRING_XML
 #define ARTIFEX_AUTOSTRING_XML
 
+/* Only for internal use by extract code.  */
+
 /* A simple string struct that reallocs as required. */
 typedef struct
 {

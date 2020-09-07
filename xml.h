@@ -1,6 +1,8 @@
 #ifndef ARTIFEX_EXTRACT_XML
 #define ARTIFEX_EXTRACT_XML
 
+/* Only for internal use by extract code.  */
+
 #include "astring.h"
 
 #include <stdio.h>

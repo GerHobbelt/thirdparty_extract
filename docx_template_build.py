@@ -1,5 +1,19 @@
 #! /usr/bin/env python3
 
+'''
+Creates C code for creating .docx files using internal template .docx content.
+
+Args:
+
+    -i <docx-path>
+        Set template .docx file to extract from.
+
+    -o <out-path>
+        Set name of output files.
+        
+        We write to <out-path>.c and <out-path>.h.
+'''
+
 import io
 import os
 import sys
@@ -17,25 +31,43 @@ def read(path):
         return f.read()
 
 def write(text, path):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
     with open(path, 'w') as f:
         f.write(text)
 
-if __name__ == '__main__':
+def path_unsafe(path):
+    if '"' in path or "'" in path or '..' in path or ' ' in path:
+        return True
+
+def main():
+    path_in = None
+    path_out = None
     args = iter(sys.argv[1:])
     while 1:
         try: arg = next(args)
         except StopIteration: break
-        if arg == '-i':
+        if arg == '-h' or arg == '--help':
+            print(__doc__)
+            return
+        elif arg == '-i':
             path_in = next(args)
         elif arg == '-o':
             path_out = next(args)
         else:
             assert 0
     
+    if not path_in:
+        raise Exception('Need to specify -i <docx-path>')
+    if not path_in:
+        raise Exception('Need to specify -o <out-path>')
+    
+    if path_unsafe(path_in):
+        raise Exception(f'Cannot use path_in={path_in!r} because unsafe for shell commands.')
+    if path_unsafe(path_out):
+        raise Exception(f'Cannot use path_out={path_out!r} because unsafe for shell commands.')
     path_temp = f'{path_in}.dir'
-    if '"' in path_temp or '..' in path_temp or not path_temp.endswith('.dir'):
-        raise Exception(f'path_temp={path_temp!r} contains double-quote')
     os.system(f'rm -r "{path_temp}"')
     system(f'unzip -d {path_temp} {path_in}')
     
@@ -107,3 +139,5 @@ if __name__ == '__main__':
     out.write(f'#endif\n')
     write(out.getvalue(), f'{path_out}.h')
     
+if __name__ == '__main__':
+    main()

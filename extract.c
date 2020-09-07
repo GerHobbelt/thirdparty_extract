@@ -524,6 +524,9 @@ static page_t* document_page_append(extract_document_t* document)
 void extract_document_free(extract_document_t* document)
 {
     int p;
+    if (!document) {
+        return;
+    }
     for (p=0; p<document->pages_num; ++p) {
         page_t* page = document->pages[p];
         page_free(page);

@@ -1,6 +1,8 @@
 #ifndef ARTIFEX_OUTF_H
 #define ARTIFEX_OUTF_H
 
+/* Only for internal use by extract code.  */
+
 /* Simple printf-style debug output. */
 void (outf)(
         const char* file, int line,

@@ -290,8 +290,13 @@ int extract_docx_content_to_docx_template(
 
     int e;
 
-    if (strchr(path_out, '\'')) {
-        outf("path_out contains single-quote character: %s", path_out);
+    if (0
+            || strstr(path_out, "..")
+            || strchr(path_out, '\'')
+            || strchr(path_out, '"')
+            || strchr(path_out, ' ')
+            ) {
+        outf("path_out is unsafe: %s", path_out);
         errno = EINVAL;
         goto end;
     }

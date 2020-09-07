@@ -1,6 +1,8 @@
 #ifndef ARTIFEX_EXTRACT_ZIP
 #define ARTIFEX_EXTRACT_ZIP
 
+/* Only for internal use by extract code.  */
+
 #include <stddef.h>
 
 

@@ -1,4 +1,4 @@
-/* Command-line for extract_ API. */
+/* Command-line programme for extract_ API. */
 
 #include "extract.h"
 
@@ -73,19 +73,21 @@ int main(int argc, char** argv)
                     "    -i <intermediate-path>\n"
                     "        Path of XML file containing intermediate text spans.\n"
                     "    -o <docx-path>\n"
-                    "        Output .docx path.\n"
+                    "        If specified, we generate the specified .docx file.\n"
                     "    --o-content <path>\n"
                     "        If specified, we write raw .docx content to <path>; this is the\n"
                     "        text that we embed inside the template word/document.xml file\n"
                     "        when generating the .docx file.\n"
                     "    -p 0|1\n"
-                    "        If 1, we preserve the uncompressed <docx-path>.lib/ directory.\n"
+                    "        If 1 and -t <docx-template> is specified, we preserve the\n"
+                    "        uncompressed <docx-path>.lib/ directory.\n"
                     "    -s 0|1\n"
                     "        If 1, we insert extra vertical space between paragraphs and extra\n"
                     "        vertical space between paragraphs that had different ctm matrices\n"
                     "        in the original document.\n"
                     "    -t <docx-template>\n"
-                    "        Name of docx file to use as template.\n"
+                    "        If specified we use <docx-template> as template. Otheerwise we use"
+                    "        an internal template.\n"
                     );
             if (i + 1 == argc) {
                 e = 0;

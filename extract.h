@@ -120,8 +120,9 @@ preserve_dir:
     If true, we don't delete the temporary directory <path_out>.dir containing
     unzipped .docx content.
 path_out:
-    Name of .docx file to create. Must not contain single-quote character or
-    '..'.
+    Name of .docx file to create. Must not contain single-quote, double quote,
+    space or ".." sequence - these will force EINVAL error because they could
+    make internal shell commands unsafe.
 */
 
 #endif
