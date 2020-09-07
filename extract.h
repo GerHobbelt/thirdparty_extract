@@ -17,7 +17,7 @@ typedef struct extract_document_t extract_document_t;
 /* Contains characters, spans, lines, paragraphs and pages. */
 
 void extract_document_free(extract_document_t* document);
-/* Frees a document.
+/* Frees a document. Does nothing if <document> is NULL.
 */
 
 
