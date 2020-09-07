@@ -21,16 +21,25 @@ import textwrap
 
 
 def system(command):
+    '''
+    Like os.system() but raises exception if command fails.
+    '''
     e = os.system(command)
     if e:
         print(f'command failed: {command}')
         assert 0
 
 def read(path):
+    '''
+    Returns contents of file.
+    '''
     with open(path) as f:
         return f.read()
 
 def write(text, path):
+    '''
+    Writes text to file.
+    '''
     parent = os.path.dirname(path)
     if parent:
         os.makedirs(parent, exist_ok=True)
@@ -72,6 +81,8 @@ def main():
     system(f'unzip -d {path_temp} {path_in}')
     
     out_c1 = io.StringIO()
+    out_c1.write(f'/* THIS IS AUTO-GENERATED CODE, DO NOT EDIT. */\n')
+    out_c1.write(f'\n')
     out_c1.write(f'#include "{os.path.basename(path_out)}.h"\n')
     out_c1.write(f'\n')
     
@@ -94,6 +105,9 @@ def main():
             text = f'"{text}"'
             
             if name == 'word/document.xml':
+                # We make the contents of word/document.xml available as global
+                # extract_docx_word_document_xml, and our generated C code
+                # substitutes with the <word_document_xml> arg.
                 out_c2.write(f'char extract_docx_word_document_xml[] = {text};\n')
                 out_c2.write(f'int  extract_docx_word_document_xml_len = sizeof(extract_docx_word_document_xml) - 1;\n')
                 out_c2.write(f'\n')
@@ -127,6 +141,8 @@ def main():
     out.write(f'#ifndef EXTRACT_DOCX_TEMPLATE_H\n')
     out.write(f'#define EXTRACT_DOCX_TEMPLATE_H\n')
     out.write(f'\n')
+    out.write(f'/* THIS IS AUTO-GENERATED CODE, DO NOT EDIT. */\n')
+    out.write(f'\n')
     out.write(f'#include "../zip.h"\n')
     out.write(f'\n')
     out.write(f'extern char extract_docx_word_document_xml[];\n')
@@ -134,7 +150,8 @@ def main():
     out.write(f'/* Contents of internal .docx template\'s word/document.xml. */\n')
     out.write(f'\n')
     out.write(f'int extract_docx_write(extract_zip_t* zip, const char* word_document_xml, int word_document_xml_length);\n')
-    out.write(f'/* Writes internal template .docx items to <zip>, inserting <word_document_xml> into word/document.xml. */\n')
+    out.write(f'/* Writes internal template .docx items to <zip>, using <word_document_xml>\n')
+    out.write(f'instead of the internal template\'s word/document.xml. */\n')
     out.write(f'\n')
     out.write(f'#endif\n')
     write(out.getvalue(), f'{path_out}.h')
