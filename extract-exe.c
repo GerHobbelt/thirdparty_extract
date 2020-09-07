@@ -127,12 +127,7 @@ int main(int argc, char** argv)
         errno = EINVAL;
         goto end;
     }
-    if (docx_out_path && !docx_template_path) {
-        printf("Must specify '-t <docx-template>' with -o.\n");
-        errno = EINVAL;
-        goto end;
-    }
-
+    
     if (extract_intermediate_to_document(input_path, autosplit, &document)) {
         printf("Failed to read 'raw' output from: %s\n", input_path);
         goto end;
@@ -166,15 +161,27 @@ int main(int argc, char** argv)
     
     if (docx_out_path) {
         printf("Creating .docx file: %s\n", docx_out_path);
-        if (extract_docx_content_to_docx(
-                content,
-                content_length,
-                docx_template_path,
-                docx_out_path,
-                preserve_dir
-                )) {
-            printf("Failed to create .docx file: %s\n", docx_out_path);
-            goto end;
+        if (docx_template_path) {
+            if (extract_template_docx_content_to_docx(
+                    content,
+                    content_length,
+                    docx_template_path,
+                    docx_out_path,
+                    preserve_dir
+                    )) {
+                printf("Failed to create .docx file: %s\n", docx_out_path);
+                goto end;
+            }
+        }
+        else {
+            if (extract_docx_content_to_docx(
+                    content,
+                    content_length,
+                    docx_out_path
+                    )) {
+                printf("Failed to create .docx file: %s\n", docx_out_path);
+                goto end;
+            }
         }
     }
 

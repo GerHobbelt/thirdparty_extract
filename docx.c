@@ -3,8 +3,9 @@ sensible order to create valid content - e.g. don't call docx_paragraph_start()
 twice without intervening call to docx_paragraph_finish(). */
 
 #include "astring.h"
-#include "docx.h"
 #include "build/docx_template.h"
+#include "docx.h"
+#include "extract.h"
 #include "outf.h"
 #include "zip.h"
 
@@ -204,6 +205,7 @@ static char* read_all(FILE* in)
 static int extract_docx_content_replace(
         const char* original,
         const char* content,
+        int         content_length,
         char**      o_out
         )
 /*
@@ -229,7 +231,7 @@ o_out:
     extract_astring_t   out;
     extract_astring_init(&out);
     if (extract_astring_catl(&out, original, original_pos - original)) goto end;
-    if (extract_astring_cat(&out, content)) goto end;
+    if (extract_astring_catl(&out, content, content_length)) goto end;
     if (extract_astring_cat(&out, original_pos)) goto end;
     
     *o_out = out.chars;
@@ -240,9 +242,33 @@ o_out:
     return e;
 }
 
-
-
 int extract_docx_content_to_docx(
+        const char* content,
+        int         content_length,
+        const char* path_out
+        )
+{
+    int e = -1;
+    char* content2;
+    if (extract_docx_content_replace(
+            extract_docx_word_document_xml,
+            content,
+            content_length,
+            &content2
+            )) goto end;
+
+    extract_zip_t*  zip;
+    if (extract_zip_open(path_out, "w", &zip)) goto end;
+
+    if (extract_docx_write(zip, content2, strlen(content2))) goto end;
+    if (extract_zip_close(zip)) goto end;
+    e = 0;
+    
+    end:
+    return e;
+}
+
+int extract_template_docx_content_to_docx(
         const char* content,
         int         content_length,
         const char* path_template,
@@ -261,19 +287,6 @@ int extract_docx_content_to_docx(
     char*   word_document_xml = NULL;
     char*   original = NULL;
     FILE*   f = NULL;
-
-    if (1) {
-        char* content2;
-        if (extract_docx_content_replace(extract_docx_word_document_xml, content, &content2)) goto end;
-        
-        extract_zip_t*  zip;
-        if (extract_zip_open(path_out, "w", &zip)) goto end;
-        
-        if (extract_docx_write(zip, content2, strlen(content2))) goto end;
-        if (extract_zip_close(zip)) goto end;
-        ret = 0;
-        goto end;
-    }
 
     int e;
 
@@ -318,40 +331,16 @@ int extract_docx_content_to_docx(
     f = NULL;
 
     char*   content2;
-    if (extract_docx_content_replace(original, content, &content2)) goto end;
+    if (extract_docx_content_replace(
+            original,
+            content,
+            content_length,
+            &content2
+            )) goto end;
     f = fopen(word_document_xml, "w");
     if (fwrite(content2, strlen(content2), 1 /*nmemb*/, f) != 1) goto end;
     if (fclose(f) < 0) goto end;
     f = NULL;
-    #if 0
-    const char* original_marker = "<w:body>";
-    const char* original_pos = strstr(original, original_marker);
-    if (!original_pos) {
-        outf("error: could not find '%s' in docx object: %s",
-                original_marker, word_document_xml);
-        errno = ESRCH;
-        goto end;
-    }
-    original_pos += strlen(original_marker);
-
-    outfx("Writing tempdir's word/document.xml file");
-    f = fopen(word_document_xml, "w");
-    if (!f) {
-        outf("error: Failed to open .docx for writing: %s",
-                word_document_xml);
-        goto end;
-    }
-    if (0
-            || fwrite(original, original_pos - original, 1 /*nmemb*/, f) != 1
-            || fwrite(content, content_length, 1 /*nmemb*/, f) != 1
-            || fwrite(original_pos, strlen(original_pos), 1 /*nmemb*/, f) != 1
-            || fclose(f) < 0
-            ) {
-        outf("error: Failed to write to: %s", word_document_xml);
-        goto end;
-    }
-    f = NULL;
-    #endif
 
     outf("Zipping tempdir to create %s", path_out);
     const char* path_out_leaf = strrchr(path_out, '/');

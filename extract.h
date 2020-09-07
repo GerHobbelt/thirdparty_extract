@@ -82,6 +82,23 @@ On error *o_content=NULL and *o_content_length=0.
 int extract_docx_content_to_docx(
         const char* content,
         int         content_length,
+        const char* path_out
+        );
+/* Writes docx content (e.g. from extract_document_to_docx_content()) into a
+new .docx file.
+
+content:
+    E.g. from extract_document_to_docx_content().
+content_length:
+    Length of content.
+path_out:
+    Name of .docx file to create.
+*/
+
+
+int extract_template_docx_content_to_docx(
+        const char* content,
+        int         content_length,
         const char* path_template,
         const char* path_out,
         int         preserve_dir

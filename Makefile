@@ -74,7 +74,8 @@ test-mu-as: Python2.pdf-test-mu-as zlib.3.pdf-test-mu-as
 	@echo == Generating intermediate with mutool.
 	$(mutool) draw -F xmltext -o test/$<.mu.intermediate.xml $<
 	@echo == Generating output.
-	./$(exe) -i test/$<.mu.intermediate.xml --o-content test/$<.mu.content.xml -o test/$<.mu.docx -p 1 -t template.docx
+	./$(exe) -i test/$<.mu.intermediate.xml --o-content test/$<.mu.content.xml -o test/$<.mu.docx
+	./$(exe) -i test/$<.mu.intermediate.xml --o-content test/$<.mu.content.xml -o test/$<.mu.t.docx -p 1 -t template.docx
 	@echo == Comparing output with reference output.
 	diff -u test/$<.mu.content.xml $<.mu.content.ref.xml
 	@echo == Test succeeded.
@@ -88,7 +89,8 @@ test-mu-as: Python2.pdf-test-mu-as zlib.3.pdf-test-mu-as
 	@echo == Generating intermediate with mutool.
 	$(mutool) draw -F xmltext -o test/$<.mu.intermediate.xml $<
 	@echo == Generating output.
-	./$(exe) --autosplit 1 -i test/$<.mu.intermediate.xml --o-content test/$<.mu.as.content.xml -o test/$<.mu.as.docx -p 1 -t template.docx
+	./$(exe) --autosplit 1 -i test/$<.mu.intermediate.xml --o-content test/$<.mu.as.content.xml -o test/$<.mu.as.docx
+	./$(exe) --autosplit 1 -i test/$<.mu.intermediate.xml --o-content test/$<.mu.as.content.xml -o test/$<.mu.as.t.docx -p 1 -t template.docx
 	@echo == Comparing output with reference output.
 	diff -u test/$<.mu.as.content.xml $<.mu.content.ref.xml
 	@echo == Test succeeded.
@@ -102,7 +104,8 @@ test-mu-as: Python2.pdf-test-mu-as zlib.3.pdf-test-mu-as
 	@echo == Generating intermediate with gs.
 	$(gs) -sDEVICE=txtwrite -dTextFormat=4 -o test/$<.gs.intermediate.xml $<
 	@echo == Generating output.
-	./$(exe) -i test/$<.gs.intermediate.xml --o-content test/$<.gs.content.xml -o test/$<.gs.docx -p 1 -t template.docx
+	./$(exe) -i test/$<.gs.intermediate.xml --o-content test/$<.gs.content.xml -o test/$<.gs.docx
+	./$(exe) -i test/$<.gs.intermediate.xml --o-content test/$<.gs.content.xml -o test/$<.gs.t.docx -p 1 -t template.docx
 	@echo == Comparing output with reference output.
 	diff -u test/$<.gs.content.xml $<.gs.content.ref.xml
 	@echo == Test succeeded.
@@ -123,7 +126,7 @@ $(exe): $(obj)
 
 # Compile rule.
 #
-build/%.c-$(build).o: %.c
+build/%.c-$(build).o: %.c build/docx_template.c
 	mkdir -p build
 	cc -c $(flags_compile) -o $@ $<
 

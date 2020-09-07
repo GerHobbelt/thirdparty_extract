@@ -17,6 +17,7 @@ def read(path):
         return f.read()
 
 def write(text, path):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w') as f:
         f.write(text)
 
