@@ -42,7 +42,7 @@ endif
 src = src/extract-exe.c src/extract.c src/astring.c src/docx.c src/outf.c src/xml.c src/zip.c
 
 ifeq ($(build),memento)
-    src += memento.c
+    src += src/memento.c
 endif
 
 
@@ -53,62 +53,44 @@ obj = $(patsubst src/%.c, src/build/%.c-$(build).o, $(src)) src/build/docx_templ
 dep = $(obj:.o=.d)
 
 
-# Test rules.
+# Test targets and rules.
 #
 
-# Default target.
-test: test-mu test-gs test-mu-as
+test_files = test/Python2.pdf test/zlib.3.pdf
 
-test-mu: Python2.pdf-test-mu zlib.3.pdf-test-mu
-test-gs: zlib.3.pdf-test-gs Python2.pdf-test-gs
-test-mu-as: Python2.pdf-test-mu-as zlib.3.pdf-test-mu-as
+test_targets_mu             = $(patsubst test/%, test/generated/%.mu.intermediate.xml.content.xml.diff, $(test_files))
+test_targets_mu_autosplit   = $(patsubst test/%, test/generated/%.mu.intermediate.xml.autosplit.content.xml.diff, $(test_files))
+test_targets_gs             = $(patsubst test/%, test/generated/%.gs.intermediate.xml.content.xml.diff, $(test_files))
 
-%.pdf-test: %.pdf-test-mu %.pdf-test-gs
+test: $(test_targets_mu) $(test_targets_mu_autosplit) $(test_targets_gs)
 
-# Test using mutool to generate intermediate.
-#
-%.pdf-test-mu: %.pdf $(exe)
+test/generated/%.pdf.mu.intermediate.xml: test/%.pdf
 	@echo
-	@echo === Testing $< with mutool.
-	mkdir -p test
-	@echo == Generating intermediate with mutool.
-	$(mutool) draw -F xmltext -o test/$<.mu.intermediate.xml $<
-	@echo == Generating output.
-	./$(exe) -i test/$<.mu.intermediate.xml --o-content test/$<.mu.content.xml -o test/$<.mu.docx
-	./$(exe) -i test/$<.mu.intermediate.xml --o-content test/$<.mu.content.xml -o test/$<.mu.t.docx -p 1 -t template.docx
-	@echo == Comparing output with reference output.
-	diff -u test/$<.mu.content.xml $<.mu.content.ref.xml
-	@echo == Test succeeded.
+	@echo Generating intermediate file for $< with mutool.
+	@mkdir -p test/generated
+	$(mutool) draw -F xmltext -o $@ $<
 
-# Run extract.exe with --autosplit, to stress joining of spans. Compare with
-# the default .ref file.
-%.pdf-test-mu-as: %.pdf $(exe)
+test/generated/%.pdf.gs.intermediate.xml: test/%.pdf
 	@echo
-	@echo === Testing $< with mutool and autosplit.
-	mkdir -p test
-	@echo == Generating intermediate with mutool.
-	$(mutool) draw -F xmltext -o test/$<.mu.intermediate.xml $<
-	@echo == Generating output.
-	./$(exe) --autosplit 1 -i test/$<.mu.intermediate.xml --o-content test/$<.mu.as.content.xml -o test/$<.mu.as.docx
-	./$(exe) --autosplit 1 -i test/$<.mu.intermediate.xml --o-content test/$<.mu.as.content.xml -o test/$<.mu.as.t.docx -p 1 -t template.docx
-	@echo == Comparing output with reference output.
-	diff -u test/$<.mu.as.content.xml $<.mu.content.ref.xml
-	@echo == Test succeeded.
+	@echo Generating intermediate file for $< with gs.
+	@mkdir -p test/generated
+	$(gs) -sDEVICE=txtwrite -dTextFormat=4 -o $@ $<
 
-# Test using gs to generate intermediate.
-#
-%.pdf-test-gs: %.pdf $(exe)
+test/generated/%.intermediate.xml.content.xml: test/generated/%.intermediate.xml $(exe)
 	@echo
-	@echo === Testing $< with gs
-	mkdir -p test
-	@echo == Generating intermediate with gs.
-	$(gs) -sDEVICE=txtwrite -dTextFormat=4 -o test/$<.gs.intermediate.xml $<
-	@echo == Generating output.
-	./$(exe) -i test/$<.gs.intermediate.xml --o-content test/$<.gs.content.xml -o test/$<.gs.docx
-	./$(exe) -i test/$<.gs.intermediate.xml --o-content test/$<.gs.content.xml -o test/$<.gs.t.docx -p 1 -t template.docx
-	@echo == Comparing output with reference output.
-	diff -u test/$<.gs.content.xml $<.gs.content.ref.xml
-	@echo == Test succeeded.
+	@echo Generating content with extract.exe
+	./$(exe) -i $< --o-content $@ -o $<.docx
+
+test/generated/%.intermediate.xml.autosplit.content.xml: test/generated/%.intermediate.xml $(exe)
+	@echo
+	@echo Generating content with extract.exe autosplit
+	./$(exe) -i $< --autosplit 1 --o-content $@ -o $<.docx
+
+test/generated/%.intermediate.xml.content.xml.diff: test/generated/%.intermediate.xml.content.xml test/%.content.ref.xml
+	@echo Diffing content with reference output.
+	diff -u $^ >$@
+test/generated/%.intermediate.xml.autosplit.content.xml.diff: test/generated/%.intermediate.xml.autosplit.content.xml test/%.content.ref.xml
+	diff -u $^ >$@
 
 
 # Build rules.
@@ -121,17 +103,17 @@ exe: $(exe)
 # Rule for main executble.
 #
 $(exe): $(obj)
-	mkdir -p build
+	@mkdir -p build
 	cc $(flags_link) -o $@ $^ -lz
 
 # Compile rule.
 #
 src/build/%.c-$(build).o: src/%.c src/build/docx_template.c
-	mkdir -p src/build
+	@mkdir -p src/build
 	cc -c $(flags_compile) -o $@ $<
 
 src/build/%.c-$(build).o: src/build/%.c
-	mkdir -p src/build
+	@mkdir -p src/build
 	cc -c $(flags_compile) -o $@ $<
 
 
@@ -148,7 +130,8 @@ clean-all:
 # Rule for build/docx_template.c.
 #
 src/build/docx_template.c: .ALWAYS
-	mkdir -p src/build
+	@echo Building $@
+	@mkdir -p src/build
 	./docx_template_build.py -i template.docx -o src/build/docx_template
 .ALWAYS:
 
