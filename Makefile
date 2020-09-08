@@ -11,7 +11,7 @@
 build = debug
 
 flags_link      = -W -Wall -lm
-flags_compile   = -W -Wall -Wmissing-declarations -Wmissing-prototypes -Werror -MMD -MP
+flags_compile   = -W -Wall -Wmissing-declarations -Wmissing-prototypes -Werror -MMD -MP -I include
 
 # We assume that mutool and gs are available at hard-coded paths.
 #
@@ -39,7 +39,7 @@ endif
 
 # Source code.
 #
-src = extract-exe.c extract.c astring.c docx.c outf.c xml.c zip.c
+src = src/extract-exe.c src/extract.c src/astring.c src/docx.c src/outf.c src/xml.c src/zip.c
 
 ifeq ($(build),memento)
     src += memento.c
@@ -49,7 +49,7 @@ endif
 # Build files.
 #
 exe = build/extract-$(build).exe
-obj = $(addprefix build/, $(src:.c=.c-$(build).o)) build/docx_template.c-$(build).o
+obj = $(patsubst src/%.c, build/%.c-$(build).o, $(src)) build/docx_template.c-$(build).o
 dep = $(obj:.o=.d)
 
 
@@ -126,7 +126,7 @@ $(exe): $(obj)
 
 # Compile rule.
 #
-build/%.c-$(build).o: %.c build/docx_template.c
+build/%.c-$(build).o: src/%.c build/docx_template.c
 	mkdir -p build
 	cc -c $(flags_compile) -o $@ $<
 
