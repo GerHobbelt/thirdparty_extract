@@ -46,6 +46,14 @@ def write(text, path):
     with open(path, 'w') as f:
         f.write(text)
 
+def write_if_diff(text, path):
+    try:
+        old = read(path)
+    except Exception:
+        old = None
+    if text != old:
+        write(text, path)
+
 def path_unsafe(path):
     if '"' in path or "'" in path or '..' in path or ' ' in path:
         return True
@@ -135,7 +143,7 @@ def main():
     out_c += out_c1.getvalue()
     out_c += out_c2.getvalue()
     out_c += out_c3.getvalue()
-    write(out_c, f'{path_out}.c')
+    write_if_diff(out_c, f'{path_out}.c')
     
     out = io.StringIO()
     out.write(f'#ifndef EXTRACT_DOCX_TEMPLATE_H\n')
@@ -154,7 +162,7 @@ def main():
     out.write(f'instead of the internal template\'s word/document.xml. */\n')
     out.write(f'\n')
     out.write(f'#endif\n')
-    write(out.getvalue(), f'{path_out}.h')
+    write_if_diff(out.getvalue(), f'{path_out}.h')
     
 if __name__ == '__main__':
     main()
