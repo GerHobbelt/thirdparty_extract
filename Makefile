@@ -49,7 +49,7 @@ endif
 # Build files.
 #
 exe = build/extract-$(build).exe
-obj = $(patsubst src/%.c, build/%.c-$(build).o, $(src)) build/docx_template.c-$(build).o
+obj = $(patsubst src/%.c, src/build/%.c-$(build).o, $(src)) src/build/docx_template.c-$(build).o
 dep = $(obj:.o=.d)
 
 
@@ -126,12 +126,12 @@ $(exe): $(obj)
 
 # Compile rule.
 #
-build/%.c-$(build).o: src/%.c build/docx_template.c
-	mkdir -p build
+src/build/%.c-$(build).o: src/%.c src/build/docx_template.c
+	mkdir -p src/build
 	cc -c $(flags_compile) -o $@ $<
 
-build/%.c-$(build).o: build/%.c
-	mkdir -p build
+src/build/%.c-$(build).o: src/build/%.c
+	mkdir -p src/build
 	cc -c $(flags_compile) -o $@ $<
 
 
@@ -139,16 +139,17 @@ build/%.c-$(build).o: build/%.c
 #
 .PHONY: clean
 clean:
-	rm $(obj) $(dep) $(exe)
+	-rm $(obj) $(dep) $(exe)
 
 clean-all:
-	rm -r build test 
+	-rm -r src/build test/generated
 
 
 # Rule for build/docx_template.c.
 #
-build/docx_template.c: .ALWAYS
-	./docx_template_build.py -i template.docx -o build/docx_template
+src/build/docx_template.c: .ALWAYS
+	mkdir -p src/build
+	./docx_template_build.py -i template.docx -o src/build/docx_template
 .ALWAYS:
 
 # Copy generated files to website.
