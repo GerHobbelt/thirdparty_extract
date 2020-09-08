@@ -13,11 +13,6 @@ build = debug
 flags_link      = -W -Wall -lm
 flags_compile   = -W -Wall -Wmissing-declarations -Wmissing-prototypes -Werror -MMD -MP -I include
 
-# We assume that mutool and gs are available at hard-coded paths.
-#
-gs      = ../ghostpdl/debug-bin/gs
-mutool  = ../mupdf/build/debug/mutool
-
 ifeq ($(build),)
     $(error Need to specify build=debug|opt|debug-opt|memento)
 else ifeq ($(build),debug)
@@ -53,9 +48,15 @@ exe_obj = $(patsubst src/%.c, src/build/%.c-$(build).o, $(exe_src)) src/build/do
 exe_dep = $(exe_obj:.o=.d)
 
 
+# Locations of mutool and gs - we assume these are available at hard-coded
+# paths.
+#
+gs      = ../ghostpdl/debug-bin/gs
+mutool  = ../mupdf/build/debug/mutool
+
+
 # Test targets and rules.
 #
-
 test_files = test/Python2.pdf test/zlib.3.pdf
 
 test_targets_mu             = $(patsubst test/%, test/generated/%.mu.intermediate.xml.content.xml.diff, $(test_files))
@@ -93,15 +94,9 @@ test/generated/%.intermediate.xml.autosplit.content.xml.diff: test/generated/%.i
 	diff -u $^ >$@
 
 
-# Build rules.
-#
-
-# Convenience target to build main executable.
+# Rule for main executable.
 #
 exe: $(exe)
-
-# Rule for main executble.
-#
 $(exe): $(exe_obj)
 	cc $(flags_link) -o $@ $^ -lz
 
@@ -116,15 +111,7 @@ src/build/%.c-$(build).o: src/build/%.c
 	@mkdir -p src/build
 	cc -c $(flags_compile) -o $@ $<
 
-
-# Clean rules.
-#
-.PHONY: clean
-clean:
-	-rm -r src/build test/generated
-
-
-# Rule for build/docx_template.c.
+# Rule for machine-generated source code, build/docx_template.c.
 #
 src/build/docx_template.c: .ALWAYS
 	@echo Building $@
@@ -132,10 +119,19 @@ src/build/docx_template.c: .ALWAYS
 	./src/docx_template_build.py -i src/template.docx -o src/build/docx_template
 .ALWAYS:
 
+
+# Clean rule.
+#
+.PHONY: clean
+clean:
+	-rm -r src/build test/generated
+
+
 # Copy generated files to website.
 #
 web:
 	rsync -ai test/*.docx *.pdf julian@casper.ghostscript.com:public_html/extract/
+
 
 # Dynamic dependencies.
 #
