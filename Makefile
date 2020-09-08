@@ -39,18 +39,18 @@ endif
 
 # Source code.
 #
-src = src/extract-exe.c src/extract.c src/astring.c src/docx.c src/outf.c src/xml.c src/zip.c
+exe_src = src/extract-exe.c src/extract.c src/astring.c src/docx.c src/outf.c src/xml.c src/zip.c
 
 ifeq ($(build),memento)
-    src += src/memento.c
+    exe_src += src/memento.c
 endif
 
 
 # Build files.
 #
-exe = build/extract-$(build).exe
-obj = $(patsubst src/%.c, src/build/%.c-$(build).o, $(src)) src/build/docx_template.c-$(build).o
-dep = $(obj:.o=.d)
+exe = src/build/extract-$(build).exe
+exe_obj = $(patsubst src/%.c, src/build/%.c-$(build).o, $(exe_src)) src/build/docx_template.c-$(build).o
+exe_dep = $(exe_obj:.o=.d)
 
 
 # Test targets and rules.
@@ -102,11 +102,11 @@ exe: $(exe)
 
 # Rule for main executble.
 #
-$(exe): $(obj)
-	@mkdir -p build
+$(exe): $(exe_obj)
 	cc $(flags_link) -o $@ $^ -lz
 
-# Compile rule.
+# Compile rule. We always include src/build/docx_template.c as a prerequisite
+# in case code #includes docx_template.h.
 #
 src/build/%.c-$(build).o: src/%.c src/build/docx_template.c
 	@mkdir -p src/build
@@ -121,9 +121,6 @@ src/build/%.c-$(build).o: src/build/%.c
 #
 .PHONY: clean
 clean:
-	-rm $(obj) $(dep) $(exe)
-
-clean-all:
 	-rm -r src/build test/generated
 
 
@@ -132,7 +129,7 @@ clean-all:
 src/build/docx_template.c: .ALWAYS
 	@echo Building $@
 	@mkdir -p src/build
-	./docx_template_build.py -i template.docx -o src/build/docx_template
+	./src/docx_template_build.py -i src/template.docx -o src/build/docx_template
 .ALWAYS:
 
 # Copy generated files to website.
@@ -142,4 +139,4 @@ web:
 
 # Dynamic dependencies.
 #
--include $(dep)
+-include $(exe_dep)

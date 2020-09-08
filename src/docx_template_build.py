@@ -85,7 +85,7 @@ def main():
     if path_unsafe(path_out):
         raise Exception(f'Cannot use path_out={path_out!r} because unsafe for shell commands.')
     path_temp = f'{path_in}.dir'
-    os.system(f'rm -r "{path_temp}"')
+    os.system(f'rm -r "{path_temp}" 2>/dev/null')
     system(f'unzip -d {path_temp} {path_in}')
     
     out_c1 = io.StringIO()
@@ -163,6 +163,7 @@ def main():
     out.write(f'\n')
     out.write(f'#endif\n')
     write_if_diff(out.getvalue(), f'{path_out}.h')
+    os.system(f'rm -r "{path_temp}"')
     
 if __name__ == '__main__':
     main()
