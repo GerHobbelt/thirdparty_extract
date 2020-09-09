@@ -16,5 +16,6 @@ void (outf)(
 
 #define outfx(format, ...)
 
+void outf_level_set(int level);
 
 #endif

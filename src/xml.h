@@ -3,6 +3,8 @@
 
 /* Only for internal use by extract code.  */
 
+#include "../include/extract_buffer.h"
+
 #include "astring.h"
 
 #include <stdio.h>
@@ -32,11 +34,12 @@ void extract_xml_tag_free(extract_xml_tag_t* tag);
 /* Frees tag and then calls extract_xml_tag_init(). */
 
 
-FILE* extract_xml_pparse_init(const char* path, const char* first_line);
+int extract_xml_pparse_init(extract_buffer_t* buffer, const char* first_line);;
 /* extract_xml_pparse_*(): simple XML 'pull' parser.
 
-extract_xml_pparse_init() merely consumes the initial '<'. Thereafter extract_xml_pparse_next()
-consumes the next '<' before returning the previous tag. */
+extract_xml_pparse_init() merely consumes the initial '<'. Thereafter
+extract_xml_pparse_next() consumes the next '<' before returning the previous
+tag. */
 
 /* Opens specified file.
 
@@ -45,7 +48,7 @@ If first_line is not NULL, we check that it matches the first line in the file.
 Returns NULL with errno set if error. */
 
 
-int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out);
+int extract_xml_pparse_next(extract_buffer_t* buffer, extract_xml_tag_t* out);
 /* Returns the next XML tag.
 
 Returns 0 with *out containing next tag; or -1 with errno set if error; or +1

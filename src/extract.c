@@ -1458,7 +1458,13 @@ int extract_intermediate_to_document(
 {
     int ret = -1;
 
-    FILE* in = NULL;
+    extract_document_t* document = NULL;
+    
+    extract_xml_tag_t   tag;
+    extract_xml_tag_init(&tag);
+
+    extract_buffer_t*   buffer;
+    if (extract_buffer_file_open(path, &buffer)) goto end;
     int num_spans = 0;
 
     /* Number of extra spans from page_span_end_clean(). */
@@ -1467,16 +1473,12 @@ int extract_intermediate_to_document(
     /* Num extra spans from autosplit=1. */
     int num_spans_autosplit = 0;
 
-    extract_xml_tag_t   tag;
-    extract_xml_tag_init(&tag);
-
-    extract_document_t* document = malloc(sizeof(**o_document));
+    document = malloc(sizeof(**o_document));
     if (!document) goto end;
     extract_document_init(document);
     
-    in = extract_xml_pparse_init(path, NULL);
-    if (!in) {
-        outf("Failed to open: %s", path);
+    if (extract_xml_pparse_init(buffer, NULL /*first_line*/)) {
+        outf("Failed to read start of '%s': %s", path, strerror(errno));
         goto end;
     }
     /* Data read from <path> is expected to be XML looking like:
@@ -1506,7 +1508,7 @@ int extract_intermediate_to_document(
         Split spans in two where there seem to be large gaps between glyphs.
     */
     for(;;) {
-        int e = extract_xml_pparse_next(in, &tag);
+        int e = extract_xml_pparse_next(buffer, &tag);
         if (e == 1) break; /* EOF. */
         if (e) goto end;
         if (!strcmp(tag.name, "?xml")) {
@@ -1525,7 +1527,7 @@ int extract_intermediate_to_document(
         if (!page) goto end;
 
         for(;;) {
-            if (extract_xml_pparse_next(in, &tag)) goto end;
+            if (extract_xml_pparse_next(buffer, &tag)) goto end;
             if (!strcmp(tag.name, "/page")) {
                 num_spans += page->spans_num;
                 break;
@@ -1570,7 +1572,7 @@ int extract_intermediate_to_document(
             float   offset_x = 0;
             float   offset_y = 0;
             for(;;) {
-                if (extract_xml_pparse_next(in, &tag)) {
+                if (extract_xml_pparse_next(buffer, &tag)) {
                     outf("Failed to find <char or </span");
                     goto end;
                 }
@@ -1678,13 +1680,11 @@ int extract_intermediate_to_document(
 
     end:
     extract_xml_tag_free(&tag);
-    if (in) {
-        fclose(in);
-        in = NULL;
-    }
+    extract_buffer_close(buffer);
+    
 
     if (ret) {
-        outf("read_spans_raw() returning error");
+        outf("read_spans_raw() returning error ret=%i", ret);
         extract_document_free(document);
         free(document);
         *o_document = NULL;

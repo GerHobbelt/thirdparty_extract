@@ -1,6 +1,8 @@
 #ifndef ARITFEX_EXTRACT_H
 #define ARITFEX_EXTRACT_H
 
+#include "extract_buffer.h"
+
 
 /* Functions for extracting paragraphs of text from intermediate format data
 created by these commands:
@@ -20,6 +22,12 @@ void extract_document_free(extract_document_t* document);
 /* Frees a document. Does nothing if <document> is NULL.
 */
 
+
+int extract_intermediate_to_document_buffer(
+        extract_buffer_t*       buffer,
+        int                     autosplit,
+        extract_document_t**    o_document
+        );
 
 int extract_intermediate_to_document(
         const char*             path,

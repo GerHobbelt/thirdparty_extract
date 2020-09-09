@@ -34,7 +34,7 @@ endif
 
 # Source code.
 #
-exe_src = src/extract-exe.c src/extract.c src/astring.c src/docx.c src/outf.c src/xml.c src/zip.c
+exe_src = src/extract-exe.c src/extract.c src/astring.c src/docx.c src/outf.c src/xml.c src/zip.c src/buffer.c
 
 ifeq ($(build),memento)
     exe_src += src/memento.c

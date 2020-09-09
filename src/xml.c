@@ -156,38 +156,31 @@ int extract_xml_compare_tags(const extract_xml_tag_t* lhs, const extract_xml_tag
 #endif
 
 
-FILE* extract_xml_pparse_init(const char* path, const char* first_line)
+int extract_xml_pparse_init(extract_buffer_t* buffer, const char* first_line)
 {
-    FILE* in = NULL;
-    char* buffer = NULL;
-    int e = 1;
-
-    in = fopen(path, "r");
-    if (!in) {
-        outf("error: Could not open filename=%s", path);
-        goto end;
-    }
+    char* first_line_buffer = NULL;
+    int e = -1;
 
     if (first_line) {
         size_t first_line_len = strlen(first_line);
-        buffer = malloc(first_line_len + 1);
+        first_line_buffer = malloc(first_line_len + 1);
         if (!buffer) goto end;
 
-        ssize_t n = fread(buffer, first_line_len, 1 /*nmemb*/, in);
-        if (n != 1) {
-            outf("error: fread() failed. n=%zi. path='%s'", n, path);
+        if (extract_buffer_read(buffer, first_line_buffer, first_line_len)) {
+            outf("error: failed to read first line.");
             goto end;
         }
-        buffer[first_line_len] = 0;
-        if (strcmp(first_line, buffer)) {
-            outf("Unrecognised prefix in path=%s: %s", path, buffer);
+        first_line_buffer[first_line_len] = 0;
+        if (strcmp(first_line, first_line_buffer)) {
+            outf("Unrecognised prefix: ", first_line_buffer);
             errno = ESRCH;
             goto end;
         }
     }
 
     for(;;) {
-        int c = getc(in);
+        char c;
+        if (extract_buffer_getc(buffer, &c)) goto end;
         if (c == '<') {
             break;
         }
@@ -200,18 +193,21 @@ FILE* extract_xml_pparse_init(const char* path, const char* first_line)
     e = 0;
 
     end:
-    free(buffer);
-    if (e) {
-        if (in) {
-            fclose(in);
-            in = NULL;
-        }
-    }
-    return in;
+    free(first_line_buffer);
+    return e;
 }
 
+static int s_next(extract_buffer_t* buffer, int* ret, char* o_c)
+{
+    int e = extract_buffer_getc(buffer, o_c);
+    if (e == +1) {
+        *ret = +1;
+        errno = ESRCH;
+    }
+    return e;
+}
 
-int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out)
+int extract_xml_pparse_next(extract_buffer_t* buffer, extract_xml_tag_t* out)
 {
     int ret = -1;
     extract_xml_tag_free(out);
@@ -222,20 +218,14 @@ int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out)
     extract_xml_tag_init(out);
     char c;
 
-    assert(in);
+    assert(buffer);
 
     /* Read tag name. */
     int i = 0;
     for( i=0;; ++i) {
-        c = getc(in);
-        if (c == EOF) {
-            if (i == 0 && feof(in)) {
-                /* Legitimate EOF. We provide a reasonable errno value if
-                caller isn't expecting EOF and doesn't test explicitly for +1.
-                */
-                ret = +1;
-                errno = ESRCH;
-            }
+        int e = extract_buffer_getc(buffer, &c);
+        if (e) {
+            if (e == +1) ret = 1;   /* EOF is not an error here. */
             goto end;
         }
         if (c == '>' || c == ' ')  break;
@@ -248,11 +238,7 @@ int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out)
 
             /* Read attribute name. */
             for(;;) {
-                c = getc(in);
-                if (c == EOF) {
-                    errno = -ESRCH;
-                    goto end;
-                }
+                if (s_next(buffer, &ret, &c)) goto end;
                 if (c == '=' || c == '>' || c == ' ') break;
                 if (str_catc(&attribute_name, c)) goto end;
             }
@@ -263,7 +249,7 @@ int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out)
                 int quote_single = 0;
                 int quote_double = 0;
                 for(;;) {
-                    c = getc(in);
+                    if (s_next(buffer, &ret, &c)) goto end;
                     if (c == '\'')      quote_single = !quote_single;
                     else if (c == '"')  quote_double = !quote_double;
                     else if (!quote_single && !quote_double
@@ -274,11 +260,7 @@ int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out)
                     }
                     else if (c == '\\') {
                         // Escape next character.
-                        c = getc(in);
-                        if (c == EOF) {
-                            errno = ESRCH;
-                            goto end;
-                        }
+                        if (s_next(buffer, &ret, &c)) goto end;
                     }
                     if (str_catc(&attribute_value, c)) goto end;
                 }
@@ -300,15 +282,22 @@ int extract_xml_pparse_next(FILE* in, extract_xml_tag_t* out)
             if (extract_xml_tag_attributes_append(out, attribute_name, attribute_value)) goto end;
             attribute_name = NULL;
             attribute_value = NULL;
-            if (c == '/') c = getc(in);
+            if (c == '/') {
+                if (s_next(buffer, &ret, &c)) goto end;
+            }
             if (c == '>') break;
         }
     }
 
     /* Read plain text until next '<'. */
     for(;;) {
-        c = getc(in);
-        if (c == '<' || feof(in)) break;
+        /* We don't use s_next() here because EOF is not an error. */
+        int e = extract_buffer_getc(buffer, &c);
+        if (e == +1) {
+            break;   /* EOF is not an error here. */
+        }
+        if (e) goto end;
+        if (c == '<') break;
         if (extract_astring_catc(&out->text, c)) goto end;
     }
 
