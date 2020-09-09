@@ -59,9 +59,9 @@ mutool  = ../mupdf/build/debug/mutool
 #
 test_files = test/Python2.pdf test/zlib.3.pdf
 
-test_targets_mu             = $(patsubst test/%, test/generated/%.mu.intermediate.xml.content.xml.diff, $(test_files))
-test_targets_mu_autosplit   = $(patsubst test/%, test/generated/%.mu.intermediate.xml.autosplit.content.xml.diff, $(test_files))
-test_targets_gs             = $(patsubst test/%, test/generated/%.gs.intermediate.xml.content.xml.diff, $(test_files))
+test_targets_mu             = $(patsubst test/%, test/generated/%.mu.intermediate.xml.content.xml.diff,             $(test_files))
+test_targets_mu_autosplit   = $(patsubst test/%, test/generated/%.mu.intermediate.xml.autosplit.content.xml.diff,   $(test_files))
+test_targets_gs             = $(patsubst test/%, test/generated/%.gs.intermediate.xml.content.xml.diff,             $(test_files))
 
 test: $(test_targets_mu) $(test_targets_mu_autosplit) $(test_targets_gs)
 
@@ -90,7 +90,9 @@ test/generated/%.intermediate.xml.autosplit.content.xml: test/generated/%.interm
 test/generated/%.intermediate.xml.content.xml.diff: test/generated/%.intermediate.xml.content.xml test/%.content.ref.xml
 	@echo Diffing content with reference output.
 	diff -u $^ >$@
+
 test/generated/%.intermediate.xml.autosplit.content.xml.diff: test/generated/%.intermediate.xml.autosplit.content.xml test/%.content.ref.xml
+	@echo Diffing content with reference output.
 	diff -u $^ >$@
 
 
@@ -111,7 +113,8 @@ src/build/%.c-$(build).o: src/build/%.c
 	@mkdir -p src/build
 	cc -c $(flags_compile) -o $@ $<
 
-# Rule for machine-generated source code, build/docx_template.c.
+# Rule for machine-generated source code, src/build/docx_template.c. Also
+# generates src/build/docx_template.h.
 #
 src/build/docx_template.c: .ALWAYS
 	@echo Building $@
