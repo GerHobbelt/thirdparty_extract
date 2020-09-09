@@ -4,6 +4,12 @@
 #include <stdio.h>
 #include <string.h>
 
+static int s_level = 0;
+
+void outf_level_set(int level)
+{
+    s_level = level;
+}
 
 void (outf)(
         const char* file, int line,
@@ -14,6 +20,10 @@ void (outf)(
         )
 {
     va_list va;
+    if (s_level <= 0) {
+        return;
+    }
+    
     if (ln) {
         fprintf(stderr, "%s:%i:%s: ", file, line, fn);
     }
