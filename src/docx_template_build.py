@@ -151,7 +151,7 @@ def main():
     out.write(f'\n')
     out.write(f'/* THIS IS AUTO-GENERATED CODE, DO NOT EDIT. */\n')
     out.write(f'\n')
-    out.write(f'#include "../src/zip.h"\n')
+    out.write(f'#include "../zip.h"\n')
     out.write(f'\n')
     out.write(f'extern char extract_docx_word_document_xml[];\n')
     out.write(f'extern int  extract_docx_word_document_xml_length;\n')

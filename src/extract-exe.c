@@ -1,6 +1,6 @@
 /* Command-line programme for extract_ API. */
 
-#include "extract.h"
+#include "../include/extract.h"
 
 #include <assert.h>
 #include <errno.h>

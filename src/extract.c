@@ -2,9 +2,10 @@
     #include "memento.h"
 #endif
 
+#include "../include/extract.h"
+
 #include "astring.h"
 #include "docx.h"
-#include "extract.h"
 #include "outf.h"
 #include "xml.h"
 

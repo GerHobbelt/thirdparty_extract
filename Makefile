@@ -11,7 +11,7 @@
 build = debug
 
 flags_link      = -W -Wall -lm
-flags_compile   = -W -Wall -Wmissing-declarations -Wmissing-prototypes -Werror -MMD -MP -I include
+flags_compile   = -W -Wall -Wmissing-declarations -Wmissing-prototypes -Werror -MMD -MP
 
 ifeq ($(build),)
     $(error Need to specify build=debug|opt|debug-opt|memento)
@@ -133,7 +133,7 @@ clean:
 # Copy generated files to website.
 #
 web:
-	rsync -ai test/*.docx *.pdf julian@casper.ghostscript.com:public_html/extract/
+	rsync -ai test/generated/*.docx test/*.pdf julian@casper.ghostscript.com:public_html/extract/
 
 
 # Dynamic dependencies.

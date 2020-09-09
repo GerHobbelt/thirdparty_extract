@@ -2,10 +2,12 @@
 sensible order to create valid content - e.g. don't call docx_paragraph_start()
 twice without intervening call to docx_paragraph_finish(). */
 
-#include "astring.h"
+#include "../include/extract.h"
+
 #include "build/docx_template.h"
+
+#include "astring.h"
 #include "docx.h"
-#include "extract.h"
 #include "outf.h"
 #include "zip.h"
 
