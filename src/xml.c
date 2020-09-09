@@ -186,9 +186,13 @@ FILE* extract_xml_pparse_init(const char* path, const char* first_line)
         }
     }
 
-    {
+    for(;;) {
         int c = getc(in);
-        if (c != '<') {
+        if (c == '<') {
+            break;
+        }
+        else if (c == ' ' || c == '\n') {}
+        else {
             outf("Expected '<' but found c=%i", c);
             goto end;
         }
