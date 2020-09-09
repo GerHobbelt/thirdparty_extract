@@ -11,6 +11,15 @@
 #include <unistd.h>
 
 
+struct extract_buffer_t
+{
+    extract_buffer_data_t   data;
+    void*                   handle;
+    extract_buffer_fn_get   get;
+    extract_buffer_fn_close close;
+};
+/* */
+
 int extract_buffer_open(
         void*                   handle,
         extract_buffer_fn_get   get,
@@ -25,9 +34,9 @@ int extract_buffer_open(
     buffer->handle = handle;
     buffer->get = get;
     buffer->close = close;
-    buffer->data = NULL;
-    buffer->data_length = 0;
-    buffer->data_pos = 0;
+    buffer->data.data = NULL;
+    buffer->data.length = 0;
+    buffer->data.pos = 0;
     e = 0;
     
     end:
@@ -52,21 +61,22 @@ void extract_buffer_close(extract_buffer_t* buffer)
     free(buffer);
 }
 
-int extract_buffer_internal_get_more(extract_buffer_t* buffer)
+static int extract_buffer_internal_get_more(extract_buffer_t* buffer)
+/* Returns +1 on EOF. */
 {
     assert(buffer);
-    assert(buffer->data_pos == buffer->data_length);
-    int e = buffer->get(buffer->handle, &buffer->data, &buffer->data_length);
+    assert(buffer->data.pos == buffer->data.length);
+    int e = buffer->get(buffer->handle, &buffer->data.data, &buffer->data.length);
     if (e) {
-        buffer->data_length = 0;
-        buffer->data_pos = 0;
+        buffer->data.length = 0;
+        buffer->data.pos = 0;
         return e;
     }
-    if (buffer->data_length == 0) {
-        buffer->data_pos = 0;
+    if (buffer->data.length == 0) {
+        buffer->data.pos = 0;
         return +1;
     }
-    buffer->data_pos = 0;
+    buffer->data.pos = 0;
     return 0;
 }
 
@@ -77,21 +87,21 @@ int extract_buffer_read(extract_buffer_t* buffer, char* out, int out_len)
         if (out_pos == out_len) {
             return 0;
         }
-        int n = buffer->data_length - buffer->data_pos;
+        int n = buffer->data.length - buffer->data.pos;
         if (n == 0) {
             if (extract_buffer_internal_get_more(buffer)) return -1;
-            if (buffer->data_length == 0) {
+            if (buffer->data.length == 0) {
                 /* EOF */
                 return +1;
             }
-            n = buffer->data_length - buffer->data_pos;
+            n = buffer->data.length - buffer->data.pos;
         }
         if (n > out_len - out_pos) {
             n = out_len - out_pos;
         }
-        memcpy(out + out_pos, buffer->data + buffer->data_pos, n);
+        memcpy(out + out_pos, buffer->data.data + buffer->data.pos, n);
         out_pos += n;
-        buffer->data_pos += n;
+        buffer->data.pos += n;
     }
 }
 
@@ -121,7 +131,7 @@ static void extract_buffer_file_close(void* handle)
     free(file);
 }
 
-int extract_buffer_file_open(const char* path, extract_buffer_t** o_buffer)
+int extract_buffer_open_file(const char* path, extract_buffer_t** o_buffer)
 {
     int e = -1;
     extract_buffer_file_t* file = malloc(sizeof(*file));
@@ -156,12 +166,12 @@ int extract_buffer_file_open(const char* path, extract_buffer_t** o_buffer)
 int extract_buffer_getc_internal(extract_buffer_t* buffer, char* out)
 /* Called by extract_buffer_getc() if we are at end of buffer->data. */
 {
-    if (buffer->data_length == buffer->data_pos) {
+    if (buffer->data.length == buffer->data.pos) {
         int e = extract_buffer_internal_get_more(buffer);
         if (e) return e;
     }
-    assert(buffer->data_pos < buffer->data_length);
-    *out = buffer->data[buffer->data_pos];
-    buffer->data_pos += 1;
+    assert(buffer->data.pos < buffer->data.length);
+    *out = buffer->data.data[buffer->data.pos];
+    buffer->data.pos += 1;
     return 0;
 }

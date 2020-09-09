@@ -28,13 +28,29 @@ int extract_intermediate_to_document_buffer(
         int                     autosplit,
         extract_document_t**    o_document
         );
+/* Reads intermediate format from buffer, into a document.
+
+buffer;
+    Source of intermediate format data.
+autosplit:
+    If true, we split spans when the y coordinate changes, in order to stress
+    the joining algorithms.
+o_document:
+    Out-param: *o_document is set to internal data populated with pages from
+    intermediate format. Each page will have spans, but no lines or paragraphs;
+    use extract_document_join() to create lines and paragraphs.
+
+    *o_document should be freed with extract_document_free().
+
+Returns with *o_document set. On error *o_document=NULL.
+*/
 
 int extract_intermediate_to_document(
         const char*             path,
         int                     autosplit,
         extract_document_t**    o_document
         );
-/* Reads from intermediate format file into a document.
+/* Reads from intermediate format from file into a document.
 
 path;
     Path of file containg intermediate format. Intermediate format can be

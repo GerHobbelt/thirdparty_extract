@@ -1450,8 +1450,22 @@ static int page_span_end_clean(page_t* page)
     return ret;
 }
 
+
 int extract_intermediate_to_document(
         const char*             path,
+        int                     autosplit,
+        extract_document_t**    o_document
+        )
+{
+    extract_buffer_t*   buffer;
+    if (extract_buffer_open_file(path, &buffer)) return -1;
+    int e = extract_intermediate_to_document_buffer(buffer, autosplit, o_document);
+    extract_buffer_close(buffer);
+    return e;
+}
+
+int extract_intermediate_to_document_buffer(
+        extract_buffer_t*       buffer,
         int                     autosplit,
         extract_document_t**    o_document
         )
@@ -1463,8 +1477,6 @@ int extract_intermediate_to_document(
     extract_xml_tag_t   tag;
     extract_xml_tag_init(&tag);
 
-    extract_buffer_t*   buffer;
-    if (extract_buffer_file_open(path, &buffer)) goto end;
     int num_spans = 0;
 
     /* Number of extra spans from page_span_end_clean(). */
@@ -1478,7 +1490,7 @@ int extract_intermediate_to_document(
     extract_document_init(document);
     
     if (extract_xml_pparse_init(buffer, NULL /*first_line*/)) {
-        outf("Failed to read start of '%s': %s", path, strerror(errno));
+        outf("Failed to read start of intermediate data: %s", strerror(errno));
         goto end;
     }
     /* Data read from <path> is expected to be XML looking like:
@@ -1679,9 +1691,7 @@ int extract_intermediate_to_document(
     ret = 0;
 
     end:
-    extract_xml_tag_free(&tag);
-    extract_buffer_close(buffer);
-    
+    extract_xml_tag_free(&tag);    
 
     if (ret) {
         outf("read_spans_raw() returning error ret=%i", ret);
