@@ -51,7 +51,10 @@ o_buffer:
 
 
 void extract_buffer_close(extract_buffer_t* buffer);
-/* Closes down an extract_buffer_t and frees all internal resources. */
+/* Closes down an extract_buffer_t and frees all internal resources.
+
+Does nothing if <buffer> is NULL.
+*/
 
 
 int extract_buffer_open_simple(
@@ -60,7 +63,11 @@ int extract_buffer_open_simple(
         extract_buffer_t**  o_buffer
         );
 /* Creates an extract_buffer_t that reads from a single fixed block of memory.
+
+The data is not copied so data..+data_length must exist for the lifetime of the
+returned extract_buffer_t.
 */
+
 
 int extract_buffer_open_file(const char* path, extract_buffer_t** o_buffer);
 /* Creates an extract_buffer_t that reads from a file.
@@ -78,7 +85,7 @@ int extract_buffer_read(
         int                 out_length,
         int*                out_actual
         );
-/* Reads from buffer into out_buffer.
+/* Reads specified number of bytes from buffer into out..+out_length.
 
 Returns +1 if short read due to EOF.
 
@@ -87,14 +94,15 @@ buffer:
 out:
     Location for copied data.
 out_length:
-    Length of out_buffer.
+    Number of bytes to copy.
 out_actual:
-    Optional out-param, set to actual number of bytes copied to out_buffer.
+    Optional out-param, set to actual number of bytes copied.
 */
 
 
 /* Implementation details below are to allow extract_buffer_getc() to be
-inline. */
+inline.
+*/
 
 typedef struct
 {
@@ -103,14 +111,20 @@ typedef struct
     int     pos;
 } extract_buffer_data_t;
 /* Internal only; defined here only so that extract_buffer_getc() can be
-inline. */
+inline.
+*/
+
 
 int extract_buffer_getc_internal(extract_buffer_t* buffer, char* out);
 /* Internal only. */
 
+
 static inline int extract_buffer_getc(extract_buffer_t* buffer, char* out)
-/* Inline function to read one character from an extract_buffer_t. Writes next
-char to *out and returns zero, or returns -ve error, or returns +1 on EOF. */
+/* Inline function to read one character from an extract_buffer_t.
+
+Writes next char to *out and returns zero, or returns -ve error with errno set,
+or returns +1 on EOF.
+*/
 {
     extract_buffer_data_t* buffer_data = (void*) buffer;
     if (buffer_data->length == buffer_data->pos) {

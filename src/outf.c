@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int s_level = 1;
+static int s_level = 0;
 
 void outf_level_set(int level)
 {
