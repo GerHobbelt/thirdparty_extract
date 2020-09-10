@@ -44,7 +44,7 @@ handle:
 openfn:
     Callback used to get more data.
 closefn:
-    Callback called by extract_buffer_close().
+    NULL or called by extract_buffer_close().
 o_buffer:
     Out-param. Set to NULL on error.
 */
@@ -53,6 +53,14 @@ o_buffer:
 void extract_buffer_close(extract_buffer_t* buffer);
 /* Closes down an extract_buffer_t and frees all internal resources. */
 
+
+int extract_buffer_open_simple(
+        char*               data,
+        int                 data_length,
+        extract_buffer_t**  o_buffer
+        );
+/* Creates an extract_buffer_t that reads from a single fixed block of memory.
+*/
 
 int extract_buffer_open_file(const char* path, extract_buffer_t** o_buffer);
 /* Creates an extract_buffer_t that reads from a file.

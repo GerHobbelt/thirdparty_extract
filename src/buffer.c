@@ -116,7 +116,37 @@ int extract_buffer_read(
     return e;
 }
 
-/* Implementation of extract_buffer_file_*. */
+static int s_extract_buffer_open_simple_get(
+        void* handle,
+        char** o_data,
+        int* o_data_length
+        )
+{
+    /* Indicate EOF. */
+    (void) handle;
+    *o_data = NULL;
+    *o_data_length = 0;
+    return 0;
+}
+
+int extract_buffer_open_simple(
+        char*               data,
+        int                 data_length,
+        extract_buffer_t**  o_buffer
+        )
+{
+    extract_buffer_t* buffer = malloc(sizeof(*buffer));
+    if (!buffer) return -1;
+    buffer->data.data = data;
+    buffer->data.length = data_length;
+    buffer->data.pos = 0;
+    buffer->handle = NULL;
+    buffer->get = s_extract_buffer_open_simple_get;
+    buffer->close = NULL;
+    *o_buffer = buffer;
+    return 0;
+}
+
 
 typedef struct
 {
@@ -177,7 +207,12 @@ int extract_buffer_open_file(const char* path, extract_buffer_t** o_buffer)
 int extract_buffer_getc_internal(extract_buffer_t* buffer, char* out)
 /* Called by extract_buffer_getc() if we are at end of buffer->data. */
 {
+    outf("buffer->data.length=%i buffer->data.pos=%i",
+            buffer->data.length,
+            buffer->data.pos
+            );
     if (buffer->data.length == buffer->data.pos) {
+        outf("calling extract_buffer_internal_get_more()");
         int e = extract_buffer_internal_get_more(buffer);
         if (e) return e;
     }
