@@ -18,7 +18,7 @@ struct extract_buffer_t
     extract_buffer_fn_get   get;
     extract_buffer_fn_close close;
 };
-/* */
+
 
 int extract_buffer_open(
         void*                   handle,
@@ -66,43 +66,54 @@ static int extract_buffer_internal_get_more(extract_buffer_t* buffer)
 {
     assert(buffer);
     assert(buffer->data.pos == buffer->data.length);
+    buffer->data.pos = 0;
     int e = buffer->get(buffer->handle, &buffer->data.data, &buffer->data.length);
     if (e) {
+        buffer->data.data = NULL;
         buffer->data.length = 0;
-        buffer->data.pos = 0;
         return e;
     }
     if (buffer->data.length == 0) {
-        buffer->data.pos = 0;
         return +1;
     }
-    buffer->data.pos = 0;
     return 0;
 }
 
-int extract_buffer_read(extract_buffer_t* buffer, char* out, int out_len)
+int extract_buffer_read(
+        extract_buffer_t*   buffer,
+        char*               out,
+        int                 out_length,
+        int*                out_actual
+        )
 {
+    int e = 0;
     int out_pos = 0;
     for(;;) {
-        if (out_pos == out_len) {
-            return 0;
+        if (out_pos == out_length) {
+            break;
         }
         int n = buffer->data.length - buffer->data.pos;
         if (n == 0) {
             if (extract_buffer_internal_get_more(buffer)) return -1;
             if (buffer->data.length == 0) {
                 /* EOF */
-                return +1;
+                e = +1;
+                break;
             }
             n = buffer->data.length - buffer->data.pos;
         }
-        if (n > out_len - out_pos) {
-            n = out_len - out_pos;
+        if (n > out_length - out_pos) {
+            n = out_length - out_pos;
         }
         memcpy(out + out_pos, buffer->data.data + buffer->data.pos, n);
         out_pos += n;
         buffer->data.pos += n;
     }
+    
+    if (out_actual) {
+        *out_actual = out_pos;
+    }
+    return e;
 }
 
 /* Implementation of extract_buffer_file_*. */
@@ -170,6 +181,8 @@ int extract_buffer_getc_internal(extract_buffer_t* buffer, char* out)
         int e = extract_buffer_internal_get_more(buffer);
         if (e) return e;
     }
+    /* We could call extract_buffer_getc() without fear of recursion, but seems
+    simpler to do things explicitly. */
     assert(buffer->data.pos < buffer->data.length);
     *out = buffer->data.data[buffer->data.pos];
     buffer->data.pos += 1;

@@ -46,7 +46,7 @@ openfn:
 closefn:
     Callback called by extract_buffer_close().
 o_buffer:
-    Out-param.
+    Out-param. Set to NULL on error.
 */
 
 
@@ -60,20 +60,28 @@ int extract_buffer_open_file(const char* path, extract_buffer_t** o_buffer);
 path:
     Path of file to read from.
 o_buffer:
-    Out-param.
+    Out-param. Set to NULL on error.
 */
 
 
-int extract_buffer_read(extract_buffer_t* buffer, char* out_buffer, int out_buffer_length);
-/* Reads from buffer into out_buffer. Returns +1 if unable to get
-out_buffer_length bytes due to EOF.
+int extract_buffer_read(
+        extract_buffer_t*   buffer,
+        char*               out,
+        int                 out_length,
+        int*                out_actual
+        );
+/* Reads from buffer into out_buffer.
+
+Returns +1 if short read due to EOF.
 
 buffer:
     As returned by earlier call to extract_buffer_open().
-out_buffer:
+out:
     Location for copied data.
-out_buffer_length:
+out_length:
     Length of out_buffer.
+out_actual:
+    Optional out-param, set to actual number of bytes copied to out_buffer.
 */
 
 

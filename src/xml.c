@@ -166,7 +166,7 @@ int extract_xml_pparse_init(extract_buffer_t* buffer, const char* first_line)
         first_line_buffer = malloc(first_line_len + 1);
         if (!buffer) goto end;
 
-        if (extract_buffer_read(buffer, first_line_buffer, first_line_len)) {
+        if (extract_buffer_read(buffer, first_line_buffer, first_line_len, NULL)) {
             outf("error: failed to read first line.");
             goto end;
         }
