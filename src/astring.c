@@ -1,4 +1,6 @@
+#include "alloc.h"
 #include "astring.h"
+#include "memento.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -12,18 +14,17 @@ void extract_astring_init(extract_astring_t* string)
 
 void extract_astring_free(extract_astring_t* string)
 {
-    free(string->chars);
+    extract_free(&string->chars);
     extract_astring_init(string);
 }
 
-int extract_astring_catl(extract_astring_t* string, const char* s, int s_len)
+
+int extract_astring_catl(extract_astring_t* string, const char* s, size_t s_len)
 {
-    char* chars = realloc(string->chars, string->chars_num + s_len + 1);
-    if (!chars) return -1;
-    memcpy(chars + string->chars_num, s, s_len);
-    chars[string->chars_num + s_len] = 0;
-    string->chars = chars;
-    string->chars_num += s_len;
+    if (extract_realloc2(&string->chars, string->chars_num+1, string->chars_num + s_len + 1)) return -1;
+    memcpy(string->chars + string->chars_num, s, s_len);
+    string->chars[string->chars_num + s_len] = 0;
+    string->chars_num += (int) s_len;
     return 0;
 }
 

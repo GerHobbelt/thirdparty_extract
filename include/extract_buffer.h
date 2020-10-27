@@ -1,27 +1,130 @@
 #ifndef ARTIFEX_EXTRACT_BUFFER_H
 #define ARTIFEX_EXTRACT_BUFFER_H
 
+#include <stddef.h>
 
-/* Support for buffered reading. */
+
+/* Reading and writing abstractions. */
 
 
 typedef struct extract_buffer_t extract_buffer_t;
-/* Abstract state for buffer API. */
+/* Abstract state for a buffer. */
 
 
-typedef int (*extract_buffer_fn_get)(void* handle, char** o_data, int* o_data_length);
-/* Should get more data and use out-parameters to inform where the data is.
+static inline int extract_buffer_read(
+        extract_buffer_t*   buffer,
+        void*               data,
+        size_t              numbytes,
+        size_t*             o_actual
+        );
+/* Reads specified number of bytes from buffer into data..+bytes. Returns +1 if
+short read due to EOF.
+
+buffer:
+    As returned by earlier call to extract_buffer_open().
+data:
+    Location of transferred data.
+bytes:
+    Number of bytes transferred.
+o_actual:
+    Optional out-param, set to actual number of bytes read.
+
+Implemented in extract_buffer_impl.h.
+*/
+
+
+static inline int extract_buffer_write(
+        extract_buffer_t*   buffer,
+        const void*         data,
+        size_t              numbytes,
+        size_t*             o_actual
+        );
+/* Writes specified data into buffer. Returns +1 if short write due to EOF.
+
+buffer:
+    As returned by earlier call to extract_buffer_open().
+data:
+    Location of source data.
+bytes:
+    Number of bytes to copy.
+out_actual:
+    Optional out-param, set to actual number of bytes read. Can be negative if
+    internal cache-flush using fn_write() fails or returns EOF.
+
+Implemented in extract_buffer_impl.h.
+*/
+
+
+size_t extract_buffer_pos(extract_buffer_t* buffer);
+/* Returns number of bytes read or number of bytes written so far. */
+
+
+int extract_buffer_close(extract_buffer_t** io_buffer);
+/* Closes down an extract_buffer_t and frees all internal resources.
+
+Can return error or +1 for EOF if write buffer and fn_write() fails when
+flushing cache.
+
+Always sets *io_buffer to NULL. Does nothing if *io_buffer is already NULL.
+*/
+
+
+typedef int (*extract_buffer_fn_read)(void* handle, void* destination, size_t numbytes, size_t* o_actual);
+/* Callback used by read buffer. Should read data from buffer into the supplied
+destination. E.g. this is used to fill cache or to handle large reads.
+
+Should returns 0 on success (including EOF) or -1 with errno set.
+
+handle:
+    As passed to extract_buffer_open().
+destination:
+    Start of destination.
+bytes:
+    Number of bytes in destination.
+o_actual:
+    Out-param, set to actual number of bytes transferred or zero if EOF. Short
+    reads are not an error.
+*/
+
+typedef int (*extract_buffer_fn_write)(void* handle, const void* source, size_t numbytes, size_t* o_actual);
+/* Callback used by write buffer. Should write data from the supplied source
+into the buffer. E.g. used to flush cache or to handle large writes.
+
+Should return 0 on success (including EOF) or -1 with errno set.
+
+handle:
+    As passed to extract_buffer_open().
+source:
+    Start of source.
+bytes:
+    Number of bytes in source.
+o_actual:
+    Out-param, set to actual number of bytes transferred or zero if EOF. Short
+    writes are not an error.
+*/
+
+typedef int (*extract_buffer_fn_cache)(void* handle, void** o_cache, size_t* o_numbytes);
+/* Callback to flush/populate cache.
+
+If the buffer is for writing:
+    Should return a memory region to which data can be written. Any data
+    written to a previous cache will have already been passed to fn_write() so
+    this can overlap or be the same as any previously-returned cache.
+
+If the buffer is for reading:
+    Should return a memory region containing more data to be read. All data in
+    any previously-returned cache has been read so this can overlap or be the
+    same as any previous cache.
 
 handle:
     As passed to extract_buffer_open().
 o_data:
-    Out-param, should point to new data.
-o_data_length:
-    Out-param, should contain length of new data.
+    Out-param, set to point to new cache.
+o_numbytes:
+    Out-param, set to size of new cache.
 
-On EOF should return 0 with *o_data_length = 0;
+If no data is available due to EOF, should return with *o_numbytes set to zero.
 */
-
 
 typedef void (*extract_buffer_fn_close)(void* handle);
 /* Called by extract_buffer_close().
@@ -33,107 +136,79 @@ handle:
 
 int extract_buffer_open(
         void*                   handle,
-        extract_buffer_fn_get   open,
-        extract_buffer_fn_close close,
+        extract_buffer_fn_read  fn_read,
+        extract_buffer_fn_write fn_write,
+        extract_buffer_fn_cache fn_cache,
+        extract_buffer_fn_close fn_close,
         extract_buffer_t**      o_buffer
         );
 /* Creates an extract_buffer_t that uses specified callbacks.
 
+If fn_read is non-NULL the buffer is a read buffer, else if fn_write is
+non-NULL the buffer is a write buffer. Passing non-NULL for both or neither is
+not supported.
+
 handle:
-    Passed to open() and close() callbacks.
-openfn:
-    Callback used to get more data.
-closefn:
-    NULL or called by extract_buffer_close().
+    Passed to fn_read, fn_write, fn_cache and fn_close callbacks.
+fn_read:
+    Callback for reading data.
+fn_write:
+    Callback for writing data.
+fn_cache:
+    Optional cache callback.
+fn_close:
+    Optional close callback.
 o_buffer:
     Out-param. Set to NULL on error.
-*/
-
-
-void extract_buffer_close(extract_buffer_t* buffer);
-/* Closes down an extract_buffer_t and frees all internal resources.
-
-Does nothing if <buffer> is NULL.
 */
 
 
 int extract_buffer_open_simple(
-        char*               data,
-        int                 data_length,
-        extract_buffer_t**  o_buffer
+        const void*             data,
+        size_t                  numbytes,
+        void*                   handle,
+        extract_buffer_fn_close fn_close,
+        extract_buffer_t**      o_buffer
         );
-/* Creates an extract_buffer_t that reads from a single fixed block of memory.
+/* Creates an extract_buffer_t that reads from or writes to a single fixed
+block of memory.
 
-The data is not copied so data..+data_length must exist for the lifetime of the
+The address region data..+data_length must exist for the lifetime of the
 returned extract_buffer_t.
+
+data:
+    Start of memory region. Note that if the extract_buffer_t is used as a
+    write buffer then data[] will be written-to, despite the 'const'. [This
+    use of const avoids the need for the caller to use a cast when creating a
+    read-buffer.]
+bytes:
+    Size of memory region.
+handle:
+    Passed to fn_close.
+fn_close:
+    Optional callback called by extract_buffer_close(). E.g. could copy the
+    memory region elsewhere if the buffer was used as a write buffer.
+o_buffer:
+    Out-param.
 */
 
 
-int extract_buffer_open_file(const char* path, extract_buffer_t** o_buffer);
-/* Creates an extract_buffer_t that reads from a file.
+int extract_buffer_open_file(const char* path, int writable, extract_buffer_t** o_buffer);
+/* Creates a buffer that reads from, or writes to, a file. For portability
+uses an internal FILE* rather than an integer file descriptor, so doesn't use
+extract_buffer's caching support because FILE* already provides caching.
 
 path:
     Path of file to read from.
+writable:
+    We create read buffer if zero, else a write buffer.
 o_buffer:
     Out-param. Set to NULL on error.
 */
 
 
-int extract_buffer_read(
-        extract_buffer_t*   buffer,
-        char*               out,
-        int                 out_length,
-        int*                out_actual
-        );
-/* Reads specified number of bytes from buffer into out..+out_length.
+/* Include implementations of inline-functions. */
 
-Returns +1 if short read due to EOF.
-
-buffer:
-    As returned by earlier call to extract_buffer_open().
-out:
-    Location for copied data.
-out_length:
-    Number of bytes to copy.
-out_actual:
-    Optional out-param, set to actual number of bytes copied.
-*/
-
-
-/* Implementation details below are to allow extract_buffer_getc() to be
-inline.
-*/
-
-typedef struct
-{
-    char*   data;
-    int     length;
-    int     pos;
-} extract_buffer_data_t;
-/* Internal only; defined here only so that extract_buffer_getc() can be
-inline.
-*/
-
-
-int extract_buffer_getc_internal(extract_buffer_t* buffer, char* out);
-/* Internal only. */
-
-
-static inline int extract_buffer_getc(extract_buffer_t* buffer, char* out)
-/* Inline function to read one character from an extract_buffer_t.
-
-Writes next char to *out and returns zero, or returns -ve error with errno set,
-or returns +1 on EOF.
-*/
-{
-    extract_buffer_data_t* buffer_data = (void*) buffer;
-    if (buffer_data->length == buffer_data->pos) {
-        return extract_buffer_getc_internal(buffer, out);
-    }
-    *out = buffer_data->data[buffer_data->pos];
-    buffer_data->pos += 1;
-    return 0;
-}
-
+#include "extract_buffer_impl.h"
 
 #endif

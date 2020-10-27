@@ -1,3 +1,7 @@
+#include "alloc.h"
+#include "mem.h"
+#include "memento.h"
+#include "outf.h"
 #include "zip.h"
 
 #include <zlib.h>
@@ -5,6 +9,8 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,50 +25,69 @@ typedef struct
     int32_t     size_uncompressed;
     char*       name;
     uint32_t    offset;
+    uint16_t    attr_internal;
+    uint32_t    attr_external;
     
 } extract_zip_cd_file_t;
 
 struct extract_zip_t
 {
-    FILE*                   stream;
+    extract_buffer_t*       buffer;
     extract_zip_cd_file_t*  cd_files;
     int                     cd_files_num;
     
+    /* errno_ is set to non-zero if any operation fails; avoids need to check
+    after every small output operation. */
+    int                     errno_;
+    int                     eof;
+    
+    /* Defaults for various values in zip file headers etc. */
+    uint16_t                mtime;
+    uint16_t                mdate;
+    uint16_t                version_creator;
+    uint16_t                version_extract;
+    uint16_t                general_purpose_bit_flag;
+    uint16_t                file_attr_internal;
+    uint32_t                file_attr_external;
+    char*                   archive_comment;
 };
 
-int extract_zip_open(
-        const char* path,
-        const char* mode,
-        extract_zip_t** o_zip
-        )
+int extract_zip_open(extract_buffer_t* buffer, extract_zip_t** o_zip)
 {
     int e = -1;
-    extract_zip_t* zip = malloc(sizeof(*zip));
-    if (!zip)   goto end;
+    extract_zip_t* zip;
+    if (extract_malloc(&zip, sizeof(*zip))) goto end;
     
     zip->cd_files = NULL;
     zip->cd_files_num = 0;
+    zip->buffer = buffer;
+    zip->errno_ = 0;
+    zip->eof = 0;
     
-    zip->stream = fopen(path, mode);
-    if (!zip->stream) goto end;
+    /* We could maybe convert current date/time to the ms-dos format required
+    here, but using zeros doesn't seem to make a difference to Word etc. */
+    zip->mtime = 0;
+    zip->mdate = 0;
     
-    if (fseek(zip->stream, 0, SEEK_END)) goto end;
-    long pos = ftell(zip->stream);
-    if (pos > 0) {
-        /* Look for EOCD. */
-        printf("Refusing to open existing file.\n");
-        errno = EINVAL;
-        goto end;
-    }
+    /* These are all copied from command-line zip on unix. */
+    zip->version_creator = (0x3 << 8) + 30; /* 0x3 is unix, 30 means 3.0. */
+    zip->version_extract = 10;              /* 10 means 1.0. */
+    zip->general_purpose_bit_flag = 0;
+    zip->file_attr_internal = 0;
+    
+    /* We follow command-line zip which uses 0x81a40000 which is octal
+    0100644:0.  (0100644 is S_IFREG (regular file) plus rw-r-r. See stat(2) for
+    details.) */
+    zip->file_attr_external = (0100644 << 16) + 0;
+    if (extract_strdup("Artifex", &zip->archive_comment)) goto end;
     
     e = 0;
+    
     end:
     if (e) {
-        if (zip) {
-            if (zip->stream) fclose(zip->stream);
-            free(zip->cd_files);
-        }
-        free(zip);
+        if (zip) extract_free(&zip->archive_comment);
+        extract_free(&zip);
+        *o_zip = NULL;
     }
     else {
         *o_zip = zip;
@@ -79,17 +104,22 @@ static int s_native_little_endinesss(void)
         return 1;
     }
     else if (b == 2 + 1*256) {
+        /* Native big-endiness. */
         return 0;
     }
-    assert(0);
+    abort();
 }
 
 static int s_write(extract_zip_t* zip, const void* data, size_t data_length)
 {
-    int e = fwrite(data, data_length, 1 /*memb*/, zip->stream);
-    if (e == 1) return 0;
-    errno = EIO;
-    return -1;
+    size_t actual;
+    int e;
+    if (zip->errno_)    return -1;
+    if (zip->eof)       return +1;
+    e = extract_buffer_write(zip->buffer, data, data_length, &actual);
+    if (e == -1)    zip->errno_ = errno;
+    if (e == +1)    zip->eof = 1;
+    return e;
 }
 
 static int s_write_uint32(extract_zip_t* zip, uint32_t value)
@@ -98,7 +128,12 @@ static int s_write_uint32(extract_zip_t* zip, uint32_t value)
         return s_write(zip, &value, sizeof(value));
     }
     else {
-        unsigned char value2[4] = { value, value>>8, value>>16, value>>24};
+        unsigned char value2[4] = {
+                (unsigned char) (value >> 0),
+                (unsigned char) (value >> 8),
+                (unsigned char) (value >> 16),
+                (unsigned char) (value >> 24)
+                };
         return s_write(zip, &value2, sizeof(value2));
     }
 }
@@ -109,7 +144,10 @@ static int s_write_uint16(extract_zip_t* zip, uint16_t value)
         return s_write(zip, &value, sizeof(value));
     }
     else {
-        unsigned char value2[2] = { value, value>>8};
+        unsigned char value2[2] = {
+                (unsigned char) (value >> 0),
+                (unsigned char) (value >> 8)
+                };
         return s_write(zip, &value2, sizeof(value2));
     }
 }
@@ -119,6 +157,7 @@ static int s_write_string(extract_zip_t* zip, const char* text)
     return s_write(zip, text, strlen(text));
 }
 
+
 int extract_zip_write_file(
         extract_zip_t* zip,
         const void* data,
@@ -127,50 +166,68 @@ int extract_zip_write_file(
         )
 {
     int e = -1;
+    extract_zip_cd_file_t* cd_file = NULL;
     
-    uint16_t    mtime = 0;
-    uint16_t    mdate = 0;
-    
+    if (data_length > INT_MAX) {
+        assert(0);
+        errno = EINVAL;
+        return -1;
+    }
     /* Create central directory file header for later. */
-    extract_zip_cd_file_t*  cd_files = realloc(
-            zip->cd_files,
-            (zip->cd_files_num+1) * sizeof(extract_zip_cd_file_t)
-            );
-    if (!cd_files) goto end;
-    zip->cd_files = cd_files;
-    extract_zip_cd_file_t* cd_file = &cd_files[zip->cd_files_num];
-    cd_file->mtime = mtime;
-    cd_file->mdate = mdate;
-    cd_file->crc_sum = crc32(0, NULL, 0);
-    cd_file->crc_sum = crc32(cd_file->crc_sum, data, data_length);
-    cd_file->size_compressed = data_length;
-    cd_file->size_uncompressed = data_length;
-    cd_file->name = strdup(name);
-    cd_file->offset = ftell(zip->stream);
-    if (!cd_file->name) goto end;
-    zip->cd_files_num += 1;
+    if (extract_realloc2(
+            &zip->cd_files,
+            sizeof(extract_zip_cd_file_t) * zip->cd_files_num,
+            sizeof(extract_zip_cd_file_t) * (zip->cd_files_num+1)
+            )) goto end;
+    cd_file = &zip->cd_files[zip->cd_files_num];
+    cd_file->name = NULL;
     
-    /* Write local header. */
-    s_write_uint32(zip, 0x04034b50);
-    s_write_uint16(zip, 0);                             /* Version needed to extract (minimum) */
-    s_write_uint16(zip, 0);                             /* General purpose bit flag */
-    s_write_uint16(zip, 0);                             /* Compression method */
-    s_write_uint16(zip, cd_file->mtime);                /* File last modification time */
-    s_write_uint16(zip, cd_file->mdate);                /* File last modification date */
-    s_write_uint32(zip, cd_file->crc_sum);              /* CRC-32 of uncompressed data */
-    s_write_uint32(zip, cd_file->size_compressed);      /* Compressed size */
-    s_write_uint32(zip, cd_file->size_uncompressed);    /* Uncompressed size */
-    s_write_uint16(zip, strlen(name));                  /* File name length (n) */
-    s_write_uint16(zip, 0);                             /* Extra field length (m) */
-    s_write_string(zip, cd_file->name);                 /* File name */
+    cd_file->mtime = zip->mtime;
+    cd_file->mdate = zip->mtime;
+    cd_file->crc_sum = (int32_t) crc32(crc32(0, NULL, 0), data, (int) data_length);
+    cd_file->size_compressed = (int) data_length;
+    cd_file->size_uncompressed = (int) data_length;
+    if (extract_strdup(name, &cd_file->name)) goto end;
+    cd_file->offset = (int) extract_buffer_pos(zip->buffer);
+    cd_file->attr_internal = zip->file_attr_internal;
+    cd_file->attr_external = zip->file_attr_external;
+    if (!cd_file->name) goto end;
+    
+    /* Write local file header. */
+    {
+        const char extra_local[] = "";  /* Modify for testing. */
+        s_write_uint32(zip, 0x04034b50);
+        s_write_uint16(zip, zip->version_extract);          /* Version needed to extract (minimum). */
+        s_write_uint16(zip, zip->general_purpose_bit_flag); /* General purpose bit flag */
+        s_write_uint16(zip, 0);                             /* Compression method */
+        s_write_uint16(zip, cd_file->mtime);                /* File last modification time */
+        s_write_uint16(zip, cd_file->mdate);                /* File last modification date */
+        s_write_uint32(zip, cd_file->crc_sum);              /* CRC-32 of uncompressed data */
+        s_write_uint32(zip, cd_file->size_compressed);      /* Compressed size */
+        s_write_uint32(zip, cd_file->size_uncompressed);    /* Uncompressed size */
+        s_write_uint16(zip, (uint16_t) strlen(name));       /* File name length (n) */
+        s_write_uint16(zip, sizeof(extra_local)-1);         /* Extra field length (m) */
+        s_write_string(zip, cd_file->name);                 /* File name */
+        s_write(zip, extra_local, sizeof(extra_local)-1);   /* Extra field */
+    }
+    /* Write the (uncompressed) data. */
     s_write(zip, data, data_length);
     
-    e = 0;
+    if (zip->errno_)    e = -1;
+    else if (zip->eof)  e = +1;
+    else e = 0;
+    
     
     end:
+    
     if (e) {
-        if (cd_file) free(cd_file->name);
-        free(cd_file);
+        /* Leave zip->cd_files_num unchanged, so calling extract_zip_close()
+        will write out any earlier files. Free cd_file->name to avoid leak. */
+        if (cd_file) extract_free(&cd_file->name);
+    }
+    else {
+        /* cd_files[zip->cd_files_num] is valid. */
+        zip->cd_files_num += 1;
     }
     
     return e;
@@ -180,80 +237,57 @@ int extract_zip_close(extract_zip_t* zip)
 {
     int e = -1;
     
-    long pos = ftell(zip->stream);
-    long len = 0;
+    size_t pos = extract_buffer_pos(zip->buffer);
+    size_t len = 0;
     int i;
     
-    /* Write Central directory file headers. */
+    /* Write Central directory file headers, freeing data as we go. */
     for (i=0; i<zip->cd_files_num; ++i) {
-        long pos2 = ftell(zip->stream);
+        const char extra[] = "";
+        size_t pos2 = extract_buffer_pos(zip->buffer);
         extract_zip_cd_file_t* cd_file = &zip->cd_files[i];
         s_write_uint32(zip, 0x02014b50);
-        s_write_uint16(zip, 0);                             /* Version made by */
-        s_write_uint16(zip, 0);                             /* Version needed to extract (minimum) */
-        s_write_uint16(zip, 0);                             /* General purpose bit flag */
-        s_write_uint16(zip, 0);                             /* Compression method */
-        s_write_uint16(zip, cd_file->mtime);                /* File last modification time */
-        s_write_uint16(zip, cd_file->mdate);                /* File last modification date */
-        s_write_uint32(zip, cd_file->crc_sum);              /* CRC-32 of uncompressed data */
-        s_write_uint32(zip, cd_file->size_compressed);      /* Compressed size */
-        s_write_uint32(zip, cd_file->size_uncompressed);    /* Uncompressed size */
-        s_write_uint16(zip, strlen(cd_file->name));         /* File name length (n) */
-        s_write_uint16(zip, 0);                             /* Extra field length (m) */
-        s_write_uint16(zip, 0);                             /* File comment length (k) */
-        s_write_uint16(zip, 0);                             /* Disk number where file starts */
-        s_write_uint16(zip, 0);                             /* Internal file attributes */
-        s_write_uint32(zip, 0);                             /* External file attributes */
-        s_write_uint32(zip, cd_file->offset);               /* Relative offset of local file header. This is the number of bytes between the start of the first disk on which the file occurs, and the start of the local file header. This allows software reading the central directory to locate the position of the file inside the ZIP file. */
-        s_write_string(zip, cd_file->name);                 /* File name */
-        len += ftell(zip->stream) - pos2;
+        s_write_uint16(zip, zip->version_creator);              /* Version made by, copied from command-line zip. */
+        s_write_uint16(zip, zip->version_extract);              /* Version needed to extract (minimum). */
+        s_write_uint16(zip, zip->general_purpose_bit_flag);     /* General purpose bit flag */
+        s_write_uint16(zip, 0);                                 /* Compression method */
+        s_write_uint16(zip, cd_file->mtime);                    /* File last modification time */
+        s_write_uint16(zip, cd_file->mdate);                    /* File last modification date */
+        s_write_uint32(zip, cd_file->crc_sum);                  /* CRC-32 of uncompressed data */
+        s_write_uint32(zip, cd_file->size_compressed);          /* Compressed size */
+        s_write_uint32(zip, cd_file->size_uncompressed);        /* Uncompressed size */
+        s_write_uint16(zip, (uint16_t) strlen(cd_file->name));  /* File name length (n) */
+        s_write_uint16(zip, sizeof(extra)-1);                   /* Extra field length (m) */
+        s_write_uint16(zip, 0);                                 /* File comment length (k) */
+        s_write_uint16(zip, 0);                                 /* Disk number where file starts */
+        s_write_uint16(zip, cd_file->attr_internal);            /* Internal file attributes */
+        s_write_uint32(zip, cd_file->attr_external);            /* External file attributes. */
+        s_write_uint32(zip, cd_file->offset);                   /* Offset of local file header. */
+        s_write_string(zip, cd_file->name);                     /* File name */
+        s_write(zip, extra, sizeof(extra)-1);                   /* Extra field */
+        len += extract_buffer_pos(zip->buffer) - pos2;
+        extract_free(&cd_file->name);
     }
+    extract_free(&zip->cd_files);
     
     /* Write End of central directory record. */
     s_write_uint32(zip, 0x06054b50);
-    s_write_uint16(zip, 0);                  /* Number of this disk */
-    s_write_uint16(zip, 0);                  /* Disk where central directory starts */
-    s_write_uint16(zip, zip->cd_files_num);  /* Number of central directory records on this disk */
-    s_write_uint16(zip, zip->cd_files_num);  /* Total number of central directory records */
-    s_write_uint32(zip, len);                /* Size of central directory (bytes) */
-    s_write_uint32(zip, pos);                /* Offset of start of central directory, relative to start of archive */
-    s_write_uint32(zip, 5);                  /* Comment length (n) */
+    s_write_uint16(zip, 0);                             /* Number of this disk */
+    s_write_uint16(zip, 0);                             /* Disk where central directory starts */
+    s_write_uint16(zip, (uint16_t) zip->cd_files_num);  /* Number of central directory records on this disk */
+    s_write_uint16(zip, (uint16_t) zip->cd_files_num);  /* Total number of central directory records */
+    s_write_uint32(zip, (int) len);                     /* Size of central directory (bytes) */
+    s_write_uint32(zip, (int) pos);                     /* Offset of start of central directory, relative to start of archive */
     
-    s_write_string(zip, "MuPDF");
+    s_write_uint16(zip, (uint16_t) strlen(zip->archive_comment));  /* Comment length (n) */
+    s_write_string(zip, zip->archive_comment);
+    extract_free(&zip->archive_comment);
     
-    if (feof(zip->stream) || ferror(zip->stream)) {
-        goto end;
-    }
-    if (fclose(zip->stream)) goto end;
+    if (zip->errno_)    e = -1;
+    else if (zip->eof)  e = +1;
+    else e = 0;
     
-    e = 0;
-    
-    end:
+    extract_free(&zip);
     
     return e;
 }
-
-/*
-int main(int argc, char** argv)
-{
-    (void) argc;
-    (void) argv;
-    int e = -1;
-    extract_zip_t* zip;
-    if (extract_zip_open("ziptest.zip", "w", &zip)) goto end;
-    const char hw[] = "hello world\n";
-    if (extract_zip_write_file(zip, hw, sizeof(hw)-1, "ziptest/hw.txt")) goto end;
-    if (extract_zip_write_file(zip, hw, sizeof(hw)-1, "ziptest/foo/hw2.txt")) goto end;
-    if (extract_zip_close(zip)) goto end;
-    
-    e = 0;
-    
-    end:
-    
-    if (e) {
-        printf("failed: %s\n", strerror(errno));
-        return 1;
-    }
-    return 0;
-}
-*/

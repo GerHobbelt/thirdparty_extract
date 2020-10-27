@@ -1,5 +1,5 @@
-#ifndef ARTIFEX_DOCX_H
-#define ARTIFEX_DOCX_H
+#ifndef ARTIFEX_EXTRACT_DOCX_H
+#define ARTIFEX_EXTRACT_DOCX_H
 
 /* Only for internal use by extract code.  */
 
@@ -22,6 +22,7 @@ int extract_docx_paragraph_start(extract_astring_t* content);
 int extract_docx_paragraph_finish(extract_astring_t* content);
 
 int extract_docx_char_append_string(extract_astring_t* content, char* text);
+int extract_docx_char_append_stringf(extract_astring_t* content, char* format, ...);
 
 int extract_docx_char_append_char(extract_astring_t* content, char c);
 

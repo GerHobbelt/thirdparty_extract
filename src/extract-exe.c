@@ -2,6 +2,10 @@
 
 #include "../include/extract.h"
 
+#include "alloc.h"
+#include "memento.h"
+#include "outf.h"
+
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -46,11 +50,16 @@ int main(int argc, char** argv)
     const char* content_path        = NULL;
     int         preserve_dir        = 0;
     int         spacing             = 1;
+    int         rotation            = 1;
     int         autosplit           = 0;
+    int         images              = 1;
+    int         alloc_stats         = 0;
 
     extract_document_t* document = NULL;
     char*               content = NULL;
-    int                 content_length = 0;
+    size_t              content_length = 0;
+    extract_buffer_t*   intermediate = NULL;
+    extract_buffer_t*   out_buffer = NULL;
 
     int e = -1;
     
@@ -81,6 +90,9 @@ int main(int argc, char** argv)
                     "    -p 0|1\n"
                     "        If 1 and -t <docx-template> is specified, we preserve the\n"
                     "        uncompressed <docx-path>.lib/ directory.\n"
+                    "    -r 0|1\n"
+                    "       If 1, we we output rotated text inside a rotated drawing. Otherwise\n"
+                    "       output text is always horizontal.\n"
                     "    -s 0|1\n"
                     "        If 1, we insert extra vertical space between paragraphs and extra\n"
                     "        vertical space between paragraphs that had different ctm matrices\n"
@@ -88,17 +100,24 @@ int main(int argc, char** argv)
                     "    -t <docx-template>\n"
                     "        If specified we use <docx-template> as template. Otheerwise we use"
                     "        an internal template.\n"
+                    "    -v <verbose>\n"
+                    "        Set verbose level.\n"
+                    "    -v-alloc\n"
+                    "        Show alloc stats.\n"
                     );
             if (i + 1 == argc) {
                 e = 0;
                 goto end;
             }
         }
+        else if (!strcmp(arg, "--alloc-exp-min")) {
+            int size;
+            if (arg_next_int(argv, argc, &i, &size)) goto end;
+            outf0("Calling alloc_set_min_alloc_size(%i)", size);
+            extract_alloc_exp_min(size);
+        }
         else if (!strcmp(arg, "--autosplit")) {
             if (arg_next_int(argv, argc, &i, &autosplit)) goto end;
-        }
-        else if (!strcmp(arg, "--o-content")) {
-            if (arg_next_string(argv, argc, &i, &content_path)) goto end;
         }
         else if (!strcmp(arg, "-i")) {
             if (arg_next_string(argv, argc, &i, &input_path)) goto end;
@@ -106,14 +125,29 @@ int main(int argc, char** argv)
         else if (!strcmp(arg, "-o")) {
             if (arg_next_string(argv, argc, &i, &docx_out_path)) goto end;
         }
+        else if (!strcmp(arg, "--o-content")) {
+            if (arg_next_string(argv, argc, &i, &content_path)) goto end;
+        }
         else if (!strcmp(arg, "-p")) {
             if (arg_next_int(argv, argc, &i, &preserve_dir)) goto end;
+        }
+        else if (!strcmp(arg, "-r")) {
+            if (arg_next_int(argv, argc, &i, &rotation)) goto end;
         }
         else if (!strcmp(arg, "-s")) {
             if (arg_next_int(argv, argc, &i, &spacing)) goto end;
         }
         else if (!strcmp(arg, "-t")) {
             if (arg_next_string(argv, argc, &i, &docx_template_path)) goto end;
+        }
+        else if (!strcmp(arg, "-v")) {
+            int verbose;
+            if (arg_next_int(argv, argc, &i, &verbose)) goto end;
+            outf_verbose_set(verbose);
+            outf("Have changed verbose to %i", verbose);
+        }
+        else if (!strcmp(arg, "--v-alloc")) {
+            if (arg_next_int(argv, argc, &i, &alloc_stats)) goto end;
         }
         else {
             printf("Unrecognised arg: '%s'\n", arg);
@@ -130,7 +164,11 @@ int main(int argc, char** argv)
         goto end;
     }
     
-    if (extract_intermediate_to_document(input_path, autosplit, &document)) {
+    if (extract_buffer_open_file(input_path, 0 /*writable*/, &intermediate)) {
+        printf("Failed to open intermediate file: %s\n", input_path);
+        goto end;
+    }
+    if (extract_intermediate_to_document(intermediate, autosplit, &document)) {
         printf("Failed to read 'raw' output from: %s\n", input_path);
         goto end;
     }
@@ -140,14 +178,15 @@ int main(int argc, char** argv)
         goto end;
     }
     
-    if (extract_document_to_docx_content(document, spacing, &content, &content_length)) {
+    if (extract_document_to_docx_content(document, spacing, rotation, images, &content, &content_length)) {
         printf("Failed to create docx content.\n");
         goto end;
     }
 
     if (content_path) {
+        FILE* f;
         printf("Writing content to: %s\n", content_path);
-        FILE* f = fopen(content_path, "w");
+        f = fopen(content_path, "w");
         if (!f) {
             printf("Failed to create content file: %s\n", content_path);
             goto end;
@@ -164,9 +203,11 @@ int main(int argc, char** argv)
     if (docx_out_path) {
         printf("Creating .docx file: %s\n", docx_out_path);
         if (docx_template_path) {
+            printf("Using template: %s\n", docx_template_path);
             if (extract_docx_content_to_docx_template(
                     content,
                     content_length,
+                    document,
                     docx_template_path,
                     docx_out_path,
                     preserve_dir
@@ -176,28 +217,47 @@ int main(int argc, char** argv)
             }
         }
         else {
+            /* We could use extract_docx_content_to_docx(), but
+            instead test with extract_buffer_open_file() and
+            extract_docx_content_to_docx_buffer(). */
+            if (extract_buffer_open_file(docx_out_path, 1 /*writable*/, &out_buffer)) goto end;
+            
             if (extract_docx_content_to_docx(
                     content,
                     content_length,
-                    docx_out_path
+                    document,
+                    out_buffer
                     )) {
                 printf("Failed to create .docx file: %s\n", docx_out_path);
                 goto end;
             }
+            if (extract_buffer_close(&out_buffer)) goto end;
         }
     }
 
     e = 0;
     end:
 
-    free(content);
-    extract_document_free(document);
+    extract_free(&content);
+    extract_document_free(&document);
+    extract_buffer_close(&intermediate);
+    extract_buffer_close(&out_buffer);
 
     if (e) {
         printf("Failed (errno=%i): %s\n", errno, strerror(errno));
         return 1;
     }
     
+    extract_end();
+    
+    if (alloc_stats) {
+        printf("Alloc stats: num_malloc=%i num_realloc=%i num_free=%i num_libc_realloc=%i\n",
+                extract_alloc_info.num_malloc,
+                extract_alloc_info.num_realloc,
+                extract_alloc_info.num_free,
+                extract_alloc_info.num_libc_realloc
+                );
+    }
     printf("Finished.\n");
     return 0;
 }

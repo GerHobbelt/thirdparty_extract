@@ -3,10 +3,12 @@
 
 /* Only for internal use by extract code.  */
 
+#include "../include/extract_buffer.h"
+
 #include <stddef.h>
 
 
-/* Functions for creating zip files.
+/* Support for creating zip file content.
 
 Content is uncompressed.
 
@@ -18,22 +20,14 @@ typedef struct extract_zip_t extract_zip_t;
 /* Abstract handle for zipfile state. */
 
 
-int extract_zip_open(
-        const char*     path,
-        const char*     mode,
-        extract_zip_t** o_zip
-        );
-/* Opens new zip file.
+int extract_zip_open(extract_buffer_t* buffer, extract_zip_t** o_zip);
+/* Creates an extract_zip_t that writes to specified buffer.
 
-path:
-    Path of zip file.
-mode:
-    Passed to fopen(), should be "w" (intended to allow reading/writing in
-    the future, but unnecessary for now).
+buffer:
+    Destination for zip file content.
 o_zip:
     Out-param.
 */
-
 
 int extract_zip_write_file(
         extract_zip_t*  zip,
@@ -42,6 +36,9 @@ int extract_zip_write_file(
         const char*     name
         );
 /* Writes specified data into the zip file.
+
+Returns same as extract_buffer_write(): 0 on success, +1 if short write due to
+EOF or -1 with errno set.
 
 zip:
     From extract_zip_open().
@@ -56,7 +53,9 @@ name:
 
 int extract_zip_close(extract_zip_t* zip);
 /* Finishes writing the zip file (e.g. appends Central directory file headers
-and End of central directory record.
+and End of central directory record).
+
+Does not call extract_buffer_close().
 
 zip:
     From extract_zip_open().
