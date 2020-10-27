@@ -26,9 +26,6 @@
 
 #define COMPILING_MEMENTO_C
 
-/* SHUT UP, MSVC. I KNOW WHAT I AM DOING. */
-#define _CRT_SECURE_NO_WARNINGS
-
 /* We have some GS specific tweaks; more for the GS build environment than
  * anything else. */
 /* #define MEMENTO_GS_HACKS */
@@ -1656,7 +1653,7 @@ void Memento_fin(void)
 }
 
 /* Reads number from <text> using strtol().
- * 
+ *
  * Params:
  *     text:
  *         text to read.
@@ -1666,7 +1663,7 @@ void Memento_fin(void)
  *         *relative set to 1 if <text> starts with '+' or '-', else set to 0.
  *     end:
  *         *end is set to point to next unread character after number.
- * 
+ *
  * Returns 0 on success, else -1.
  */
 static int read_number(const char *text, int *out, int *relative, char **end)
@@ -1689,10 +1686,10 @@ static int read_number(const char *text, int *out, int *relative, char **end)
 }
 
 /* Reads number plus optional delta value from <text>.
- * 
+ *
  * Evaluates <number> or <number>[+|-<delta>]. E.g. text='1234+2' sets *out=1236,
  * text='1234-1' sets *out=1233.
- * 
+ *
  * Params:
  *     text:
  *         text to read.
@@ -1700,7 +1697,7 @@ static int read_number(const char *text, int *out, int *relative, char **end)
  *         pointer to output value.
  *     end:
  *         *end is set to point to next unread character after number.
- * 
+ *
  * Returns 0 on success, else -1.
  */
 static int read_number_delta(const char *text, int *out, char **end)
@@ -1731,11 +1728,11 @@ static int read_number_delta(const char *text, int *out, char **end)
 }
 
 /* Reads range.
- * 
+ *
  * E.g.:
  *     text='115867-2' sets *begin=115865 *end=115866.
  *     text='115867-1..+3' sets *begin=115866 *end=115869.
- * 
+ *
  * Supported patterns for text:
  *     <range>
  *         <value>             - returns *begin=value *end=*begin+1.
@@ -1745,11 +1742,11 @@ static int read_number_delta(const char *text, int *out, char **end)
  *         <number>
  *         <number>+<number>
  *         <number>-<number>
- * 
+ *
  *     <number>: [0-9]+
- * 
+ *
  * If not specified, *end defaults to *begin+1.
- * 
+ *
  * Returns 0 on success, else -1, with *string_end pointing to first unused
  * character.
  */
@@ -1783,9 +1780,9 @@ static int read_number_range(const char *text, int *begin, int *end, char **stri
 
 /*
  * Format: <range>[,<range>]+
- * 
+ *
  * For description of <range>, see read_number_range() above.
- * 
+ *
  * E.g.:
  *     MEMENTO_SQUEEZES=1234-2..+4,2345,2350..+2
  */
