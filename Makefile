@@ -57,12 +57,19 @@ endif
 # Locations of mutool and gs - we assume these are available at hard-coded
 # paths, with mupdf and ghostpdl checked out next to extract.
 #
-# If this extract checkout is a mupdf submodule, one could override with:
-#   make gs=../../../ghostpdl/debug-bin/gs mutool=../../build/debug-extract/mutool ...
+# If this extract checkout is within the mupdf tree (typically as a git
+# submodule) we set things differently, pointing $(mutool) to within the mupdf
+# tree and assuming that ghostpdl is checked out next to mupdf.
 #
 gs      = ../ghostpdl/debug-bin/gs
 mutool  = ../mupdf/build/debug-extract/mutool
 
+we_are_mupdf_thirdparty = $(findstring /mupdf/thirdparty/extract, $(abspath .))
+ifneq ($(we_are_mupdf_thirdparty),)
+    #$(warning we are mupdf thirdparty)
+    mutool = ../../build/debug-extract/mutool
+    gs = ../../../ghostpdl/debug-bin/gs
+endif
 
 # Default target - run all tests.
 #
@@ -98,8 +105,8 @@ tests_mutool := \
         $(patsubst %, %.mutool.docx.diff, $(pdfs_generated)) \
         $(patsubst %, %.mutool-norotate.docx.diff, $(pdfs_generated)) \
 
-#$(warn $(pdfs_generated_intermediate_docx_diffs))
-#$(warn $(tests))
+#$(warning $(pdfs_generated_intermediate_docx_diffs))
+#$(warning $(tests))
 
 test: $(tests_exe) $(tests_mutool)
 
@@ -208,7 +215,7 @@ test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.d
 	@rm -r $@ 2>/dev/null || true
 	unzip -q -d $@ $<
 
-# Prettyifies each .xml file within .docx.dir/ directory.
+# Prettifies each .xml file within .docx.dir/ directory.
 %.docx.dir.pretty: %.docx.dir
 	@rm -r $@ $@- 2>/dev/null || true
 	cp -pr $< $@-
@@ -216,13 +223,13 @@ test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.d
 	mv $@- $@
 
 # Converts .pdf directly to .docx using mutool.
-test/generated/%.pdf.mutool.docx: test/%.pdf
+test/generated/%.pdf.mutool.docx: test/%.pdf $(mutool)
 	@echo
 	@echo == Converting .pdf directly to .docx using mutool.
 	@mkdir -p test/generated
 	$(mutool) convert -o $@ $<
 
-test/generated/%.pdf.mutool-norotate.docx: test/%.pdf
+test/generated/%.pdf.mutool-norotate.docx: test/%.pdf $(mutool)
 	@echo
 	@echo == Converting .pdf directly to .docx using mutool.
 	@mkdir -p test/generated
