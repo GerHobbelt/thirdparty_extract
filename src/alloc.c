@@ -70,7 +70,7 @@ int (extract_malloc)(extract_alloc_t* alloc, void** pptr, size_t size)
     size = round_up(alloc, size);
     p = (alloc) ? alloc->realloc_fn(alloc->realloc_state, NULL, size) : malloc(size);
     *pptr = p;
-    if (!p)
+    if (!p && size)
     {
         if (alloc) errno = ENOMEM;
         return -1;
@@ -82,7 +82,7 @@ int (extract_malloc)(extract_alloc_t* alloc, void** pptr, size_t size)
 int (extract_realloc)(extract_alloc_t* alloc, void** pptr, size_t newsize)
 {
     void* p = (alloc) ? alloc->realloc_fn(alloc->realloc_state, *pptr, newsize) : realloc(*pptr, newsize);
-    if (!p)
+    if (!p && newsize)
     {
         if (alloc) errno = ENOMEM;
         return -1;

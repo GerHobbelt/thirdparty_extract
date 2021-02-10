@@ -235,6 +235,10 @@ int main(int argc, char** argv)
                 stats->num_libc_realloc
                 );
     }
+    
+    extract_alloc_destroy(&alloc);
+    assert(alloc == NULL);    
+
     printf("Finished.\n");
     return 0;
 }
