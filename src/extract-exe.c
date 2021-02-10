@@ -1,8 +1,8 @@
 /* Command-line programme for extract_ API. */
 
 #include "../include/extract.h"
+#include "../include/extract_alloc.h"
 
-#include "alloc.h"
 #include "memento.h"
 #include "outf.h"
 
@@ -57,6 +57,7 @@ int main(int argc, char** argv)
     int         alloc_stats         = 0;
     int         i;
 
+    extract_alloc_t*    alloc = NULL;
     extract_buffer_t*   out_buffer = NULL;
     extract_buffer_t*   intermediate = NULL;
     extract_t*          extract = NULL;
@@ -114,7 +115,7 @@ int main(int argc, char** argv)
             int size;
             if (arg_next_int(argv, argc, &i, &size)) goto end;
             outf("Calling alloc_set_min_alloc_size(%i)", size);
-            extract_alloc_exp_min(size);
+            extract_exp_min(extract, size);
         }
         else if (!strcmp(arg, "--autosplit")) {
             if (arg_next_int(argv, argc, &i, &autosplit)) goto end;
@@ -164,17 +165,17 @@ int main(int argc, char** argv)
         goto end;
     }
     
-    if (extract_buffer_open_file(input_path, 0 /*writable*/, &intermediate)) {
+    if (extract_buffer_open_file(alloc, input_path, 0 /*writable*/, &intermediate)) {
         printf("Failed to open intermediate file: %s\n", input_path);
         goto end;
     }
     
-    if (extract_begin(&extract)) goto end;
+    if (extract_begin(alloc, &extract)) goto end;
     if (extract_read_intermediate(extract, intermediate, autosplit)) goto end;
     if (extract_process(extract, spacing, rotation, images)) goto end;
     
     if (content_path) {
-        if (extract_buffer_open_file(content_path, 1 /*writable*/, &out_buffer)) goto end;
+        if (extract_buffer_open_file(alloc, content_path, 1 /*writable*/, &out_buffer)) goto end;
         if (extract_write_content(extract, out_buffer)) goto end;
         if (extract_buffer_close(&out_buffer)) goto end;
     }
@@ -191,7 +192,7 @@ int main(int argc, char** argv)
             }
         }
         else {
-            if (extract_buffer_open_file(docx_out_path, 1 /*writable*/, &out_buffer)) goto end;
+            if (extract_buffer_open_file(alloc, docx_out_path, 1 /*writable*/, &out_buffer)) goto end;
             if (extract_write(extract, out_buffer)) {
                 printf("Failed to create docx file: %s\n", docx_out_path);
                 goto end;

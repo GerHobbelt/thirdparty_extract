@@ -1,6 +1,8 @@
 #ifndef ARTIFEX_EXTRACT_BUFFER_H
 #define ARTIFEX_EXTRACT_BUFFER_H
 
+#include "extract_alloc.h"
+
 #include <stddef.h>
 
 
@@ -136,8 +138,12 @@ handle:
     As passed to extract_buffer_open().
 */
 
+extract_alloc_t* extract_buffer_alloc(extract_buffer_t* buffer);
+/* Returns the extract_alloc_t* originally passed to extract_buffer_open*(). */
+
 
 int extract_buffer_open(
+        extract_alloc_t*        alloc, 
         void*                   handle,
         extract_buffer_fn_read  fn_read,
         extract_buffer_fn_write fn_write,
@@ -167,6 +173,7 @@ o_buffer:
 
 
 int extract_buffer_open_simple(
+        extract_alloc_t*        alloc,
         const void*             data,
         size_t                  numbytes,
         void*                   handle,
@@ -196,7 +203,12 @@ o_buffer:
 */
 
 
-int extract_buffer_open_file(const char* path, int writable, extract_buffer_t** o_buffer);
+int extract_buffer_open_file(
+        extract_alloc_t*    alloc,
+        const char*         path,
+        int                 writable,
+        extract_buffer_t**  o_buffer
+        );
 /* Creates a buffer that reads from, or writes to, a file. For portability
 uses an internal FILE* rather than an integer file descriptor, so doesn't use
 extract_buffer's caching support because FILE* already provides caching.
@@ -220,7 +232,10 @@ typedef struct
 /* A write buffer that writes to an automatically-growing contiguous area of
 memory. */
 
-int extract_buffer_expanding_create(extract_buffer_expanding_t* buffer_expanding);
+int extract_buffer_expanding_create(
+        extract_alloc_t*            alloc,
+        extract_buffer_expanding_t* buffer_expanding
+        );
 /* Initialises buffer_expanding. buffer_expanding->buffer can be passed to
 extract_buffer_*() functions, and after buffer_close(), the written data is
 available in buffer_expanding->data..+data_size, which will have been allocated

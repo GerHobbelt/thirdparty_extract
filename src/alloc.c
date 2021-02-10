@@ -1,21 +1,20 @@
-#include "alloc.h"
+#include "../include/extract_alloc.h"
 #include "memento.h"
 
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
 
 
 extract_alloc_info_t    extract_alloc_info = {0};
 
-static size_t s_exp_min_alloc_size = 0;
-
-static size_t round_up(size_t n)
+static size_t round_up(extract_alloc_t* alloc, size_t n)
 {
-    if (s_exp_min_alloc_size) {
+    if (alloc && alloc->exp_min_alloc_size) {
         /* Round up to power of two. */
         size_t ret;
         if (n==0) return 0;
-        ret = s_exp_min_alloc_size;
+        ret = alloc->exp_min_alloc_size;
         for(;;) {
             size_t ret_old;
             if (ret >= n) return ret;
@@ -30,44 +29,52 @@ static size_t round_up(size_t n)
     }
 }
 
-int (extract_malloc)(void** pptr, size_t size)
+int (extract_malloc)(extract_alloc_t* alloc, void** pptr, size_t size)
 {
     void* p;
-    size = round_up(size);
+    size = round_up(alloc, size);
     extract_alloc_info.num_malloc += 1;
-    p = malloc(size);
+    p = (alloc) ? alloc->realloc(alloc->realloc_state, NULL, size) : malloc(size);
     *pptr = p;
-    if (!p) return -1;
+    if (!p)
+    {
+        if (alloc) errno = ENOMEM;
+        return -1;
+    }
     return 0;
 }
 
-int (extract_realloc)(void** pptr, size_t newsize)
+int (extract_realloc)(extract_alloc_t* alloc, void** pptr, size_t newsize)
 {
-    void* p = realloc(*pptr, newsize);
-    if (!p) return -1;
+    void* p = (alloc) ? alloc->realloc(alloc->realloc_state, *pptr, newsize) : realloc(*pptr, newsize);
+    if (!p)
+    {
+        if (alloc) errno = ENOMEM;
+        return -1;
+    }
     *pptr = p;
     return 0;
 }
 
-int (extract_realloc2)(void** pptr, size_t oldsize, size_t newsize)
+int (extract_realloc2)(extract_alloc_t* alloc, void** pptr, size_t oldsize, size_t newsize)
 {
     /* We ignore <oldsize> if <ptr> is NULL - allows callers to not worry about
     edge cases e.g. with strlen+1. */
-    oldsize = (*pptr) ? round_up(oldsize) : 0;
-    newsize = round_up(newsize);
+    oldsize = (*pptr) ? round_up(alloc, oldsize) : 0;
+    newsize = round_up(alloc, newsize);
     extract_alloc_info.num_realloc += 1;
     if (newsize == oldsize) return 0;
-    return (extract_realloc)(pptr, newsize);
+    return (extract_realloc)(alloc, pptr, newsize);
 }
 
-void (extract_free)(void** pptr)
+void (extract_free)(extract_alloc_t* alloc, void** pptr)
 {
     extract_alloc_info.num_free += 1;
-    free(*pptr);
+    (alloc) ? alloc->realloc(alloc->realloc_state, *pptr, 0) : free(*pptr);
     *pptr = NULL;
 }
 
-void extract_alloc_exp_min(size_t size)
+void extract_alloc_exp_min(extract_alloc_t* alloc, size_t size)
 {
-    s_exp_min_alloc_size = size;
+    alloc->exp_min_alloc_size = size;
 }
