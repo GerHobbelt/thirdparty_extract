@@ -422,9 +422,16 @@ int extract_buffer_write_internal(
 
 static int expanding_memory_buffer_write(void* handle, const void* source, size_t numbytes, size_t* o_actual)
 {
+    /* We realloc our memory region as required. For efficiency, we also use
+    any currently-unused region of our memory buffer as an extract_buffer
+    cache. So we can be called either to 'flush the cache' (in which case we
+    don't actually copy any data) or to accept data from somewhere else (in
+    which case we need to increase the size of our memory region. */
     extract_buffer_expanding_t*  ebe = handle;
     if ((char*) source >= ebe->data && (char*) source < ebe->data + ebe->alloc_size) {
-        /* Data is from our cache, so nothing to copy. */
+        /* Source is inside our memory region so we are being called by
+        extract_buffer_write_internal() to re-populate the cache. We don't
+        actually have to copy anything. */
         assert((size_t) ((char*) source - ebe->data) == ebe->data_size);
         assert((size_t) ((char*) source - ebe->data + numbytes) <= ebe->alloc_size);
         ebe->data_size += numbytes;

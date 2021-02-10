@@ -6,7 +6,11 @@
 #include <stddef.h>
 
 
-/* Reading and writing abstractions. */
+/* Reading and writing abstractions.
+
+We use inline code in the common case where reading or writing can be satisfied
+using a cache.
+*/
 
 
 typedef struct extract_buffer_t extract_buffer_t;
@@ -19,7 +23,9 @@ static inline int extract_buffer_read(
         size_t              numbytes,
         size_t*             o_actual
         );
-/* Reads specified number of bytes from buffer into data..+bytes. Returns +1 if
+/* Reads specified number of bytes from buffer into data..+bytes, making multiple calls to
+the underlying extract_buffer_fn_read function until we have read <numbytes> or reached
+EOF. If we reach EOF, . Returns +1 if
 short read due to EOF.
 
 buffer:
@@ -32,7 +38,8 @@ o_actual:
     Optional out-param, set to actual number of bytes read. If we return zero
     this will always be <numbytes>; otherwise will be less than <numbytes>.
 
-Implemented in extract_buffer_impl.h.
+For speed reasons, this is implemented in extract_buffer_impl.h and uses only
+inline code if the requested data can be read from the cache.
 */
 
 
@@ -56,7 +63,8 @@ out_actual:
     and can even be negative if internal cache-flush using fn_write() fails or
     returns EOF.
 
-Implemented in extract_buffer_impl.h.
+For speed reason, this is implemented in extract_buffer_impl.h and uses only
+inline code if there is space in the cache for the data.
 */
 
 
@@ -76,9 +84,11 @@ Always sets *io_buffer to NULL. Does nothing if *io_buffer is already NULL.
 
 typedef int (*extract_buffer_fn_read)(void* handle, void* destination, size_t numbytes, size_t* o_actual);
 /* Callback used by read buffer. Should read data from buffer into the supplied
-destination. E.g. this is used to fill cache or to handle large reads.
+destination. Short reads are not an error.
 
-Should returns 0 on success (including EOF) or -1 with errno set.
+E.g. used to fill cache or to handle large reads.
+
+Should returns 0 on success (including short read or EOF) or -1 with errno set.
 
 handle:
     As passed to extract_buffer_open().
@@ -87,15 +97,17 @@ destination:
 bytes:
     Number of bytes in destination.
 o_actual:
-    Out-param, set to actual number of bytes transferred or zero if EOF. Short
-    reads are not an error.
+    Out-param, set to zero if EOF. Otherwise set to the number of bytes
+    transferred in the range 1..<numbytes> inclusive.
 */
 
 typedef int (*extract_buffer_fn_write)(void* handle, const void* source, size_t numbytes, size_t* o_actual);
 /* Callback used by write buffer. Should write data from the supplied source
-into the buffer. E.g. used to flush cache or to handle large writes.
+into the buffer; short writes are not an error.
 
-Should return 0 on success (including EOF) or -1 with errno set.
+E.g. used to flush cache or to handle large writes.
+
+Should return 0 on success (including short write or EOF) or -1 with errno set.
 
 handle:
     As passed to extract_buffer_open().
@@ -104,8 +116,8 @@ source:
 bytes:
     Number of bytes in source.
 o_actual:
-    Out-param, set to actual number of bytes transferred or zero if EOF. Short
-    writes are not an error.
+    Out-param, set to zero if EOF. Otherwise set to the number of bytes
+    transferred in the range 1..<numbytes> inclusive.
 */
 
 typedef int (*extract_buffer_fn_cache)(void* handle, void** o_cache, size_t* o_numbytes);
@@ -157,6 +169,9 @@ If fn_read is non-NULL the buffer is a read buffer, else if fn_write is
 non-NULL the buffer is a write buffer. Passing non-NULL for both or neither is
 not supported.
 
+alloc:
+    NULL or from extract_alloc_create(). Is only used to allocate the
+    extract_buffer_t returned in *o_buffer.
 handle:
     Passed to fn_read, fn_write, fn_cache and fn_close callbacks.
 fn_read:
@@ -186,6 +201,9 @@ block of memory.
 The address region data..+data_length must exist for the lifetime of the
 returned extract_buffer_t.
 
+alloc:
+    NULL or from extract_alloc_create(). Is only used to allocate the
+    extract_buffer_t returned in *o_buffer.
 data:
     Start of memory region. Note that if the extract_buffer_t is used as a
     write buffer then data[] will be written-to, despite the 'const'. [This
@@ -236,14 +254,21 @@ int extract_buffer_expanding_create(
         extract_alloc_t*            alloc,
         extract_buffer_expanding_t* buffer_expanding
         );
-/* Initialises buffer_expanding. buffer_expanding->buffer can be passed to
-extract_buffer_*() functions, and after buffer_close(), the written data is
+/* Creates a writable buffer that writes into an automatically-growing
+contiguous area of memory.
+
+alloc:
+    NULL or from extract_alloc_create().
+buffer_expanding:
+    Out-param; *buffer_expanding is initialised.
+
+Initialises buffer_expanding. buffer_expanding->buffer can be passed to
+extract_buffer_*() functions. After buffer_close(), the written data is
 available in buffer_expanding->data..+data_size, which will have been allocated
-by extract_realloc(). */
+using <alloc>. */
+
 
 /* Include implementations of inline-functions. */
-
-
 #include "extract_buffer_impl.h"
 
 #endif
