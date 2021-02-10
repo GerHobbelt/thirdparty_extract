@@ -41,6 +41,11 @@ static int arg_next_int(char** argv, int argc, int* i, int* out)
     return 0;
 }
 
+static void* s_realloc(void* state, void* prev, size_t size)
+{
+    assert(state == (void*) 123);
+    return realloc(prev, size);
+}
 
 int main(int argc, char** argv)
 {
@@ -61,6 +66,12 @@ int main(int argc, char** argv)
     extract_buffer_t*   out_buffer = NULL;
     extract_buffer_t*   intermediate = NULL;
     extract_t*          extract = NULL;
+    
+    /* Create an allocator so we test the allocation code. */
+    if (extract_alloc_create(s_realloc, (void*) 123, &alloc))
+    {
+        assert(0);
+    }
     
     for (i=1; i<argc; ++i) {
         const char* arg = argv[i];

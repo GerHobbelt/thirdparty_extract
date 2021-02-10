@@ -15,7 +15,7 @@ struct extract_alloc_t
     extract_alloc_stats_t   stats;
 };
 
-int extract_alloc_make(extract_realloc_fn_t realloc_fn, void* realloc_state, extract_alloc_t** palloc)
+int extract_alloc_create(extract_realloc_fn_t realloc_fn, void* realloc_state, extract_alloc_t** palloc)
 {
     assert(realloc_fn);
     assert(palloc);

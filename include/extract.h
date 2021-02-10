@@ -26,8 +26,9 @@ int extract_begin(
         extract_alloc_t*    alloc,
         extract_t**         pextract
         );
-/* Creates a new extract_t* for use by other extact_*() functions. If not NULL,
-<realloc_fn> will be used for all allocation and freeing. */
+/* Creates a new extract_t* for use by other extact_*() functions. All
+allocation will be done with <alloc> (which can be NULL, in which case we use
+malloc/free). */
 
 
 int extract_read_intermediate(
