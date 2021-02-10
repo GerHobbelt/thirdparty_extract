@@ -216,11 +216,12 @@ int main(int argc, char** argv)
     extract_internal_end();
     
     if (alloc_stats) {
+        extract_alloc_stats_t* stats = extract_alloc_stats(alloc);
         printf("Alloc stats: num_malloc=%i num_realloc=%i num_free=%i num_libc_realloc=%i\n",
-                extract_alloc_info.num_malloc,
-                extract_alloc_info.num_realloc,
-                extract_alloc_info.num_free,
-                extract_alloc_info.num_libc_realloc
+                stats->num_malloc,
+                stats->num_realloc,
+                stats->num_free,
+                stats->num_libc_realloc
                 );
     }
     printf("Finished.\n");

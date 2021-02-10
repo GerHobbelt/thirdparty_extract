@@ -5,12 +5,14 @@
 
 typedef void* (*extract_realloc_fn_t)(void* state, void* prev, size_t size);
 
-typedef struct
-{
-    extract_realloc_fn_t    realloc;
-    void*                   realloc_state;
-    size_t                  exp_min_alloc_size;
-} extract_alloc_t;
+typedef struct extract_alloc_t extract_alloc_t;
+
+int extract_alloc_make(extract_realloc_fn_t realloc_fn, void* realloc_state, extract_alloc_t** palloc);
+/* Creates a new extract_alloc_t*. */
+
+void extract_alloc_destroy(extract_alloc_t** palloc);
+/* Destroys an extract_alloc_t*; returns with *palloc set to NULL. Does nothing
+if *palloc is already NULL. */
 
 int extract_malloc(extract_alloc_t* alloc, void** pptr, size_t size);
 /* Sets *pptr to point to new buffer and returns 0. On error return -1 with
@@ -34,9 +36,10 @@ typedef struct
     int num_realloc;
     int num_free;
     int num_libc_realloc;
-} extract_alloc_info_t;
+} extract_alloc_stats_t;
 
-extern extract_alloc_info_t extract_alloc_info;
+extract_alloc_stats_t* extract_alloc_stats(extract_alloc_t* alloc);
+/* Retrieve statistics. */
 
 int extract_realloc2(extract_alloc_t* alloc, void** pptr, size_t oldsize, size_t newsize);
 /* A realloc variant that takes the existing buffer size.
