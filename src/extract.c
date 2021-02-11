@@ -555,8 +555,8 @@ int extract_begin(
     /* Use a temporary extract_alloc_t to allocate space for the extract_t. */
     if (extract_malloc(alloc, &extract, sizeof(*extract))) goto end;
     
-    extract->alloc = alloc;
     extract_bzero(extract, sizeof(*extract));
+    extract->alloc = alloc;
     s_document_init(&extract->document);
     
     /* Start at 10 because template document might use some low-numbered IDs.
