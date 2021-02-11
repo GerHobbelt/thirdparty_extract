@@ -81,12 +81,12 @@ static int extract_docx_run_finish(extract_alloc_t* alloc, extract_astring_t* co
     return extract_astring_cat(alloc, content, "</w:t></w:r>");
 }
 
-static int extract_docx_char_append_string(extract_alloc_t* alloc, extract_astring_t* content, char* text)
+static int extract_docx_char_append_string(extract_alloc_t* alloc, extract_astring_t* content, const char* text)
 {
     return extract_astring_cat(alloc, content, text);
 }
 
-static int extract_docx_char_append_stringf(extract_alloc_t* alloc, extract_astring_t* content, char* format, ...)
+static int extract_docx_char_append_stringf(extract_alloc_t* alloc, extract_astring_t* content, const char* format, ...)
 {
     char* buffer = NULL;
     int e;
@@ -1022,7 +1022,7 @@ int extract_docx_write_template(
     modify. */
     
     {
-        char*   names[] = {
+        const char* names[] = {
                 "word/document.xml",
                 "[Content_Types].xml",
                 "word/_rels/document.xml.rels",
