@@ -190,16 +190,16 @@
 #define MEMENTO_H
 
 #ifndef MEMENTO_UNDERLYING_MALLOC
-#define MEMENTO_UNDERLYING_MALLOC malloc
+#define MEMENTO_UNDERLYING_MALLOC(size) (malloc)(size)
 #endif
 #ifndef MEMENTO_UNDERLYING_FREE
-#define MEMENTO_UNDERLYING_FREE free
+#define MEMENTO_UNDERLYING_FREE(ptr) (free)(ptr)
 #endif
 #ifndef MEMENTO_UNDERLYING_REALLOC
-#define MEMENTO_UNDERLYING_REALLOC realloc
+#define MEMENTO_UNDERLYING_REALLOC(ptr, size) (realloc)(ptr, size)
 #endif
 #ifndef MEMENTO_UNDERLYING_CALLOC
-#define MEMENTO_UNDERLYING_CALLOC calloc
+#define MEMENTO_UNDERLYING_CALLOC(nmemb, size) (calloc)(nmemb, size)
 #endif
 
 #ifndef MEMENTO_MAXALIGN
@@ -244,6 +244,7 @@ int Memento_vasprintf(char **ret, const char *format, va_list ap);
 
 void Memento_info(void *addr);
 void Memento_listBlockInfo(void);
+void Memento_blockInfo(void *blk);
 void *Memento_takeByteRef(void *blk);
 void *Memento_dropByteRef(void *blk);
 void *Memento_takeShortRef(void *blk);
@@ -273,16 +274,16 @@ void Memento_fin(void);
 
 void Memento_bt(void);
 
-#ifdef MEMENTO
+#if defined(MEMENTO) && !defined(_CRTDBG_MAP_ALLOC)
 
 #ifndef COMPILING_MEMENTO_C
-#define malloc    Memento_malloc
-#define free      Memento_free
-#define realloc   Memento_realloc
-#define calloc    Memento_calloc
-#define strdup    Memento_strdup
-#define asprintf  Memento_asprintf
-#define vasprintf Memento_vasprintf
+#define malloc(size)        Memento_malloc(size)
+#define free(ptr)           Memento_free(ptr)
+#define realloc(ptr, size)  Memento_realloc(ptr, size)
+#define calloc(nmemb, size) Memento_calloc(nmemb, size)
+#define strdup(str)         Memento_strdup(str)
+#define asprintf            Memento_asprintf
+#define vasprintf           Memento_vasprintf
 #endif
 
 #else
@@ -315,6 +316,7 @@ void Memento_bt(void);
 #define Memento_label(A,B)                 (A)
 #define Memento_info(A)                    do {} while (0)
 #define Memento_listBlockInfo()            do {} while (0)
+#define Memento_blockInfo(A)               do {} while (0)
 #define Memento_takeByteRef(A)             (A)
 #define Memento_dropByteRef(A)             (A)
 #define Memento_takeShortRef(A)            (A)
