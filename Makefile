@@ -10,9 +10,13 @@
 #       docx.
 #
 #   make test-mutool
-#       Runs mutool regression tests. This uses $(mutool_e) to convert
-#       directly from pdf to docx. We require that $(mutool_e) was built with
-#       extract=yes.
+#       Runs mutool regression tests. This uses $(mutool) to convert directly
+#       from pdf to docx. We require that $(mutool) was built with extract=yes.
+#
+#   make test-gs
+#       Runs gs regression tests. This uses $(gs) to convert directly from pdf
+#       to docx. We require that $(gs) was built with --with-extract-dir=... We
+#       also do a simple test of output-file-per-page.
 #
 #   make test-buffer test-misc test-src
 #       Runs unit tests etc.
@@ -57,32 +61,42 @@ else
 endif
 
 
-# Locations of mutool and gs - we assume these are available at hard-coded
-# paths, with mupdf and ghostpdl checked out next to extract.
+# Locations of mutool and gs. By default we assume these are not available.
 #
-# If this extract checkout is within the mupdf tree (typically as a git
-# submodule) we set things differently, pointing $(mutool) to within the mupdf
-# tree and assuming that ghostpdl is checked out next to mupdf.
+# If this extract checkout is within a mupdf tree (typically as a git
+# submodule) we assume ghostpdl is checked out nearby and both mutool gs and gs
+# binaries are available and built with extract enabled.
 #
-gs          = ../ghostpdl/debug-bin/gs
-mutool      = ../mupdf/build/debug-extract/mutool
-mutool_e    = $(mutool)
-libbacktrace= ../libbacktrace/.libs
-
+# Disable this by running: make we_are_mupdf_thirdparty= ...
+#
 we_are_mupdf_thirdparty = $(findstring /mupdf/thirdparty/extract, $(abspath .))
 ifneq ($(we_are_mupdf_thirdparty),)
-    #$(warning we are mupdf thirdparty)
-    mutool = ../../build/debug-extract/mutool
-    gs = ../../../ghostpdl/debug-bin/gs
+    $(warning we are mupdf thirdparty)
+    mutool := ../../build/debug-extract/mutool
+    gs := ../../../ghostpdl/debug-extract-bin/gs
+    libbacktrace = ../../../libbacktrace/.libs
 endif
 
-$(warning gs=$(gs))
+# If mutool/gs are specified, they must exist.
+#
+ifneq ($(mutool),)
+ifeq ($(wildcard $(mutool)),)
+    $(error mutool does not exist: $(mutool))
+endif
 $(warning mutool=$(mutool))
-$(warning mutool_e=$(mutool_e))
+endif
+
+ifneq ($(gs),)
+ifeq ($(wildcard $(gs)),)
+    $(error gs does not exist: $(gs))
+endif
+$(warning gs=$(gs))
+endif
+
 
 # Default target - run all tests.
 #
-test: test-buffer test-misc test-src test-exe test-mutool
+test: test-buffer test-misc test-src test-exe test-mutool test-gs
 	@echo $@: passed
 
 # Define the main test targets.
@@ -114,10 +128,16 @@ tests_exe := $(patsubst %, %.diff, $(tests_exe))
 # uses rotate=true and spacing=true, so we diff with reference directory
 # ...pdf.intermediate-mu.xml.extract-rotate-spacing.docx.dir.ref
 #
-ifneq ($(mutool_e),)
+ifneq ($(mutool),)
     tests_mutool := \
             $(patsubst %, %.mutool.docx.diff, $(pdfs_generated)) \
             $(patsubst %, %.mutool-norotate.docx.diff, $(pdfs_generated)) \
+
+endif
+ifneq ($(gs),)
+    tests_gs := \
+            $(patsubst %, %.gs.docx.diff, $(pdfs_generated)) \
+            test_gs_fpp
 
 endif
 #$(warning $(pdfs_generated_intermediate_docx_diffs))
@@ -127,12 +147,36 @@ test-exe: $(tests_exe)
 	@echo $@: passed
 
 # Checks output of mutool conversion from .pdf to .docx. Requires that mutool
-# was built with extract as a third-party library. As of 2020-10-16 this
-# requires mupdf/thirdparty/extract e.g. as a softlink to extract checkout.
+# was built with extract as a third-party library.
 #
 test-mutool: $(tests_mutool)
 	@echo $@: passed
 
+# Checks output of gs conversion from .pdf to .docx. Requires that mutool
+# was built with extract as a third-party library. As of 2021-02-10 this
+# requires, for example ghostpdl/extract being a link to an extract checkout
+# and configuring with --with-extract-dir=extract.
+#
+test-gs: $(tests_gs)
+	@echo $@: passed
+
+# Check behaviour of gs when writing file-per-page.
+#
+test_gs_fpp: $(gs)
+	@echo
+	@echo == Testing gs file-page-page
+	rm test/generated/text_graphic_image.pdf.gs.*.docx || true
+	$(gs) -sDEVICE=docxwrite -o test/generated/Python2.pdf.gs.%i.docx test/Python2.pdf
+	rm test/generated/text_graphic_image.pdf.gs.*.docx || true
+	$(gs) -sDEVICE=docxwrite -o test/generated/zlib.3.pdf.gs.%i.docx test/zlib.3.pdf
+	rm test/generated/text_graphic_image.pdf.gs.*.docx || true
+	$(gs) -sDEVICE=docxwrite -o test/generated/text_graphic_image.pdf.gs.%i.docx test/text_graphic_image.pdf
+	@echo Checking for correct number of generated files.
+	ls -l test/generated/*.pdf.gs.*.docx
+	ls test/generated/text_graphic_image.pdf.gs.*.docx | wc -l | grep '^ *1$$'
+	ls test/generated/Python2.pdf.gs.*.docx | wc -l | grep '^ *1$$'
+	ls test/generated/zlib.3.pdf.gs.*.docx | wc -l | grep '^ *2$$'
+	
 
 # Main executable.
 #
@@ -154,7 +198,7 @@ ifeq ($(build),memento)
     exe_src += src/memento.c
     ifeq ($(uname),Linux)
         flags_compile += -D HAVE_LIBDL
-        flags_link += -L ../libbacktrace/.libs -l backtrace -l dl
+        flags_link += -L $(libbacktrace) -l backtrace -l dl
     endif
 endif
 exe_obj = $(patsubst src/%.c, src/build/%.c-$(build).o, $(exe_src))
@@ -242,18 +286,30 @@ test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.d
 	mv $@- $@
 
 # Converts .pdf directly to .docx using mutool.
-test/generated/%.pdf.mutool.docx: test/%.pdf $(mutool_e)
+test/generated/%.pdf.mutool.docx: test/%.pdf $(mutool)
 	@echo
 	@echo == Converting .pdf directly to .docx using mutool.
 	@mkdir -p test/generated
-	$(mutool_e) convert -o $@ $<
+	$(mutool) convert -o $@ $<
 
-test/generated/%.pdf.mutool-norotate.docx: test/%.pdf $(mutool_e)
+test/generated/%.pdf.mutool-norotate.docx: test/%.pdf $(mutool)
 	@echo
 	@echo == Converting .pdf directly to .docx using mutool.
 	@mkdir -p test/generated
-	$(mutool_e) convert -O rotation=no,spacing=yes -o $@ $<
+	$(mutool) convert -O rotation=no,spacing=yes -o $@ $<
 
+# Converts .pdf directly to .docx using gs.
+test/generated/%.pdf.gs.docx: test/%.pdf $(gs)
+	@echo
+	@echo == Converting .pdf directly to .docx using gs.
+	@mkdir -p test/generated
+	$(gs_e) -sDEVICE=docxwrite -o $@ $<
+
+test/generated/%.pdf.gs.?.docx: test/%.pdf $(gs)
+	@echo
+	@echo == Converting .pdf directly to .docx using gs, file per page.
+	rm $@
+	
 
 # Valgrind test
 #
