@@ -7,6 +7,7 @@
 #include "outf.h"
 
 #include <assert.h>
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -636,6 +637,66 @@ static int paragraphs_cmp(const void* a, const void* b)
     return 0;
 }
 
+typedef struct
+{
+    double  average;
+    double  stddev;
+    double  min;
+    double  max;
+} stats_t;
+
+static stats_t stats_set(double sum, double sum_sq, int n)
+{
+    stats_t ret;
+    ret.average = sum / n;
+    ret.stddev = sum_sq / n - ret.average * ret.average;
+    return ret;
+}
+
+typedef struct
+{
+    stats_t line_prefixes;
+    stats_t line_suffixes;
+} paragraph_white_stats_t;
+
+static double line_x_begin(line_t* line)
+{
+    return line_item_first(line)->pre_x;
+}
+static double line_x_end(line_t* line)
+{
+    char_t* char_ = line_item_last(line);
+    return char_->pre_x + char_->adv;    // fixme: need to scale.
+}
+
+static paragraph_white_stats_t paragraph_white_stats(paragraph_t* paragraph)
+{
+    int l;
+    double prefix_total = 0;
+    double prefix_sq_total = 0;
+    double suffix_total = 0;
+    double suffix_sq_total = 0;
+    paragraph_white_stats_t ret;
+    ret.line_prefixes.min = FLT_MAX;
+    ret.line_suffixes.max = FLT_MIN;
+    ret.line_suffixes.min = FLT_MAX;
+    ret.line_prefixes.max = FLT_MIN;
+    for (l=0; l<paragraph->lines_num; ++l) {
+        double prefix = line_x_begin(paragraph->lines[l]);
+        double suffix = line_x_end(paragraph->lines[l]);
+        prefix_total += prefix;
+        prefix_sq_total += prefix * prefix;
+        suffix_total += suffix;
+        suffix_sq_total += suffix * suffix;
+        if (prefix < ret.line_prefixes.min) ret.line_prefixes.min = prefix;
+        if (prefix > ret.line_prefixes.max) ret.line_prefixes.max = prefix;
+        if (suffix < ret.line_suffixes.min) ret.line_suffixes.min = suffix;
+        if (suffix > ret.line_suffixes.max) ret.line_suffixes.max = suffix;
+    }
+    ret.line_prefixes = stats_set(suffix_total, suffix_sq_total, paragraph->lines_num);
+    ret.line_suffixes = stats_set(suffix_total, suffix_sq_total, paragraph->lines_num);
+    return ret;
+}
 
 /* Creates a representation of line_t's that consists of a list of
 paragraph_t's.
@@ -879,6 +940,65 @@ static int make_paragraphs(
             /* Should always succeed because we're not increasing allocation size, but
             can fail with memento squeeze. */
             goto end;
+        }
+    }
+    
+    if (0) {
+        /* Split paragraphs based on trailing/leading space in adjacent lines. */
+        int p;
+        for (p=0; p<paragraphs_num; ++p) {
+            paragraph_t* paragraph = paragraphs[p];
+            paragraph_white_stats_t  white = paragraph_white_stats(paragraph);
+            int l;
+            for (l=0; l<paragraph->lines_num - 1; ++l) {
+                int split = 0;
+                /*
+                    abcdef ghi jklm nopq rstuv wx yz <trail>
+                    <prefix> qwer ty uiop asdf gh jkl zxc
+                */
+                double trail = line_x_end(paragraph->lines[l]);
+                double prefix = line_x_begin(paragraph->lines[l+1]);
+                double prefix_delta = 0;
+                /* Split if next line is indented. */
+                if (white.line_prefixes.stddev != 0) {
+                    prefix_delta = (prefix - white.line_prefixes.average) / white.line_prefixes.stddev;
+                }
+                if (prefix_delta > white.line_prefixes.stddev) {
+                    split = 1;
+                }
+                /* Split if first span in next line would fit into end of prev line. */
+                {
+                    double space = white.line_suffixes.max - trail;
+                    span_t* span = paragraph->lines[l+1]->spans[0];
+                    char_t* char_last = span_char_last(span);
+                    double adv = char_last->adv * matrix_expansion(span->trm);
+                    double span_width = char_last->pre_x + adv - span_char_first(span)->pre_x;
+                    if (span_width < space) {
+                        /* This span would fit into end of previous line. */
+                        split = 1;
+                    }
+                }
+                if (split) {
+                    /* Split this paragraph into two. */
+                    int p_new;
+                    int l_new;
+                    paragraph_t* paragraph_new;
+                    if (extract_realloc(alloc, &paragraphs, sizeof(*paragraphs) * (paragraphs_num + 1))) goto end;
+                    paragraphs_num += 1;
+                    for (p_new = p+2; p_new < paragraphs_num; ++p_new) {
+                        paragraphs[p_new] = paragraphs[p_new-1];
+                    }
+                    if (extract_malloc(alloc, &paragraphs[p+1], sizeof(**paragraphs))) goto end;
+                    paragraph_new = paragraphs[p+1];
+                    if (extract_malloc(alloc, &paragraph_new->lines, sizeof(line_t) * (paragraph->lines_num - (l+1)))) goto end;
+                    /* Move trailing lines into the new paragraph. */
+                    for (l_new = l+1; l_new < paragraph->lines_num; ++l_new) {
+                        paragraph_new->lines[l_new - (l+1)] = paragraph->lines[l_new];
+                    }
+                    paragraph_new->lines_num = paragraph->lines_num - (l+1);
+                    paragraph->lines_num -= paragraph_new->lines_num;
+                }
+            }
         }
     }
 
