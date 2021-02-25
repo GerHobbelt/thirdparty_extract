@@ -11,6 +11,12 @@ typedef struct
 
 typedef struct
 {
+    point_t min;
+    point_t max;
+} rectangle_t;
+
+typedef struct
+{
     double  a;
     double  b;
     double  c;

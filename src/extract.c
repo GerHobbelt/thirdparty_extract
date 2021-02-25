@@ -364,12 +364,6 @@ static point_t multiply_matrix_point(matrix_t m, point_t p)
     return p;
 }
 
-typedef struct
-{
-    point_t min;
-    point_t max;
-} rectangle_t;
-
 static int s_matrix_read(const char* text, matrix_t* matrix)
 {
     int n;
@@ -906,6 +900,10 @@ int extract_add_char(
     char_t* char_;
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     span_t* span = page->spans[page->spans_num - 1];
+    
+    if (0 && span->wmode) {
+        outf0("span->wmode=%i xy=(%f %f) ucs=%u", span->wmode, x, y, ucs);
+    }
     
     if (autosplit && y - extract->span_offset_y != 0) {
         

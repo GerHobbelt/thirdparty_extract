@@ -283,6 +283,7 @@ static int make_lines(
         line_t* nearest_line = NULL;
         span_t* span_a;
         double angle_a;
+        //double angle_a_tan = DBL_MAX;
         
         line_t* line_a = lines[a];
         if (!line_a) {
@@ -293,6 +294,9 @@ static int make_lines(
         outfx("looking at line_a=%s", line_string2(line_a));
 
         span_a = line_span_last(line_a);
+        //if (span->ctm.a) {
+        //    angle_a_tan = -span->ctm.c / span->ctm.a;
+        //}
         angle_a = span_angle(span_a);
         if (verbose) outf("a=%i angle_a=%f ctm=%s: %s",
                 a,
@@ -300,6 +304,7 @@ static int make_lines(
                 matrix_string(&span_a->ctm),
                 line_string2(alloc, line_a)
                 );
+        
 
         for (b=0; b<lines_num; ++b) {
             line_t* line_b = lines[b];
@@ -333,8 +338,18 @@ static int make_lines(
                 span_t* span_b = line_span_first(line_b);
                 double dx = span_char_first(span_b)->x - span_char_last(span_a)->x;
                 double dy = span_char_first(span_b)->y - span_char_last(span_a)->y;
-                double angle_a_b = atan2(-dy, dx);
+                double angle_a_b;
                 const double angle_tolerance_deg = 1;
+                
+                /* Avoid atan2() if possible because it seems to be a
+                bottleneck. E.g with large page as created mutool convert -o
+                foo.docx 6247.pdf 5, this reduces time from 8.5s to 5.5s. */
+                if (0 && fabs(angle_a) < 1 && dx != 0) {
+                    angle_a_b = -dy / dx;
+                }
+                else {
+                    angle_a_b = atan2(-dy, dx);
+                }
                 if (verbose) {
                     outf("delta=(%f %f) alast=(%f %f) bfirst=(%f %f): angle_a=%f angle_a_b=%f",
                             dx,
@@ -925,6 +940,26 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document)
     for (p=0; p<document->pages_num; ++p) {
         page_t* page = document->pages[p];
         outf("processing page %i: num_spans=%i", p, page->spans_num);
+        if (1) {
+            rectangle_t rect = {{DBL_MAX, DBL_MAX}, {DBL_MIN, DBL_MIN}};
+            int s;
+            for (s=0; s<page->spans_num; ++s) {
+                int c;
+                for (c=0; c<page->spans[s]->chars_num; ++c) {
+                    char_t* char_ = &page->spans[s]->chars[c];
+                    if (char_->x < rect.min.x) rect.min.x = char_->x;
+                    if (char_->x > rect.max.x) rect.max.x = char_->x;
+                    if (char_->y < rect.min.y) rect.min.y = char_->y;
+                    if (char_->y > rect.max.y) rect.max.y = char_->y;
+                }
+            }
+            outf0("page=%i: spans_num=%i rect is: (%f %f) (%f %f)",
+                    p,
+                    page->spans_num,
+                    rect.min.x, rect.min.y,
+                    rect.max.x, rect.max.y
+                    );
+        }
 
         if (make_lines(
                 alloc,
