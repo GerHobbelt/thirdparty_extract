@@ -940,7 +940,7 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document)
     for (p=0; p<document->pages_num; ++p) {
         page_t* page = document->pages[p];
         outf("processing page %i: num_spans=%i", p, page->spans_num);
-        if (1) {
+        if (0) {
             rectangle_t rect = {{DBL_MAX, DBL_MAX}, {DBL_MIN, DBL_MIN}};
             int s;
             for (s=0; s<page->spans_num; ++s) {
