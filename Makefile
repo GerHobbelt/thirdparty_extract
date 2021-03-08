@@ -141,6 +141,9 @@ ifneq ($(gs),)
     tests_gs := \
             $(patsubst %, %.gs.docx.diff, $(pdfs_generated)) \
             test_gs_fpp
+    
+    # We don't yet do clipping with gs so exclude Python2clipped.pdf.*:
+    tests_gs := $(filter-out test/generated/Python2clipped.pdf.*, $(tests_gs))
 
 endif
 #$(warning $(pdfs_generated_intermediate_docx_diffs))
