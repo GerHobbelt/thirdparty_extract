@@ -101,7 +101,10 @@ test: test-buffer test-misc test-src test-exe test-mutool test-gs
 
 # Define the main test targets.
 #
-pdfs = test/Python2.pdf test/zlib.3.pdf test/text_graphic_image.pdf
+# test/Python2clipped.pdf is same as test/Python2.pdf except it as a modified
+# MediaBox that excludes some glyphs.
+#
+pdfs = test/Python2.pdf test/Python2clipped.pdf test/zlib.3.pdf test/text_graphic_image.pdf
 pdfs_generated = $(patsubst test/%, test/generated/%, $(pdfs))
 
 # Generate targets that check all combinations of mu/gs and the various
@@ -271,7 +274,9 @@ test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.d
 	@echo == Checking $<
 	diff -ru $^
 
-# Unzips .docx into .docx.dir/ directory.
+# Unzips .docx into .docx.dir/ directory. Note that we requires a trailing '/'
+# in target.
+#
 %.docx.dir/: %.docx
 	@echo
 	@echo == Extracting .docx into directory.
