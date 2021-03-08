@@ -970,7 +970,15 @@ int extract_add_char(
 
 int extract_span_end(extract_t* extract)
 {
-    (void) extract;
+    page_t* page = extract->document.pages[extract->document.pages_num-1];
+    span_t* span = page->spans[page->spans_num - 1];
+    if (span->chars_num == 0) {
+        /* Calling code called extract_span_begin() then extract_span_end()
+        without any call to extract_add_char(). Our joining code assumes that
+        all spans are non-empty, so we need to delete this span. */
+        extract_free(extract->alloc, &page->spans[page->spans_num - 1]);
+        page->spans_num -= 1;
+    }
     return 0;
 }
 
