@@ -5,6 +5,9 @@ Creates C code for creating docx files using internal template docx content.
 
 Args:
 
+    --docx-pretty <directory>
+        Prettyfies all .xml files within <directory> using 'xmllint --format'.
+
     -i <docx-path>
         Set template docx file to extract from.
 
