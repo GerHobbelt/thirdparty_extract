@@ -1247,6 +1247,7 @@ int extract_write_template(
                 extract->alloc,
                 extract->contentss,
                 extract->contentss_num,
+                &extract->odt_styles,
                 &extract->images,
                 path_template,
                 path_out,

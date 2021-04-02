@@ -41,11 +41,11 @@ static int extract_odt_paragraph_finish(extract_alloc_t* alloc, extract_astring_
 
 struct extract_odt_style_t
 {
-    int         id;
-    const char* font_name;
-    double      font_size;
-    int         font_bold;
-    int         font_italic;
+    int     id;
+    char*   font_name;
+    double  font_size;
+    int     font_bold;
+    int     font_italic;
 };
 
 static int extract_odt_style_compare(extract_odt_style_t* a, extract_odt_style_t*b)
@@ -75,8 +75,11 @@ static int extract_odt_char_append_stringf(extract_alloc_t* alloc, extract_astri
 
 static int extract_odt_style_append_definition(extract_alloc_t* alloc, extract_odt_style_t* style, extract_astring_t* text)
 {
+    outf("style->font_name=%s", style->font_name);
     if (extract_odt_char_append_stringf(alloc, text, "<style:style style:name=\"T%i\" style:family=\"text\">", style->id)) return -1;
-    if (extract_odt_char_append_stringf(alloc, text, "<style:text-properties style:font-name=\"%s\""), style->font_name) return -1;
+    outf("style->font_name=%s", style->font_name);
+    outf("<style:text-properties style:font-name=\"%s\"", style->font_name);
+    if (extract_odt_char_append_stringf(alloc, text, "<style:text-properties style:font-name=\"%s\"", style->font_name)) return -1;
     if (extract_odt_char_append_stringf(alloc, text, " fo:font-size=\"%ipt\"", style->font_size)) return -1;
     if (style->font_bold)
     {
@@ -108,10 +111,12 @@ static int extract_odt_styles_definitions(
         )
 {
     int i;
+    if (extract_astring_cat(alloc, out, "<office:automatic-styles>")) return -1;
     for (i=0; i<styles->styles_num; ++i)
     {
         if (extract_odt_style_append_definition(alloc, &styles->styles[i], out)) return -1;
     }
+    if (extract_astring_cat(alloc, out, "</office:automatic-styles>")) return -1;
     return 0;
 }
 
@@ -127,7 +132,7 @@ static int styles_add(
 /* Adds specified style to <styles> if not already present. Sets *o_style to
 point to the style_t within <styles>. */
 {
-    extract_odt_style_t style = {0 /*id*/, font_name, font_size, font_bold, font_italic};
+    extract_odt_style_t style = {0 /*id*/, (char*) font_name, font_size, font_bold, font_italic};
     int i;
     /* We keep styles->styles[] sorted; todo: use bsearch or similar when
     searching. */
@@ -146,7 +151,7 @@ point to the style_t within <styles>. */
     memmove(&styles->styles[i+1], &styles->styles[i], sizeof(styles->styles[0]) * (styles->styles_num - i));
     styles->styles_num += 1;
     styles->styles[i].id = styles->styles_num + 10; /* Leave space for template's built-in styles. */
-    styles->styles[i].font_name = font_name;
+    if (extract_strdup(alloc, font_name, &styles->styles[i].font_name)) return -1;
     styles->styles[i].font_size = font_size;
     styles->styles[i].font_bold = font_bold;
     styles->styles[i].font_italic = font_italic;
@@ -882,7 +887,7 @@ At least one of <mid_begin_name> and <mid_end_name> must be non-NULL.
     extract_astring_t   out;
     extract_astring_init(&out);
     
-    assert(single || mid_begin_name || mid_end_name);
+    assert(single_name || mid_begin_name || mid_end_name);
     
     if (single_name) single = strstr(original, single_name);
     
@@ -1059,7 +1064,7 @@ int extract_odt_content_item(
                 text_intermediate,
                 "<office:automatic-styles/>" /*single*/,
                 NULL,
-                "</office:automatic-styles>",
+                NULL, //"</office:automatic-styles>",
                 &styles_definitions,
                 1,
                 text2
@@ -1132,7 +1137,7 @@ int extract_odt_write_template(
         extract_alloc_t*    alloc,
         extract_astring_t*  contentss,
         int                 contentss_num,
-        //extract_odt_styles_t* styles,
+        extract_odt_styles_t* styles,
         images_t*           images,
         const char*         path_template,
         const char*         path_out,
@@ -1146,7 +1151,6 @@ int extract_odt_write_template(
     char*   path = NULL;
     char*   text = NULL;
     char*   text2 = NULL;
-    extract_odt_styles_t    styles = {0};
 
     assert(path_out);
     assert(path_template);
@@ -1191,11 +1195,12 @@ int extract_odt_write_template(
             if (extract_asprintf(alloc, &path, "%s/%s", path_tempdir, name) < 0) goto end;
             if (read_all_path(alloc, path, &text)) goto end;
             
+            outf("before extract_odt_content_item() styles->styles_num=%i", styles->styles_num);
             if (extract_odt_content_item(
                     alloc,
                     contentss,
                     contentss_num,
-                    &styles,
+                    styles,
                     images,
                     name,
                     text,
@@ -1205,6 +1210,8 @@ int extract_odt_write_template(
                 outf("extract_odt_content_item() failed");
                 goto end;
             }
+            
+            outf("after extract_odt_content_item styles->styles_num=%i", styles->styles_num);
 
             {
                 const char* text3 = (text2) ? text2 : text;
@@ -1258,7 +1265,7 @@ int extract_odt_write_template(
     extract_free(alloc, &path);
     extract_free(alloc, &text);
     extract_free(alloc, &text2);
-    extract_odt_styles_free(alloc, &styles);
+    //extract_odt_styles_free(alloc, &styles);
     if (f)  fclose(f);
 
     if (e) {

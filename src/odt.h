@@ -37,7 +37,7 @@ int extract_odt_write_template(
         extract_alloc_t*    alloc, 
         extract_astring_t*  contentss,
         int                 contentss_num,
-        //extract_odt_styles_t* styles,
+        extract_odt_styles_t* styles,
         images_t*           images,
         const char*         path_template,
         const char*         path_out,
