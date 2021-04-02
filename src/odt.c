@@ -81,14 +81,8 @@ static int extract_odt_style_append_definition(extract_alloc_t* alloc, extract_o
     outf("<style:text-properties style:font-name=\"%s\"", style->font_name);
     if (extract_odt_char_append_stringf(alloc, text, "<style:text-properties style:font-name=\"%s\"", style->font_name)) return -1;
     if (extract_odt_char_append_stringf(alloc, text, " fo:font-size=\"%ipt\"", style->font_size)) return -1;
-    if (style->font_bold)
-    {
-        if (extract_astring_cat(alloc, text, " fo:font-weight=\"bold\"")) return -1;
-    }
-    if (style->font_italic)
-    {
-        if (extract_astring_cat(alloc, text, " fo:font-style=\"italic\"")) return -1;
-    }
+    if (extract_odt_char_append_stringf(alloc, text, " fo:font-weight=\"%s\"", style->font_bold ? "bold" : "normal")) return -1;
+    if (extract_odt_char_append_stringf(alloc, text, " fo:font-style=\"%s\"", style->font_italic ? "italic" : "normal")) return -1;
     if (extract_astring_cat(alloc, text, " /></style:style>")) return -1;
     return 0;
 }
