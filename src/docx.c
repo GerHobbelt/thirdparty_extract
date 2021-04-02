@@ -1010,8 +1010,8 @@ int extract_docx_write_template(
 
     outf("Unzipping template document '%s' to tempdir: %s",
             path_template, path_tempdir);
-    e = systemf(alloc, "unzip -q -d '%s' '%s'", path_tempdir, path_template);
-    if (e) {
+    if (systemf(alloc, "unzip -q -d '%s' '%s'", path_tempdir, path_template))
+    {
         outf("Failed to unzip %s into %s",
                 path_template, path_tempdir);
         goto end;
@@ -1045,6 +1045,7 @@ int extract_docx_write_template(
                     text,
                     &text2
                     )) goto end;
+
             {
                 const char* text3 = (text2) ? text2 : text;
                 if (write_all(text3, strlen(text3), path)) goto end;
@@ -1068,8 +1069,8 @@ int extract_docx_write_template(
     {
         const char* path_out_leaf = strrchr(path_out, '/');
         if (!path_out_leaf) path_out_leaf = path_out;
-        e = systemf(alloc, "cd '%s' && zip -q -r -D '../%s' .", path_tempdir, path_out_leaf);
-        if (e) {
+        if (systemf(alloc, "cd '%s' && zip -q -r -D '../%s' .", path_tempdir, path_out_leaf))
+        {
             outf("Zip command failed to convert '%s' directory into output file: %s",
                     path_tempdir, path_out);
             goto end;

@@ -855,12 +855,12 @@ static int write_all(const void* data, size_t data_size, const char* path)
 static int extract_odt_content_insert(
         extract_alloc_t*    alloc,
         const char*         original,
+        const char*         single_name,
         const char*         mid_begin_name,
         const char*         mid_end_name,
         extract_astring_t*  contentss,
         int                 contentss_num,
-        char**              o_out/*,
-        extract_odt_styles_t*   styles*/
+        char**              o_out
         )
 /* Creates a string consisting of <original> with all strings in <contentss>
 inserted into <original>'s <mid_begin_name>...<mid_end_name> region, and
@@ -878,33 +878,50 @@ At least one of <mid_begin_name> and <mid_end_name> must be non-NULL.
     int e = -1;
     const char* mid_begin = NULL;
     const char* mid_end = NULL;
+    const char* single = NULL;
     extract_astring_t   out;
     extract_astring_init(&out);
     
-    assert(mid_begin_name || mid_end_name);
-
-    if (mid_begin_name) {
-        mid_begin = strstr(original, mid_begin_name);
+    assert(single || mid_begin_name || mid_end_name);
+    
+    if (single_name) single = strstr(original, single_name);
+    
+    if (single)
+    {
+        outf("Have found single_name='%s', using in preference to mid_begin_name=%s mid_end_name=%s",
+                single_name,
+                mid_begin_name,
+                mid_end_name
+                );
+        mid_begin = single;
+        mid_end = single + strlen(single_name);
+    }
+    else
+    {
+        if (mid_begin_name) {
+            mid_begin = strstr(original, mid_begin_name);
+            if (!mid_begin) {
+                outf("error: could not find '%s' in odt content", mid_begin_name);
+                errno = ESRCH;
+                goto end;
+            }
+            mid_begin += strlen(mid_begin_name);
+        }
+        if (mid_end_name) {
+            mid_end = strstr(mid_begin ? mid_begin : original, mid_end_name);
+            if (!mid_end) {
+                outf("error: could not find '%s' in odt content", mid_end_name);
+                e = -1;
+                errno = ESRCH;
+                goto end;
+            }
+        }
         if (!mid_begin) {
-            outf("error: could not find '%s' in odt content", mid_begin_name);
-            errno = ESRCH;
-            goto end;
+            mid_begin = mid_end;
         }
-        mid_begin += strlen(mid_begin_name);
-    }
-    if (mid_end_name) {
-        mid_end = strstr(mid_begin ? mid_begin : original, mid_end_name);
         if (!mid_end) {
-            outf("error: could not find '%s' in odt content", mid_end_name);
-            errno = ESRCH;
-            goto end;
+            mid_end = mid_begin;
         }
-    }
-    if (!mid_begin) {
-        mid_begin = mid_end;
-    }
-    if (!mid_end) {
-        mid_end = mid_begin;
     }
 
     if (extract_astring_catl(alloc, &out, original, mid_begin - original)) goto end;
@@ -1020,33 +1037,37 @@ int extract_odt_content_item(
     #endif
     else if (!strcmp(name, "content.xml")) {
         /* Insert paragraphs content. */
-        int e;
         char* text_intermediate = NULL;
-        extract_astring_t       styles_definitions = {0};
+        extract_astring_t   styles_definitions = {0};
 
         if (extract_odt_content_insert(
                 alloc,
                 text,
+                NULL /*single*/,
                 NULL,
                 "</office:text>",
                 contentss,
                 contentss_num,
                 &text_intermediate
                 )) goto end;
+        outf("text_intermediate: %s", text_intermediate);
         
         if (extract_odt_styles_definitions(alloc, styles, &styles_definitions)) goto end;
         
         e = extract_odt_content_insert(
                 alloc,
                 text_intermediate,
+                "<office:automatic-styles/>" /*single*/,
                 NULL,
                 "</office:automatic-styles>",
                 &styles_definitions,
                 1,
                 text2
                 );
+        outf("e=%i errno=%i", e, errno);
         extract_free(alloc, &text_intermediate);
         extract_astring_free(alloc, &styles_definitions);
+        outf("e=%i errno=%i", e, errno);
         if (e) goto end;
     }
     else {
@@ -1054,6 +1075,7 @@ int extract_odt_content_item(
     }
     e = 0;
     end:
+    outf("e=%i errno=%i text2=%s", e, errno, text2);
     if (e) {
         /* We might have set <text2> to new content. */
         extract_free(alloc, text2);
@@ -1110,7 +1132,7 @@ int extract_odt_write_template(
         extract_alloc_t*    alloc,
         extract_astring_t*  contentss,
         int                 contentss_num,
-        extract_odt_styles_t* styles,
+        //extract_odt_styles_t* styles,
         images_t*           images,
         const char*         path_template,
         const char*         path_out,
@@ -1124,6 +1146,7 @@ int extract_odt_write_template(
     char*   path = NULL;
     char*   text = NULL;
     char*   text2 = NULL;
+    extract_odt_styles_t    styles = {0};
 
     assert(path_out);
     assert(path_template);
@@ -1144,8 +1167,8 @@ int extract_odt_write_template(
 
     outf("Unzipping template document '%s' to tempdir: %s",
             path_template, path_tempdir);
-    e = systemf(alloc, "unzip -q -d '%s' '%s'", path_tempdir, path_template);
-    if (e) {
+    if (systemf(alloc, "unzip -q -d '%s' '%s'", path_tempdir, path_template))
+    {
         outf("Failed to unzip %s into %s",
                 path_template, path_tempdir);
         goto end;
@@ -1172,24 +1195,38 @@ int extract_odt_write_template(
                     alloc,
                     contentss,
                     contentss_num,
-                    styles,
+                    &styles,
                     images,
                     name,
                     text,
                     &text2
-                    )) goto end;
+                    ))
+            {
+                outf("extract_odt_content_item() failed");
+                goto end;
+            }
+
             {
                 const char* text3 = (text2) ? text2 : text;
                 if (write_all(text3, strlen(text3), path)) goto end;
+                outf("have written to path=%s", path);
             }
         }
     }
 
     /* Copy images into <path_tempdir>/media/. */
+    #if 0
+    outf("");
     extract_free(alloc, &path);
     if (extract_asprintf(alloc, &path, "%s/word/media", path_tempdir) < 0) goto end;
-    if (s_mkdir(path, 0777)) goto end;
+    if (s_mkdir(path, 0777))
+    {
+        outf("Failed to mkdir %s", path);
+        goto end;
+    }
+    #endif
     
+    outf("");
     for (i=0; i<images->images_num; ++i) {
         image_t* image = &images->images[i];
         extract_free(alloc, &path);
@@ -1201,8 +1238,8 @@ int extract_odt_write_template(
     {
         const char* path_out_leaf = strrchr(path_out, '/');
         if (!path_out_leaf) path_out_leaf = path_out;
-        e = systemf(alloc, "cd '%s' && zip -q -r -D '../%s' .", path_tempdir, path_out_leaf);
-        if (e) {
+        if (systemf(alloc, "cd '%s' && zip -q -r -D '../%s' .", path_tempdir, path_out_leaf))
+        {
             outf("Zip command failed to convert '%s' directory into output file: %s",
                     path_tempdir, path_out);
             goto end;
@@ -1221,6 +1258,7 @@ int extract_odt_write_template(
     extract_free(alloc, &path);
     extract_free(alloc, &text);
     extract_free(alloc, &text2);
+    extract_odt_styles_free(alloc, &styles);
     if (f)  fclose(f);
 
     if (e) {

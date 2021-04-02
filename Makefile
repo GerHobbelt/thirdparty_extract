@@ -248,6 +248,11 @@ test/generated/%.pdf.intermediate-gs.xml: test/%.pdf $(gs)
 	@echo == Generating docx with extract.exe
 	$(run_exe) -r 0 -i $< -o $@
 
+%.extract.odt: % $(exe)
+	@echo
+	@echo == Generating odt with extract.exe
+	$(run_exe) -r 0 -i $< -o $@
+
 %.extract-rotate.docx: % $(exe) Makefile
 	@echo
 	@echo == Generating docx with rotation with extract.exe

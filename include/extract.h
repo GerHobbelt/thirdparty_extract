@@ -30,6 +30,8 @@ int extract_begin(
 allocation will be done with <alloc> (which can be NULL in which case we use
 malloc/free, or from extract_alloc_create()). */
 
+int extract_odt(extract_t* extract);
+/**/
 
 int extract_read_intermediate(
         extract_t*          extract,

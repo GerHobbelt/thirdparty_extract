@@ -60,6 +60,7 @@ int main(int argc, char** argv)
     int         autosplit           = 0;
     int         images              = 1;
     int         alloc_stats         = 0;
+    int         odt                 = 0;
     int         i;
 
     extract_alloc_t*    alloc = NULL;
@@ -110,7 +111,7 @@ int main(int argc, char** argv)
                     "        vertical space between paragraphs that had different ctm matrices\n"
                     "        in the original document.\n"
                     "    -t <docx-template>\n"
-                    "        If specified we use <docx-template> as template. Otheerwise we use"
+                    "        If specified we use <docx-template> as template. Otheerwise we use\n"
                     "        an internal template.\n"
                     "    -v <verbose>\n"
                     "        Set verbose level.\n"
@@ -136,6 +137,9 @@ int main(int argc, char** argv)
         }
         else if (!strcmp(arg, "-o")) {
             if (arg_next_string(argv, argc, &i, &docx_out_path)) goto end;
+        }
+        else if (!strcmp(arg, "--odt")) {
+            odt = 1;
         }
         else if (!strcmp(arg, "--o-content")) {
             if (arg_next_string(argv, argc, &i, &content_path)) goto end;
@@ -182,7 +186,12 @@ int main(int argc, char** argv)
     }
     
     if (extract_begin(alloc, &extract)) goto end;
+    if (odt)
+    {
+        if (extract_odt(extract)) goto end;
+    }
     if (extract_read_intermediate(extract, intermediate, autosplit)) goto end;
+    
     if (extract_process(extract, spacing, rotation, images)) goto end;
     
     if (content_path) {

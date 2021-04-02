@@ -7,6 +7,7 @@
 #include "docx_template.h"
 #include "mem.h"
 #include "memento.h"
+#include "odt.h"
 #include "outf.h"
 #include "xml.h"
 #include "zip.h"
@@ -534,6 +535,9 @@ struct extract_t
     int                 contentss_num;
     
     images_t            images;
+
+    int                 odt;
+    extract_odt_styles_t odt_styles;
 };
 
 
@@ -562,6 +566,12 @@ int extract_begin(
     end:
     *pextract = (e) ? NULL : extract;
     return e;
+}
+
+int extract_odt(extract_t* extract)
+{
+    extract->odt = 1;
+    return 0;
 }
 
 static void image_free_fn(void* handle, void* image_data)
@@ -1089,16 +1099,31 @@ int extract_process(
     
     if (extract_document_join(extract->alloc, &extract->document)) goto end;
     
-    if (extract_document_to_docx_content(
-            extract->alloc,
-            &extract->document,
-            spacing,
-            rotation,
-            images,
-            &extract->contentss[extract->contentss_num - 1]
-            )) goto end;
-    
-    if (extract_document_images(extract->alloc, &extract->document, &extract->images)) goto end;
+    if (extract->odt)
+    {
+        if (extract_document_to_odt_content(
+                extract->alloc,
+                &extract->document,
+                spacing,
+                rotation,
+                images,
+                &extract->contentss[extract->contentss_num - 1],
+                &extract->odt_styles
+                )) goto end;
+    }
+    else
+    {
+        if (extract_document_to_docx_content(
+                extract->alloc,
+                &extract->document,
+                spacing,
+                rotation,
+                images,
+                &extract->contentss[extract->contentss_num - 1]
+                )) goto end;
+
+        if (extract_document_images(extract->alloc, &extract->document, &extract->images)) goto end;
+    }
     
     {
         int i;
@@ -1128,16 +1153,36 @@ int extract_write(extract_t* extract, extract_buffer_t* buffer)
         const docx_template_item_t* item = &docx_template_items[i];
         extract_free(extract->alloc, &text2);
         outf("i=%i item->name=%s", i, item->name);
-        if (extract_docx_content_item(
-                extract->alloc,
-                extract->contentss,
-                extract->contentss_num,
-                &extract->images,
-                item->name,
-                item->text,
-                &text2
-                )) {
-            goto end;
+        if (extract->odt)
+        {
+            if (extract_odt_content_item(
+                    extract->alloc,
+                    extract->contentss,
+                    extract->contentss_num,
+                    &extract->odt_styles,
+                    &extract->images,
+                    item->name,
+                    item->text,
+                    &text2
+                    ))
+            {
+                goto end;
+            }
+        }
+        else
+        {
+            if (extract_docx_content_item(
+                    extract->alloc,
+                    extract->contentss,
+                    extract->contentss_num,
+                    &extract->images,
+                    item->name,
+                    item->text,
+                    &text2
+                    ))
+            {
+                goto end;
+            }
         }
         
         {
@@ -1180,6 +1225,14 @@ int extract_write_content(extract_t* extract, extract_buffer_t* buffer)
     return 0;
 }
 
+static int string_ends_with(const char* string, const char* end)
+{
+    size_t string_len = strlen(string);
+    size_t end_len = strlen(end);
+    if (end_len > string_len) return 0;
+    return memcmp(string + string_len - end_len, end, end_len) == 0;
+}
+
 int extract_write_template(
         extract_t*  extract, 
         const char* path_template,
@@ -1187,15 +1240,31 @@ int extract_write_template(
         int         preserve_dir
         )
 {
-    return extract_docx_write_template(
-            extract->alloc,
-            extract->contentss,
-            extract->contentss_num,
-            &extract->images,
-            path_template,
-            path_out,
-            preserve_dir
-            );
+    if (string_ends_with(path_out, ".odt"))
+    {
+        outf0("Writing odt");
+        return extract_odt_write_template(
+                extract->alloc,
+                extract->contentss,
+                extract->contentss_num,
+                &extract->images,
+                path_template,
+                path_out,
+                preserve_dir
+                );
+    }
+    else
+    {
+        return extract_docx_write_template(
+                extract->alloc,
+                extract->contentss,
+                extract->contentss_num,
+                &extract->images,
+                path_template,
+                path_out,
+                preserve_dir
+                );
+    }
 }
 
 void extract_end(extract_t** pextract)
