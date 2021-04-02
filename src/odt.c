@@ -168,7 +168,7 @@ called to terminate any previous run. */
 {
     extract_odt_style_t* style;
     if (styles_add(alloc, styles, font_name, font_size, bold, italic, &style)) return -1;
-    if (extract_odt_char_append_stringf(alloc, content, "<text:span text:style-name=\"T%i\"", style->id)) return -1;
+    if (extract_odt_char_append_stringf(alloc, content, "<text:span text:style-name=\"T%i\">", style->id)) return -1;
     return 0;
 }
 
