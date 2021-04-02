@@ -198,8 +198,10 @@ exe_src = \
         src/extract.c \
         src/join.c \
         src/mem.c \
+        src/odt.c \
         src/outf.c \
-        src/xml.c src/zip.c \
+        src/xml.c \
+        src/zip.c \
 
 ifeq ($(build),memento)
     exe_src += src/memento.c
@@ -286,6 +288,19 @@ test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.d
 	@echo == Extracting .docx into directory.
 	@rm -r $@ 2>/dev/null || true
 	unzip -q -d $@ $<
+
+# Unzips .odt into .odt.dir/ directory. Note that we requires a trailing '/'
+# in target.
+#
+%.odt.dir/: %.odt
+	@echo
+	@echo == Extracting .odt into directory.
+	@rm -r $@ 2>/dev/null || true
+	unzip -q -d $@ $<
+	./src/docx_template_build.py --docx-pretty $@
+
+%.xml.pretty.xml: %.xml
+	xmllint --format $< > $@
 
 # Uses zip to create .docx file by zipping up a directory. Useful to recreate
 # .docx from reference directory test/*.docx.dir.ref.
