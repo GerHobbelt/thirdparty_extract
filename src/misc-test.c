@@ -59,7 +59,11 @@ static void s_check_uint(const char* text, unsigned expected_value, int expected
     return;
 }
 
+#if defined(MAIN_IS_MONOLITHIC)
+int extract_test_main(void)
+#else
 int main(void)
+#endif
 {
     printf("testing extract_xml_str_to_int():\n");
     s_check_int("2", 2, 0);
@@ -77,10 +81,10 @@ int main(void)
     
     if (s_num_fails) {
         printf("Failed\n");
-        return 1;
+        return EXIT_FAILURE;
     }
     else {
         printf("Succeeded\n");
-        return 0;
+        return EXIT_SUCCESS;
     }
 }
