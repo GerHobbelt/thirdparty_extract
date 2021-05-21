@@ -59,7 +59,7 @@ static void s_check_uint(const char* text, unsigned expected_value, int expected
     return;
 }
 
-#if defined(MAIN_IS_MONOLITHIC)
+#if defined(BUILD_MONOLITHIC)
 int extract_test_main(void)
 #else
 int main(void)
