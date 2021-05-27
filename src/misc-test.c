@@ -60,10 +60,10 @@ static void s_check_uint(const char* text, unsigned expected_value, int expected
 }
 
 #if defined(BUILD_MONOLITHIC)
-int extract_test_main(void)
-#else
-int main(void)
+#define main(v)      extract_test_main(v)
 #endif
+
+int main(void)
 {
     printf("testing extract_xml_str_to_int():\n");
     s_check_int("2", 2, 0);
