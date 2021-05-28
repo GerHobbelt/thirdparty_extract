@@ -5,7 +5,7 @@
 #include "outf.h"
 #include "zip.h"
 
-#include <zlib.h>
+#include <zlib-ng.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -148,7 +148,7 @@ static int s_write_compressed(
 /* Uses zlib to write raw deflate compressed data to zip->buffer. */
 {
     int ze;
-    z_stream    zstream;
+    zng_stream    zstream;
     if (zip->errno_)    return -1;
     if (zip->eof)       return +1;
     
@@ -158,7 +158,7 @@ static int s_write_compressed(
     
     /* We need to write raw deflate data, so we use deflateInit2() with -ve
     windowBits. The values we use are deflateInit()'s defaults. */
-    ze = deflateInit2(
+    ze = zng_deflateInit2(
             &zstream,
             zip->compress_level,
             Z_DEFLATED,
@@ -193,7 +193,7 @@ static int s_write_compressed(
         unsigned char   buffer[1024];
         zstream.next_out = &buffer[0];
         zstream.avail_out = sizeof(buffer);
-        ze = deflate(&zstream, zstream.avail_in ? Z_NO_FLUSH : Z_FINISH);
+        ze = zng_deflate(&zstream, zstream.avail_in ? Z_NO_FLUSH : Z_FINISH);
         if (ze != Z_STREAM_END && ze != Z_OK)
         {
             outf("deflate() failed ze=%i", ze);
@@ -222,7 +222,7 @@ static int s_write_compressed(
             break;
         }
     }
-    ze = deflateEnd(&zstream);
+    ze = zng_deflateEnd(&zstream);
     if (ze != Z_OK)
     {
         outf("deflateEnd() failed ze=%i", ze);
@@ -314,7 +314,7 @@ int extract_zip_write_file(
     
     cd_file->mtime = zip->mtime;
     cd_file->mdate = zip->mtime;
-    cd_file->crc_sum = (int32_t) crc32(crc32(0, NULL, 0), data, (int) data_length);
+    cd_file->crc_sum = (int32_t)zng_crc32(zng_crc32(0, NULL, 0), data, (int) data_length);
     cd_file->size_uncompressed = (int) data_length;
     if (zip->compression_method == 0)
     {
