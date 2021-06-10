@@ -336,6 +336,14 @@ test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.d
 	@rm -r $@ 2>/dev/null || true
 	cd $< && zip -r ../$(notdir $@) .
 
+# Uses zip to create .odt file by zipping up a directory. Useful to recreate
+# .docx from reference directory test/*.odt.dir.ref.
+%.odt: %
+	@echo
+	@echo == Zipping directory into .odt file.
+	@rm -r $@ 2>/dev/null || true
+	cd $< && zip -r ../$(notdir $@) .
+
 # Prettifies each .xml file within .docx.dir/ directory.
 %.docx.dir.pretty: %.docx.dir/
 	@rm -r $@ $@- 2>/dev/null || true
