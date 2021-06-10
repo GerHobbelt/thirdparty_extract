@@ -31,6 +31,14 @@ static char_t* line_item_last(line_t* line)
     return span_char_last(span);
 }
 
+static point_t char_to_point(const char_t* char_)
+{
+    point_t ret;
+    ret.x = char_->x;
+    ret.y = char_->y;
+    return ret;
+}
+
 static const char* matrix_string(const matrix_t* matrix)
 {
     static char ret[64];
@@ -386,24 +394,30 @@ static int make_lines(
         if (nearest_line) {
             /* line_a and nearest_line are aligned so we can move line_b's
             spans on to the end of line_a. */
+            double average_adv;
             span_t* span_b = line_span_first(nearest_line);
             b = nearest_line_b;
             if (verbose) outf("found nearest line. a=%i b=%i", a, b);
 
+            /* Find average advance of the two adjacent spans in the two
+            lines we are considering joining, so that we can decide whether
+            the distance between them is large enough to merit joining with
+            a space character). */
+            average_adv = (
+                    (span_adv_total(span_a) + span_adv_total(span_b))
+                    /
+                    (double) (span_a->chars_num + span_b->chars_num)
+                    );
+
+            if (0 && nearest_adv > 5 * average_adv)
+            {
+                continue;
+            }
+            
             if (1
                     && span_char_last(span_a)->ucs != ' '
                     && span_char_first(span_b)->ucs != ' '
                     ) {
-                /* Find average advance of the two adjacent spans in the two
-                lines we are considering joining, so that we can decide whether
-                the distance between them is large enough to merit joining with
-                a space character). */
-                double average_adv = (
-                        (span_adv_total(span_a) + span_adv_total(span_b))
-                        /
-                        (double) (span_a->chars_num + span_b->chars_num)
-                        );
-
                 int insert_space = (nearest_adv > 0.25 * average_adv);
                 if (insert_space) {
                     /* Append space to span_a before concatenation. */
@@ -581,19 +595,33 @@ respectively.
 
 AQB is a right angle. We need to find AQ.
 */
-static double line_distance(
-        double ax,
-        double ay,
-        double bx,
-        double by,
-        double angle
-        )
+static double line_distance_y( double ax, double ay, double bx, double by, double angle)
 {
     double dx = bx - ax;
     double dy = by - ay;
 
-
     return dx * sin(angle) + dy * cos(angle);
+}
+
+/* Returns distance QB in above diagram. */
+static double line_distance_x( double ax, double ay, double bx, double by, double angle)
+{
+    double dx = bx - ax;
+    double dy = by - ay;
+
+    return dx * cos(angle) - dy * sin(angle);
+}
+
+static double line_distance_xp(point_t a, point_t b, double angle)
+{
+    return line_distance_x(a.x, a.y, b.x, b.y, angle);
+}
+
+static int lines_overlap(point_t a_left, point_t a_right, point_t b_left, point_t b_right, double angle)
+{
+    if (line_distance_xp(a_left, b_right, angle) < 0)  return 0;
+    if (line_distance_xp(a_right, b_left, angle) >= 0) return 0;
+    return 1;
 }
 
 
@@ -628,7 +656,7 @@ static int paragraphs_cmp(const void* a, const void* b)
             double ay = line_item_first(a_line)->y;
             double bx = line_item_first(b_line)->x;
             double by = line_item_first(b_line)->y;
-            double distance = line_distance(ax, ay, bx, by, angle);
+            double distance = line_distance_y(ax, ay, bx, by, angle);
             if (distance > 0)   return -1;
             if (distance < 0)   return +1;
         }
@@ -687,9 +715,9 @@ static int make_paragraphs(
 
     num_joins = 0;
     for (a=0; a<paragraphs_num; ++a) {
-        paragraph_t* nearest_paragraph;
-        int nearest_paragraph_b;
-        double nearest_paragraph_distance;
+        paragraph_t* nearest_paragraph = NULL;
+        int nearest_paragraph_b = -1;
+        double nearest_paragraph_distance = -1;
         line_t* line_a;
         double angle_a;
         int verbose;
@@ -702,14 +730,9 @@ static int make_paragraphs(
             continue;
         }
 
-        nearest_paragraph = NULL;
-        nearest_paragraph_b = -1;
-        nearest_paragraph_distance = -1;
         assert(paragraph_a->lines_num > 0);
-
         line_a = paragraph_line_last(paragraph_a);
         angle_a = line_angle(line_a);
-
         verbose = 0;
 
         /* Look for nearest paragraph_t that could be appended to
@@ -732,7 +755,7 @@ static int make_paragraphs(
                 double ay = line_item_last(line_a)->y;
                 double bx = line_item_first(line_b)->x;
                 double by = line_item_first(line_b)->y;
-                double distance = line_distance(ax, ay, bx, by, angle_a);
+                double distance = line_distance_y(ax, ay, bx, by, angle_a);
                 if (verbose) {
                     outf(
                             "angle_a=%f a=(%f %f) b=(%f %f) delta=(%f %f) distance=%f:",
@@ -746,17 +769,39 @@ static int make_paragraphs(
                     outf("    line_a=%s", line_string2(alloc, line_a));
                     outf("    line_b=%s", line_string2(alloc, line_b));
                 }
-                if (distance > 0) {
+                if (distance > 0)
+                {
                     if (nearest_paragraph_distance == -1
-                            || distance < nearest_paragraph_distance) {
-                        if (verbose) {
-                            outf("updating nearest. distance=%f:", distance);
-                            outf("    line_a=%s", line_string2(alloc, line_a));
-                            outf("    line_b=%s", line_string2(alloc, line_b));
+                            || distance < nearest_paragraph_distance)
+                    {
+                        int ok = 1;
+                        if (0)
+                        {
+                            /* Check whether lines overlap horizontally. */
+                            point_t a_left = char_to_point(line_item_first(line_a));
+                            point_t b_left = char_to_point(line_item_first(line_b));
+                            point_t a_right = char_to_point(line_item_last(line_a));
+                            point_t b_right = char_to_point(line_item_last(line_b));
+
+                            if (!lines_overlap(a_left, a_right, b_left, b_right, angle_a))
+                            {
+                                outf0("Not joining lines because not overlapping.");
+                                ok = 0;
+                            }
                         }
-                        nearest_paragraph_distance = distance;
-                        nearest_paragraph_b = b;
-                        nearest_paragraph = paragraph_b;
+
+                        if (ok)
+                        {
+                            if (verbose) {
+                                outf("updating nearest. distance=%f:", distance);
+                                outf("    line_a=%s", line_string2(alloc, line_a));
+                                outf("    line_b=%s", line_string2(alloc, line_b));
+                            }
+
+                            nearest_paragraph_distance = distance;
+                            nearest_paragraph_b = b;
+                            nearest_paragraph = paragraph_b;
+                        }
                     }
                 }
             }
