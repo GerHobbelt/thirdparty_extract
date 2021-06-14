@@ -15,14 +15,28 @@ struct rect_compare
 
 void extract_table_find(const std::string& path_pdf)
 {
+    // _generate_image().
+    //
     std::string path_png = path_pdf + ".png";
-    std::string command = "mutool convert -o " + path_png + " " + path_pdf;
+    std::string command = "mutool convert -O resolution=300 -o " + path_png + " " + path_pdf;
     int e = system(command.c_str());
     assert(!e);
     
+    // _generate_table_bbox().
+    //
     cv::Mat image = cv::imread(path_png);
     cv::Mat image_grey;
     cv::cvtColor(image, image_grey, cv::COLOR_BGR2GRAY);
+    
+    int image_width = image.cols;
+    int image_height = image.rows;
+    int pdf_width = 612;
+    int pdf_height = 792;
+    double image_width_scaler = 1.0 * image_width / pdf_width;
+    double image_height_scaler = 1.0 * image_height / pdf_height;
+    double pdf_width_scaler = 1.0 / image_width_scaler;
+    double pdf_height_scaler = 1.0 / image_height_scaler;
+    
     
     // Invert each pixel.
     for (int i=0; i<image_grey.cols; ++i)
@@ -149,4 +163,52 @@ void extract_table_find(const std::string& path_pdf)
     // tables is table_bbox.
     
     auto table_bbox_unscaled = table_bbox;
+    
+    // call scale_image().
+    //    self.table_bbox, self.vertical_segments, self.horizontal_segments = scale_image(
+    //        table_bbox, vertical_segments, horizontal_segments, pdf_scalers
+    auto scaling_factor_x = pdf_width_scaler;
+    auto scaling_factor_y = pdf_height_scaler;
+    auto img_y = image_height;
+    
+    std::map<cv::Rect, std::vector<cv::Point>, rect_compare>    table_bbox2;
+    for (auto it: table_bbox)
+    {
+        auto rect = it.first;
+        auto points = it.second;
+        rect.x      *= scaling_factor_x;
+        rect.y      = (rect.y - img_y) * scaling_factor_y;
+        rect.width  *= scaling_factor_x;
+        rect.height *= scaling_factor_y;
+        /*std::vector<int>    jx;
+        std::vector<int>    jy;
+        for (auto point: points)
+        {
+            jx.push_back(scaling_factor_x * point.x);
+            jy.push_back(scaling_factor_y * point.y);
+        }*/
+        std::vector<cv::Point>  points2 = points;
+        for (auto point: points2)
+        {
+            point.x *= scaling_factor_x;
+            point.y = (point.y - img_y) * scaling_factor_y;
+        }
+        table_bbox2[rect] = points2;
+    }
+    
+    for (auto rect: vertical_segments)
+    {
+        rect.x *= scaling_factor_x;
+        rect.y = (rect.y - img_y) * scaling_factor_y;
+        rect.width *= scaling_factor_x;
+        rect.height *= scaling_factor_y;
+    }
+    
+    for (auto rect: horizontal_segments)
+    {
+        rect.x *= scaling_factor_x;
+        rect.y = (rect.y - img_y) * scaling_factor_y;
+        rect.width *= scaling_factor_x;
+        rect.height *= scaling_factor_y;
+    }
 }
