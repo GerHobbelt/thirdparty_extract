@@ -1,5 +1,18 @@
 #include <opencv2/opencv.hpp>
 
+
+struct rect_compare
+{
+    bool operator()(const cv::Rect& a, const cv::Rect& b) const
+    {
+        if (a.x != b.x)             return a.x < b.x;
+        if (a.y != b.y)             return a.y < b.y;
+        if (a.width != b.width)     return a.width < b.width;
+        if (a.height != b.height)   return a.height < b.height;
+        return false;
+    }
+};
+
 void extract_table_find(const std::string& path_pdf)
 {
     std::string path_png = path_pdf + ".png";
@@ -32,15 +45,21 @@ void extract_table_find(const std::string& path_pdf)
             -2 /*C*/
             );
     
+    // Find lines
+    //
     std::vector<cv::Rect>   vertical_segments;
     std::vector<cv::Rect>   horizontal_segments;
     
     auto vertical_mask = image_grey;
     auto horizontal_mask = image_grey;
     
+    int line_scale = 15;
+    
     for (int vertical=0; vertical != 2; ++vertical)
     {
         int size = (vertical) ? image_grey_threshold.rows : image_grey_threshold.cols;
+        size /= line_scale;
+        
         cv::Mat element = cv::getStructuringElement(
                 cv::MORPH_RECT,
                 (vertical) ? cv::Point(1, size) : cv::Point(size, 1)
@@ -77,5 +96,57 @@ void extract_table_find(const std::string& path_pdf)
         }
     }
     
+    // End of Find lines.
     
+    // contours = find_contours(vertical_mask, horizontal_mask)
+    auto mask = vertical_mask + horizontal_mask;
+    std::vector<std::vector<unsigned char>> contours;
+    cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    std::sort(contours.begin(), contours.end());
+    // todo: take first 10 items.
+    std::vector<cv::Rect>   contours2;
+    for (auto& c: contours)
+    {
+        std::vector<cv::Point>  c_poly;
+        cv::approxPolyDP(c, c_poly, 3 /*epsilon*/, true /*closed*/);
+        contours2.push_back(cv::boundingRect(c_poly));
+    }
+    // contours2 is as returned by find_contours().
+    
+    /* Lines are in:
+        vertical_segments
+        horizontal_segments
+        vertical_mask
+        horizontal_mask
+    */
+    
+    // table_bbox = find_joints(contours, vertical_mask, horizontal_mask)
+    auto joints = vertical_mask * horizontal_mask;
+    std::map<cv::Rect, std::vector<cv::Point>, rect_compare>    table_bbox;
+    for (auto rect: contours2)
+    {
+        cv::Mat roi(
+                joints,
+                cv::Range(rect.y, rect.y + rect.height),
+                cv::Range(rect.x, rect.x + rect.width)
+                );
+        std::vector<std::vector<unsigned char>> jc;
+        cv::findContours(roi, jc, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+        if (jc.size() < 5)  continue;
+        std::vector<cv::Point>  joint_coords;
+        for (auto& j: jc)
+        {
+            auto rectj = cv::boundingRect(j);
+            joint_coords.push_back(
+                    cv::Point(
+                            rect.x + (2*rectj.x + rectj.width) / 2,
+                            rect.y + (2*rectj.y + rectj.height) / 2
+                            )
+                    );
+        }
+        table_bbox[rect] = joint_coords;
+    }
+    // tables is table_bbox.
+    
+    auto table_bbox_unscaled = table_bbox;
 }
