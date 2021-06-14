@@ -240,6 +240,11 @@ ifeq ($(build),memento)
     endif
 endif
 
+exe_tables = src/build/extract-tables-$(build).exe
+exe_tables_src = src/tables.c++
+$(exe_tables): $(exe_tables_src)
+	c++ -W -Wall -Werror -g -I /usr/local/include/opencv4 -L /usr/local/lib -l opencv_core -l opencv_imgproc -l opencv_imgcodecs -o $@ $^
+
 ifeq ($(create_ref),yes)
 # Special rule for populating .ref directories with current output. Useful to
 # initialise references outputs for new output type.
@@ -491,6 +496,10 @@ test-src:
 src/build/%.c-$(build).o: src/%.c src/docx_template.c src/odt_template.c 
 	@mkdir -p src/build
 	$(CC) -c $(flags_compile) -o $@ $<
+
+src/build/%.c++-$(build).o: src/%.c++ 
+	@mkdir -p src/build
+	c++ -c -Wall -W -I /usr/local/include/opencv4 -o $@ $<
 
 # Rule for machine-generated source code, src/docx_template.c. Also generates
 # src/docx_template.h.
