@@ -492,6 +492,10 @@ src/build/%.c-$(build).o: src/%.c src/docx_template.c src/odt_template.c
 	@mkdir -p src/build
 	$(CC) -c $(flags_compile) -o $@ $<
 
+src/build/%.c++-$(build).o: src/%.c++ 
+	@mkdir -p src/build
+	c++ -c -Wall -W -I /usr/local/include/opencv4 -o $@ $<
+
 # Rule for machine-generated source code, src/docx_template.c. Also generates
 # src/docx_template.h.
 #
