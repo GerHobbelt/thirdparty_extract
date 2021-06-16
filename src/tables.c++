@@ -5,8 +5,8 @@ struct rect_compare
 {
     bool operator()(const cv::Rect& a, const cv::Rect& b) const
     {
-        if (a.x != b.x)             return a.x < b.x;
         if (a.y != b.y)             return a.y < b.y;
+        if (a.x != b.x)             return a.x < b.x;
         if (a.width != b.width)     return a.width < b.width;
         if (a.height != b.height)   return a.height < b.height;
         return false;
@@ -17,15 +17,20 @@ void extract_table_find(const std::string& path_pdf)
 {
     // _generate_image().
     //
-    std::string path_png = path_pdf + ".png";
-    std::string command = "mutool convert -O resolution=300 -o " + path_png + " " + path_pdf;
+    std::string path_png = path_pdf + ".1.png";
+    std::string path_png_spec = path_pdf + "..png";
+    std::string command = "../../build/debug-extract/mutool convert -O resolution=300 -o " + path_png_spec + " " + path_pdf;
+    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            << "running: " << command << "\n";
     int e = system(command.c_str());
     assert(!e);
+    
     
     // _generate_table_bbox().
     //
     cv::Mat image = cv::imread(path_png);
     cv::Mat image_grey;
+    //std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image: " << image << "\n";
     cv::cvtColor(image, image_grey, cv::COLOR_BGR2GRAY);
     
     int image_width = image.cols;
@@ -78,6 +83,9 @@ void extract_table_find(const std::string& path_pdf)
                 cv::MORPH_RECT,
                 (vertical) ? cv::Point(1, size) : cv::Point(size, 1)
                 );
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " element=" << element
+                << "\n";
         auto image_grey_threshold2 = image_grey_threshold;    // fixme: avoid copy.
         cv::erode(image_grey_threshold, image_grey_threshold2, element);
         auto threshold = image_grey_threshold2;
@@ -89,7 +97,9 @@ void extract_table_find(const std::string& path_pdf)
         else            horizontal_mask = dmask;
         
         //cv::OutputArrayOfArrays contours;
-        std::vector<std::vector<unsigned char>> contours;
+        std::cerr << __FILE__ << ":" << __LINE__ << ": threshold.size()=" << threshold.size() << "\n";
+        std::vector<std::vector<cv::Point>> contours;
+        //auto contours = threshold;
         cv::findContours(threshold, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         
         for (auto& c: contours)
@@ -101,11 +111,11 @@ void extract_table_find(const std::string& path_pdf)
             int y2 = bounding_rect.y + bounding_rect.height;
             if (vertical)
             {
-                vertical_segments.push_back(cv::Rect((x1 + x2) / 2, y2, (x1 + x2) / 2, y1));
+                vertical_segments.push_back(cv::Rect((x1 + x2) / 2, y1, 0 /*width*/, y2 - y1 /*height*/));
             }
             else
             {
-                horizontal_segments.push_back(cv::Rect(x1, (y1 + y2) / 2, x2, (y1 + y2) / 2));
+                horizontal_segments.push_back(cv::Rect(x1, (y1 + y2) / 2, x2 - x1 /*width*/, 0 /*height*/));
             }
         }
     }
@@ -195,6 +205,7 @@ void extract_table_find(const std::string& path_pdf)
         }
         table_bbox2[rect] = points2;
     }
+    std::swap(table_bbox, table_bbox2);
     
     for (auto rect: vertical_segments)
     {
@@ -211,4 +222,45 @@ void extract_table_find(const std::string& path_pdf)
         rect.width *= scaling_factor_x;
         rect.height *= scaling_factor_y;
     }
+    
+    // sort tables based on y-coord
+    // rect_compare() sorts by y first.
+    
+    // segments_in_bbox
+    std::vector<cv::Rect>   vertical_segments_in_rect;
+    std::vector<cv::Rect>   horizontal_segments_in_rect;
+    for (auto it: table_bbox)
+    {
+        const cv::Rect& rect = it.first;
+        std::vector<cv::Point>& points = it.second;
+        for (cv::Rect& r: vertical_segments)
+        {
+            if (rect.contains(cv::Point(r.x, r.y))
+                    && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
+                    )
+            {
+                vertical_segments_in_rect.push_back(r);
+            }
+        }
+        for (cv::Rect& r: horizontal_segments)
+        {
+            if (rect.contains(cv::Point(r.x, r.y))
+                    && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
+                    )
+            {
+                horizontal_segments_in_rect.push_back(r);
+            }
+        }
+        
+        // Find text inside <rect>.
+        
+        
+    }
+}
+
+int main(int argc, char** argv)
+{
+    assert(argc == 2);
+    extract_table_find(argv[1]);
+    return 0;
 }
