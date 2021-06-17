@@ -773,13 +773,23 @@ static int make_paragraphs(
                     if (nearest_paragraph_distance == -1
                             || distance < nearest_paragraph_distance)
                     {
-                        /* Check whether lines overlap horizontally. */
-                        point_t a_left = char_to_point(line_item_first(line_a));
-                        point_t b_left = char_to_point(line_item_first(line_b));
-                        point_t a_right = char_to_point(line_item_last(line_a));
-                        point_t b_right = char_to_point(line_item_last(line_b));
+                        int ok = 1;
+                        if (0)
+                        {
+                            /* Check whether lines overlap horizontally. */
+                            point_t a_left = char_to_point(line_item_first(line_a));
+                            point_t b_left = char_to_point(line_item_first(line_b));
+                            point_t a_right = char_to_point(line_item_last(line_a));
+                            point_t b_right = char_to_point(line_item_last(line_b));
 
-                        if (lines_overlap(a_left, a_right, b_left, b_right, angle_a))
+                            if (!lines_overlap(a_left, a_right, b_left, b_right, angle_a))
+                            {
+                                outf0("Not joining lines because not overlapping.");
+                                ok = 0;
+                            }
+                        }
+
+                        if (ok)
                         {
                             if (verbose) {
                                 outf("updating nearest. distance=%f:", distance);
@@ -790,10 +800,6 @@ static int make_paragraphs(
                             nearest_paragraph_distance = distance;
                             nearest_paragraph_b = b;
                             nearest_paragraph = paragraph_b;
-                        }
-                        else
-                        {
-                            outf0("Not joining lines because not overlapping.");
                         }
                     }
                 }
