@@ -307,23 +307,8 @@ void extract_table_find(const std::string& path_pdf)
             bool        hspan = false;
             bool        vspan = false;
             
-            /*Cell(const cv::Rect& rect)
-            :
-            //rect(rect),
-            x1(x1),
-            y1(y1),
-            x2(x2),
-            y2(y2),
-            lb(rect.x, rect.y),
-            lt(rect.x, rect.y + rect.height),
-            rb(rect.x + rect.width, rect.y),
-            rt(rect.x + rect.width, rect.y + rect.height)
-            {
-            }*/
-            
             Cell(int x1, int y1, int x2, int y2)
             :
-            //rect(cv::Rect(x1, y1, x2 - x1, y2 - y1)),
             x1(x1),
             y1(y1),
             x2(x2),
@@ -333,6 +318,16 @@ void extract_table_find(const std::string& path_pdf)
             rb(x2, y2),
             rt(x2, y2)
             {
+            }
+            
+            int bound()
+            {
+                int ret = 0;
+                if (left)   ret += 1;
+                if (right)  ret += 1;
+                if (top)    ret += 1;
+                if (bottom) ret += 1;
+                return ret;
             }
         };
         std::vector<std::vector<Cell>>  cells;
@@ -361,10 +356,7 @@ void extract_table_find(const std::string& path_pdf)
                 if (abs(v.y + v.height - rows[jj].first) <= 2)  j.push_back(jj);
                 if (abs(v.y - rows[jj].first) <= 2)  k.push_back(jj);
             }
-            if (j.empty())
-            {
-                continue;
-            }
+            if (j.empty())  continue;
             
             int jj = j[0];
             if (i.size() == 1 && i[0] == 0) // only left edge
@@ -391,7 +383,82 @@ void extract_table_find(const std::string& path_pdf)
             }
         }
         
+        for (cv::Rect& h: horizontal_segments_in_rect)
+        {
+            std::vector<int>    i;
+            std::vector<int>    j;
+            std::vector<int>    k;
+            for (size_t ii=0; ii<rows.size(); ++ii)
+            {
+                if (abs(h.y - rows[ii].first) <= 2) i.push_back(ii);
+            }
+            for (size_t jj=0; jj<cols.size(); ++jj)
+            {
+                if (abs(h.x - cols[jj].first) <= 2) j.push_back(jj);
+                if (abs(h.x + h.width - cols[jj].first) <= 2) k.push_back(jj);
+            }
+            if (j.empty()) continue;
+            
+            int jj = j[0];
+            if (i.size() == 1 && i[0] == 0) // only top edge.
+            {
+                int ll = i[0];
+                int kk = k.empty() ? cols.size() : k[0];
+                for ( ; jj < kk; ++jj)  cells[ll][jj].top = true;
+            }
+            else if (i.empty()) // only bottom edge.
+            {
+                int ll = rows.size() - 1;
+                int kk = k.empty() ? cols.size() : k[0];
+                for ( ; jj < kk; ++jj)  cells[ll][jj].bottom = true;
+            }
+            else    // both top and bottom edges
+            {
+                int ll = i[0];
+                int kk = k.empty() ? cols.size() : k[0];
+                for ( ; jj < kk; ++jj)
+                {
+                    cells[ll][jj].top = true;
+                    cells[ll - 1][jj].bottom = true;
+                }
+            }
+        }
         
+        // set_border()
+        for (size_t r=0; r<rows.size(); ++r)
+        {
+            cells[r][0].left = true;
+            cells[r][cols.size() - 1].right = true;
+        }
+        for (size_t c=0; c<cols.size(); ++c)
+        {
+            cells[0][c].top = true;
+            cells[rows.size() - 1][c].bottom = true;
+        }
+        
+        // set_span()
+        for (auto& row: cells)
+        {
+            for (auto& cell: row)
+            {
+                bool left = cell.left;
+                bool right = cell.right;
+                bool top = cell.top;
+                bool bottom = cell.bottom;
+                if (left and right and top and bottom)  continue;
+                else if (!left and right and top and bottom)    cell.hspan = true;
+                else if (left and !right and top and bottom)    cell.hspan = true;
+                else if (left and right and !top and bottom)    cell.vspan = true;
+                else if (left and right and top and !bottom)    cell.vspan = true;
+                else if (left and right and !top and !bottom)   cell.vspan = true;
+                else if (!left and !right and top and bottom)   cell.hspan = true;
+                else if (cell.bound() <= 1)
+                {
+                    cell.hspan = true;
+                    cell.vspan = true;
+                }
+            }
+        }
     }
 }
 
