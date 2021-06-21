@@ -394,6 +394,7 @@ static int make_lines(
         if (nearest_line) {
             /* line_a and nearest_line are aligned so we can move line_b's
             spans on to the end of line_a. */
+            double average_adv;
             span_t* span_b = line_span_first(nearest_line);
             b = nearest_line_b;
             if (verbose) outf("found nearest line. a=%i b=%i", a, b);
@@ -402,7 +403,7 @@ static int make_lines(
             lines we are considering joining, so that we can decide whether
             the distance between them is large enough to merit joining with
             a space character). */
-            double average_adv = (
+            average_adv = (
                     (span_adv_total(span_a) + span_adv_total(span_b))
                     /
                     (double) (span_a->chars_num + span_b->chars_num)
