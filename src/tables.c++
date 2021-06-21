@@ -233,6 +233,11 @@ void extract_table_find(const std::string& path_pdf)
     {
         const cv::Rect& rect = it.first;
         std::vector<cv::Point>& points = it.second;
+        
+        // _generate_columns_and_rows().
+        //
+        
+        // segments_in_bbox
         for (cv::Rect& r: vertical_segments)
         {
             if (rect.contains(cv::Point(r.x, r.y))
@@ -254,6 +259,13 @@ void extract_table_find(const std::string& path_pdf)
         
         // Find text inside <rect>.
         
+        // 
+        // cols, rows = zip(*self.table_bbox[tk])
+        // cols, rows = list(cols), list(rows)
+        // cols.extend([tk[0], tk[2]])
+        // rows.extend([tk[1], tk[3]])
+        points.push_back(cv::Point(rect.x, rect.y));
+        points.push_back(cv::Point(rect.x + rect.width, rect.y + rect.height));
         
     }
 }
