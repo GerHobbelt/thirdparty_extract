@@ -267,6 +267,131 @@ void extract_table_find(const std::string& path_pdf)
         points.push_back(cv::Point(rect.x, rect.y));
         points.push_back(cv::Point(rect.x + rect.width, rect.y + rect.height));
         
+        // merge_close_lines
+        std::vector<int>    rows0;
+        std::vector<int>    cols0;
+        for (cv::Point& point: points)
+        {
+            if (cols0.empty() || abs(point.x - cols0.back()) <= 2)    cols0.push_back(point.x);
+            if (rows0.empty() || abs(point.y - rows0.back()) <= 2)    rows0.push_back(point.y);
+        }
+        
+        std::vector<std::pair<int, int>> rows;
+        std::vector<std::pair<int, int>> cols;
+        for (size_t i=0; i+1 < rows0.size(); ++i)
+        {
+            rows.push_back(std::pair<int, int>(rows0[i], rows0[i+1]));
+        }
+        for (size_t i=0; i+1 < cols0.size(); ++i)
+        {
+            cols.push_back(std::pair<int, int>(cols0[i], rows0[i+1]));
+        }
+        
+        
+        // _generate_table
+        struct Cell
+        {
+            //cv::Rect    rect;
+            int x1;
+            int y1;
+            int x2;
+            int y2;
+            cv::Point   lb;
+            cv::Point   lt;
+            cv::Point   rb;
+            cv::Point   rt;
+            bool        left = false;
+            bool        right = false;
+            bool        top = false;
+            bool        bottom = false;
+            bool        hspan = false;
+            bool        vspan = false;
+            
+            /*Cell(const cv::Rect& rect)
+            :
+            //rect(rect),
+            x1(x1),
+            y1(y1),
+            x2(x2),
+            y2(y2),
+            lb(rect.x, rect.y),
+            lt(rect.x, rect.y + rect.height),
+            rb(rect.x + rect.width, rect.y),
+            rt(rect.x + rect.width, rect.y + rect.height)
+            {
+            }*/
+            
+            Cell(int x1, int y1, int x2, int y2)
+            :
+            //rect(cv::Rect(x1, y1, x2 - x1, y2 - y1)),
+            x1(x1),
+            y1(y1),
+            x2(x2),
+            y2(y2),
+            lb(x1, y1),
+            lt(x1, y2),
+            rb(x2, y2),
+            rt(x2, y2)
+            {
+            }
+        };
+        std::vector<std::vector<Cell>>  cells;
+        for (auto& row: rows)
+        {
+            std::vector<Cell>   row_cells;
+            for (auto& col: cols)
+            {
+                row_cells.push_back(Cell(col.first, row.first, col.second, row.second));
+            }
+            cells.push_back( row_cells);
+        }
+        
+        // Table::set_edges().
+        for (cv::Rect& v: vertical_segments_in_rect)
+        {
+            std::vector<int>    i;
+            std::vector<int>    j;
+            std::vector<int>    k;
+            for (size_t ii=0; ii!=cols.size(); ++ii)
+            {
+                if (abs(v.x - cols[ii].first) <= 2) i.push_back(ii);
+            }
+            for (size_t jj=0; jj!=rows.size(); ++jj)
+            {
+                if (abs(v.y + v.height - rows[jj].first) <= 2)  j.push_back(jj);
+                if (abs(v.y - rows[jj].first) <= 2)  k.push_back(jj);
+            }
+            if (j.empty())
+            {
+                continue;
+            }
+            
+            int jj = j[0];
+            if (i.size() == 1 && i[0] == 0) // only left edge
+            {
+                int ll = 0;
+                int kk = k.empty() ? rows.size() : k[0];
+                for ( ; jj < kk; ++jj)  cells[jj][ll].left = true;
+            }
+            else if (i.empty()) // # only right edge
+            {
+                int ll = cols.size() - 1;
+                int kk = k.empty() ? rows.size() : k[0];
+                for ( ; jj < kk; ++jj)   cells[jj][ll].right = true;
+            }
+            else    // both left and right edges
+            {
+                int ll = i[0];
+                int kk = k.empty() ? rows.size() : k[0];
+                for ( ; jj < kk; ++jj)
+                {
+                    cells[jj][ll].left = true;
+                    cells[jj][ll - 1].right = true;
+                }
+            }
+        }
+        
+        
     }
 }
 
