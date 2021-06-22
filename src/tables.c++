@@ -13,6 +13,70 @@ struct rect_compare
     }
 };
 
+struct Cell
+{
+    //cv::Rect    rect;
+    int x1;
+    int y1;
+    int x2;
+    int y2;
+    cv::Point   lb;
+    cv::Point   lt;
+    cv::Point   rb;
+    cv::Point   rt;
+    bool        left = false;
+    bool        right = false;
+    bool        top = false;
+    bool        bottom = false;
+    bool        hspan = false;
+    bool        vspan = false;
+
+    Cell(int x1, int y1, int x2, int y2)
+    :
+    x1(x1),
+    y1(y1),
+    x2(x2),
+    y2(y2),
+    lb(x1, y1),
+    lt(x1, y2),
+    rb(x2, y2),
+    rt(x2, y2)
+    {
+    }
+
+    int bound()
+    {
+        int ret = 0;
+        if (left)   ret += 1;
+        if (right)  ret += 1;
+        if (top)    ret += 1;
+        if (bottom) ret += 1;
+        return ret;
+    }
+};
+
+struct Table
+{
+    std::vector<std::vector<Cell>>  cells;
+};
+
+struct Tables
+{
+    std::vector<Table>  tables;
+};
+
+
+template<typename T>
+double mat_stats(const cv::Mat& mat)
+{
+    double total = 0;
+    for (size_t i=0; i<mat.total(); ++i)
+    {
+        total += mat.at<T>(i);
+    }
+    return total / mat.total();
+}
+
 void extract_table_find(const std::string& path_pdf)
 {
     // _generate_image().
@@ -30,8 +94,9 @@ void extract_table_find(const std::string& path_pdf)
     //
     cv::Mat image = cv::imread(path_png);
     cv::Mat image_grey;
-    //std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image: " << image << "\n";
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image.elemSize()=" << image.elemSize() << "\n";
     cv::cvtColor(image, image_grey, cv::COLOR_BGR2GRAY);
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image_grey.elemSize()=" << image_grey.elemSize() << "\n";
     
     int image_width = image.cols;
     int image_height = image.rows;
@@ -42,16 +107,18 @@ void extract_table_find(const std::string& path_pdf)
     double pdf_width_scaler = 1.0 / image_width_scaler;
     double pdf_height_scaler = 1.0 / image_height_scaler;
     
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
     
     // Invert each pixel.
-    for (int i=0; i<image_grey.cols; ++i)
+    for (int i=0; i<image_grey.rows; ++i)
     {
-        for (int j=0; j<image_grey.rows; ++j)
+        for (int j=0; j<image_grey.cols; ++j)
         {
             auto& p = image_grey.at<unsigned char>(i, j);
             p = 255 - p;
         }
     }
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
     
     cv::Mat image_grey_threshold;
     cv::adaptiveThreshold(
@@ -63,6 +130,7 @@ void extract_table_find(const std::string& path_pdf)
             15 /*blocksize*/,
             -2 /*C*/
             );
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold) << "\n";
     
     // Find lines
     //
@@ -83,13 +151,37 @@ void extract_table_find(const std::string& path_pdf)
                 cv::MORPH_RECT,
                 (vertical) ? cv::Point(1, size) : cv::Point(size, 1)
                 );
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        if (0) std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " element=" << element
                 << "\n";
         auto image_grey_threshold2 = image_grey_threshold;    // fixme: avoid copy.
         cv::erode(image_grey_threshold, image_grey_threshold2, element);
         auto threshold = image_grey_threshold2;
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " after erode():"
+                << " &threshold=" << &threshold
+                << " &image_grey_threshold2=" << &image_grey_threshold2
+                << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold) << "\n";
+        int num_zero = 0;
+        int num_one = 0;
+        for (size_t i=0; i<threshold.total(); ++i)
+        {
+            if (threshold.at<uint8_t>(i) == 0)   num_zero += 1;
+            if (threshold.at<uint8_t>(i) == 1)   num_one += 1;
+        }
+        
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " threshold.total()=" << threshold.total()
+                << " threshold num_zero=" << num_zero
+                << " threshold num_one=" << num_one
+                << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " threshold.size=" << threshold.size << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " threshold.size()=" << threshold.size() << "\n";
         cv::dilate(image_grey_threshold2, threshold, element);
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " after dilate():"
+                << " threshold.size=" << threshold.size << "\n";
         auto dmask = threshold;
         cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
         
@@ -101,7 +193,7 @@ void extract_table_find(const std::string& path_pdf)
         std::vector<std::vector<cv::Point>> contours;
         //auto contours = threshold;
         cv::findContours(threshold, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-        
+        std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
         for (auto& c: contours)
         {
             cv::Rect    bounding_rect = cv::boundingRect(c);
@@ -119,7 +211,8 @@ void extract_table_find(const std::string& path_pdf)
             }
         }
     }
-    
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical_segments.size()=" << vertical_segments.size() << "\n";
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " horizontal_segments.size()=" << horizontal_segments.size() << "\n";
     // End of Find lines.
     
     // contours = find_contours(vertical_mask, horizontal_mask)
@@ -226,9 +319,14 @@ void extract_table_find(const std::string& path_pdf)
     // sort tables based on y-coord
     // rect_compare() sorts by y first.
     
+    Tables  tables;
+    
     // segments_in_bbox
     std::vector<cv::Rect>   vertical_segments_in_rect;
     std::vector<cv::Rect>   horizontal_segments_in_rect;
+    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            << " table_bbox.size()=" << table_bbox.size()
+            << "\n";
     for (auto it: table_bbox)
     {
         const cv::Rect& rect = it.first;
@@ -287,50 +385,14 @@ void extract_table_find(const std::string& path_pdf)
             cols.push_back(std::pair<int, int>(cols0[i], rows0[i+1]));
         }
         
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " cols.size()=" << cols.size()
+                << " rows.size()=" << rows.size()
+                << "\n";
         
         // _generate_table
-        struct Cell
-        {
-            //cv::Rect    rect;
-            int x1;
-            int y1;
-            int x2;
-            int y2;
-            cv::Point   lb;
-            cv::Point   lt;
-            cv::Point   rb;
-            cv::Point   rt;
-            bool        left = false;
-            bool        right = false;
-            bool        top = false;
-            bool        bottom = false;
-            bool        hspan = false;
-            bool        vspan = false;
-            
-            Cell(int x1, int y1, int x2, int y2)
-            :
-            x1(x1),
-            y1(y1),
-            x2(x2),
-            y2(y2),
-            lb(x1, y1),
-            lt(x1, y2),
-            rb(x2, y2),
-            rt(x2, y2)
-            {
-            }
-            
-            int bound()
-            {
-                int ret = 0;
-                if (left)   ret += 1;
-                if (right)  ret += 1;
-                if (top)    ret += 1;
-                if (bottom) ret += 1;
-                return ret;
-            }
-        };
-        std::vector<std::vector<Cell>>  cells;
+        Table table;
+        
         for (auto& row: rows)
         {
             std::vector<Cell>   row_cells;
@@ -338,7 +400,7 @@ void extract_table_find(const std::string& path_pdf)
             {
                 row_cells.push_back(Cell(col.first, row.first, col.second, row.second));
             }
-            cells.push_back( row_cells);
+            table.cells.push_back( row_cells);
         }
         
         // Table::set_edges().
@@ -363,13 +425,13 @@ void extract_table_find(const std::string& path_pdf)
             {
                 int ll = 0;
                 int kk = k.empty() ? rows.size() : k[0];
-                for ( ; jj < kk; ++jj)  cells[jj][ll].left = true;
+                for ( ; jj < kk; ++jj)  table.cells[jj][ll].left = true;
             }
             else if (i.empty()) // # only right edge
             {
                 int ll = cols.size() - 1;
                 int kk = k.empty() ? rows.size() : k[0];
-                for ( ; jj < kk; ++jj)   cells[jj][ll].right = true;
+                for ( ; jj < kk; ++jj)   table.cells[jj][ll].right = true;
             }
             else    // both left and right edges
             {
@@ -377,8 +439,8 @@ void extract_table_find(const std::string& path_pdf)
                 int kk = k.empty() ? rows.size() : k[0];
                 for ( ; jj < kk; ++jj)
                 {
-                    cells[jj][ll].left = true;
-                    cells[jj][ll - 1].right = true;
+                    table.cells[jj][ll].left = true;
+                    table.cells[jj][ll - 1].right = true;
                 }
             }
         }
@@ -404,13 +466,13 @@ void extract_table_find(const std::string& path_pdf)
             {
                 int ll = i[0];
                 int kk = k.empty() ? cols.size() : k[0];
-                for ( ; jj < kk; ++jj)  cells[ll][jj].top = true;
+                for ( ; jj < kk; ++jj)  table.cells[ll][jj].top = true;
             }
             else if (i.empty()) // only bottom edge.
             {
                 int ll = rows.size() - 1;
                 int kk = k.empty() ? cols.size() : k[0];
-                for ( ; jj < kk; ++jj)  cells[ll][jj].bottom = true;
+                for ( ; jj < kk; ++jj)  table.cells[ll][jj].bottom = true;
             }
             else    // both top and bottom edges
             {
@@ -418,8 +480,8 @@ void extract_table_find(const std::string& path_pdf)
                 int kk = k.empty() ? cols.size() : k[0];
                 for ( ; jj < kk; ++jj)
                 {
-                    cells[ll][jj].top = true;
-                    cells[ll - 1][jj].bottom = true;
+                    table.cells[ll][jj].top = true;
+                    table.cells[ll - 1][jj].bottom = true;
                 }
             }
         }
@@ -427,17 +489,17 @@ void extract_table_find(const std::string& path_pdf)
         // set_border()
         for (size_t r=0; r<rows.size(); ++r)
         {
-            cells[r][0].left = true;
-            cells[r][cols.size() - 1].right = true;
+            table.cells[r][0].left = true;
+            table.cells[r][cols.size() - 1].right = true;
         }
         for (size_t c=0; c<cols.size(); ++c)
         {
-            cells[0][c].top = true;
-            cells[rows.size() - 1][c].bottom = true;
+            table.cells[0][c].top = true;
+            table.cells[rows.size() - 1][c].bottom = true;
         }
         
         // set_span()
-        for (auto& row: cells)
+        for (auto& row: table.cells)
         {
             for (auto& cell: row)
             {
@@ -459,7 +521,11 @@ void extract_table_find(const std::string& path_pdf)
                 }
             }
         }
+        
+        tables.tables.push_back(table);
     }
+    
+    std::cout << __FILE__ << ":" << __LINE__ << ":" << " tables.tables.size()=" << tables.tables.size() << "\n";
 }
 
 int main(int argc, char** argv)
