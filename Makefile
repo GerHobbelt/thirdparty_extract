@@ -243,7 +243,7 @@ endif
 exe_tables = src/build/extract-tables-$(build).exe
 exe_tables_src = src/tables.c++
 $(exe_tables): $(exe_tables_src)
-	c++ -g -I /usr/local/include/opencv4 -L /usr/local/lib -l opencv_core -l opencv_imgproc -l opencv_imgcodecs -o $@ $^
+	c++ -W -Wall -Werror -g -I /usr/local/include/opencv4 -L /usr/local/lib -l opencv_core -l opencv_imgproc -l opencv_imgcodecs -o $@ $^
 
 ifeq ($(create_ref),yes)
 # Special rule for populating .ref directories with current output. Useful to
