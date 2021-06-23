@@ -119,6 +119,7 @@ void extract_table_find(const std::string& path_pdf)
         }
     }
     std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
+    cv::imwrite("et-gry-invert.png", image_grey);
     
     cv::Mat image_grey_threshold;
     cv::adaptiveThreshold(
@@ -131,7 +132,7 @@ void extract_table_find(const std::string& path_pdf)
             -2 /*C*/
             );
     std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold) << "\n";
-    
+    cv::imwrite("et-threshold.png", image_grey_threshold);
     // Find lines
     //
     std::vector<cv::Rect>   vertical_segments;
@@ -142,26 +143,41 @@ void extract_table_find(const std::string& path_pdf)
     
     int line_scale = 15;
     
-    for (int vertical=0; vertical != 2; ++vertical)
+    const auto image_grey_threshold_backup = image_grey_threshold;
+    
+    //for (int vertical=1; vertical >= 0; --vertical)
+    for (int vertical=1; vertical < 2; ++vertical)
     {
+        std::cerr << __FILE__ << ":" << __LINE__ << ": ------------------------------\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical=" << vertical << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " line_scale=" << line_scale << "\n";
         int size = (vertical) ? image_grey_threshold.rows : image_grey_threshold.cols;
         size /= line_scale;
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " size=" << size << "\n";
         
         cv::Mat element = cv::getStructuringElement(
                 cv::MORPH_RECT,
-                (vertical) ? cv::Point(1, size) : cv::Point(size, 1)
+                (vertical) ? cv::Size(1, size) : cv::Size(size, 1)
                 );
         if (0) std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " element=" << element
                 << "\n";
+        image_grey_threshold = image_grey_threshold_backup;
         auto image_grey_threshold2 = image_grey_threshold;    // fixme: avoid copy.
         cv::erode(image_grey_threshold, image_grey_threshold2, element);
         auto threshold = image_grey_threshold2;
+        {
+            std::ostringstream  path;
+            path << "et-erode-" << vertical << ".png";
+            imwrite(path.str(), threshold);
+        }
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " after erode():"
                 << " &threshold=" << &threshold
                 << " &image_grey_threshold2=" << &image_grey_threshold2
+                << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold)
                 << "\n";
+
         std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold) << "\n";
         int num_zero = 0;
         int num_one = 0;
@@ -183,6 +199,11 @@ void extract_table_find(const std::string& path_pdf)
                 << " after dilate():"
                 << " threshold.size=" << threshold.size << "\n";
         auto dmask = threshold;
+        {
+            std::ostringstream  path;
+            path << "et-dilate-" << vertical << ".png";
+            imwrite(path.str(), dmask);
+        }
         cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
         
         if (vertical)   vertical_mask = dmask;
@@ -194,6 +215,25 @@ void extract_table_find(const std::string& path_pdf)
         //auto contours = threshold;
         cv::findContours(threshold, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
+        
+        if (1)
+        {
+            cv::Mat contours_image = cv::Mat::zeros(threshold.size(), CV_8UC3);
+            cv::Scalar colour(0, 0, 255);
+            cv::drawContours( contours_image, contours, -1, colour);
+            std::ostringstream path;
+            path << "et-contours-" << vertical << ".png";
+            cv::imwrite(path.str(), contours_image);
+            #if 0
+            RNG rng(12345);
+            
+            for (size_t i=0; i<contours.size(); ++ii)
+            {
+                cv.Scalar colour(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
+                cv.drawContours( drawing, contours, i, colour), 2 /*thickness*/);//, cv::LINE_8, 0 );
+            }
+            #endif
+        }
         for (auto& c: contours)
         {
             cv::Rect    bounding_rect = cv::boundingRect(c);
