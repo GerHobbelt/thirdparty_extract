@@ -143,14 +143,19 @@ void extract_table_find(const std::string& path_pdf)
     
     int line_scale = 15;
     
-    const auto image_grey_threshold_backup = image_grey_threshold;
+    //const cv::Mat image_grey_threshold_backup = image_grey_threshold;
     
     //for (int vertical=1; vertical >= 0; --vertical)
-    for (int vertical=1; vertical < 2; ++vertical)
+    for (int vertical=0; vertical < 2; ++vertical)
     {
+        //image_grey_threshold = image_grey_threshold_backup;
         std::cerr << __FILE__ << ":" << __LINE__ << ": ------------------------------\n";
         std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical=" << vertical << "\n";
         std::cerr << __FILE__ << ":" << __LINE__ << ":" << " line_scale=" << line_scale << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold)
+                << " image_grey_threshold.size()=" << image_grey_threshold.size()
+                << "\n";
         int size = (vertical) ? image_grey_threshold.rows : image_grey_threshold.cols;
         size /= line_scale;
         std::cerr << __FILE__ << ":" << __LINE__ << ":" << " size=" << size << "\n";
@@ -162,10 +167,8 @@ void extract_table_find(const std::string& path_pdf)
         if (0) std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " element=" << element
                 << "\n";
-        image_grey_threshold = image_grey_threshold_backup;
-        auto image_grey_threshold2 = image_grey_threshold;    // fixme: avoid copy.
-        cv::erode(image_grey_threshold, image_grey_threshold2, element);
-        auto threshold = image_grey_threshold2;
+        auto threshold = image_grey_threshold.clone();
+        cv::erode(image_grey_threshold, threshold, element);
         {
             std::ostringstream  path;
             path << "et-erode-" << vertical << ".png";
@@ -174,7 +177,6 @@ void extract_table_find(const std::string& path_pdf)
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " after erode():"
                 << " &threshold=" << &threshold
-                << " &image_grey_threshold2=" << &image_grey_threshold2
                 << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold)
                 << "\n";
 
@@ -189,31 +191,32 @@ void extract_table_find(const std::string& path_pdf)
         
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " threshold.total()=" << threshold.total()
+                << " threshold.size()=" << threshold.size()
+                << " threshold.size=" << threshold.size
                 << " threshold num_zero=" << num_zero
                 << " threshold num_one=" << num_one
                 << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " threshold.size=" << threshold.size << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " threshold.size()=" << threshold.size() << "\n";
-        cv::dilate(image_grey_threshold2, threshold, element);
+        auto dilate = threshold.clone();
+        cv::dilate(threshold, dilate, element);
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " after dilate():"
-                << " threshold.size=" << threshold.size << "\n";
-        auto dmask = threshold;
+                << " threshold.size=" << threshold.size
+                << "\n";
         {
             std::ostringstream  path;
             path << "et-dilate-" << vertical << ".png";
-            imwrite(path.str(), dmask);
+            imwrite(path.str(), dilate);
         }
-        cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
+        //cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
         
-        if (vertical)   vertical_mask = dmask;
-        else            horizontal_mask = dmask;
+        if (vertical)   vertical_mask = dilate;
+        else            horizontal_mask = dilate;
         
         //cv::OutputArrayOfArrays contours;
         std::cerr << __FILE__ << ":" << __LINE__ << ": threshold.size()=" << threshold.size() << "\n";
         std::vector<std::vector<cv::Point>> contours;
         //auto contours = threshold;
-        cv::findContours(threshold, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+        cv::findContours(dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
         
         if (1)
@@ -224,15 +227,6 @@ void extract_table_find(const std::string& path_pdf)
             std::ostringstream path;
             path << "et-contours-" << vertical << ".png";
             cv::imwrite(path.str(), contours_image);
-            #if 0
-            RNG rng(12345);
-            
-            for (size_t i=0; i<contours.size(); ++ii)
-            {
-                cv.Scalar colour(rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256));
-                cv.drawContours( drawing, contours, i, colour), 2 /*thickness*/);//, cv::LINE_8, 0 );
-            }
-            #endif
         }
         for (auto& c: contours)
         {
