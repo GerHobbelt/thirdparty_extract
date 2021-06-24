@@ -138,8 +138,8 @@ void extract_table_find(const std::string& path_pdf)
     std::vector<cv::Rect>   vertical_segments;
     std::vector<cv::Rect>   horizontal_segments;
     
-    auto vertical_mask = image_grey;
-    auto horizontal_mask = image_grey;
+    auto vertical_mask = image_grey.clone();
+    auto horizontal_mask = image_grey.clone();
     
     int line_scale = 15;
     
@@ -197,6 +197,10 @@ void extract_table_find(const std::string& path_pdf)
                 << " threshold num_one=" << num_one
                 << "\n";
         auto dilate = threshold.clone();
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " dilate.size=" << dilate.size
+                << " dilate.elemSize()=" << dilate.elemSize()
+                << "\n";
         cv::dilate(threshold, dilate, element);
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " after dilate():"
@@ -209,13 +213,18 @@ void extract_table_find(const std::string& path_pdf)
         }
         //cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
         
-        if (vertical)   vertical_mask = dilate;
-        else            horizontal_mask = dilate;
+        if (vertical)   vertical_mask = dilate.clone();
+        else            horizontal_mask = dilate.clone();
         
         //cv::OutputArrayOfArrays contours;
         std::cerr << __FILE__ << ":" << __LINE__ << ": threshold.size()=" << threshold.size() << "\n";
         std::vector<std::vector<cv::Point>> contours;
         //auto contours = threshold;
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " before calling cv::findContours:"
+                << " dilate.size=" << dilate.size
+                << " dilate.elemSize()=" << dilate.elemSize()
+                << "\n";
         cv::findContours(dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
         std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
         
@@ -250,10 +259,34 @@ void extract_table_find(const std::string& path_pdf)
     // End of Find lines.
     
     // contours = find_contours(vertical_mask, horizontal_mask)
-    auto mask = vertical_mask + horizontal_mask;
-    std::vector<std::vector<unsigned char>> contours;
+    //auto mask = vertical_mask + horizontal_mask;
+    auto mask = image_grey.clone();
+    //cv::Mat mat = cv::Mat::zeros(threshold.size(), CV_8UC3);
+    for (int i = 0; i != vertical_mask.at<uint8_t>(i); ++i)
+    {
+        int v = vertical_mask.at<uint8_t>(i);
+        int h = horizontal_mask.at<uint8_t>(i);
+        int t = v + h;
+        if (t > 255) t = 255;
+        mask.at<uint8_t>(i) = t;
+    }
+    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            << " vertical_mask.size()=" << vertical_mask.size()
+            << " vertical_mask.elemSize()=" << vertical_mask.elemSize()
+            << " horizontal_mask.size()=" << horizontal_mask.size()
+            << " horizontal_mask.elemSize()=" << horizontal_mask.elemSize()
+            << " mask.size()=" << mask.size()
+            //<< " mask.elemSize()=" << mask.elemSize()
+            << "\n";
+    //std::vector<std::vector<unsigned char>> contours;
+    std::vector<std::vector<cv::Point>> contours;
+    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            << " before calling cv::findContours:"
+            << " mask.size=" << mask.size
+            << " mask.elemSize()=" << mask.elemSize()
+            << "\n";
     cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    std::sort(contours.begin(), contours.end());
+    //std::sort(contours.begin(), contours.end());
     // todo: take first 10 items.
     std::vector<cv::Rect>   contours2;
     for (auto& c: contours)
