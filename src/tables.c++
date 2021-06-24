@@ -305,7 +305,16 @@ void extract_table_find(const std::string& path_pdf)
     */
     
     // table_bbox = find_joints(contours, vertical_mask, horizontal_mask)
-    auto joints = vertical_mask * horizontal_mask;
+    //auto joints = vertical_mask * horizontal_mask;
+    auto joints = image_grey.clone();
+    for (int i = 0; i != vertical_mask.at<uint8_t>(i); ++i)
+    {
+        int v = vertical_mask.at<uint8_t>(i);
+        int h = horizontal_mask.at<uint8_t>(i);
+        int t = v * h / 255;
+        if (t > 255) t = 255;
+        joints.at<uint8_t>(i) = t;
+    }
     std::map<cv::Rect, std::vector<cv::Point>, rect_compare>    table_bbox;
     for (auto rect: contours2)
     {
@@ -314,7 +323,7 @@ void extract_table_find(const std::string& path_pdf)
                 cv::Range(rect.y, rect.y + rect.height),
                 cv::Range(rect.x, rect.x + rect.width)
                 );
-        std::vector<std::vector<unsigned char>> jc;
+        std::vector<std::vector<cv::Point>> jc;
         cv::findContours(roi, jc, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
         if (jc.size() < 5)  continue;
         std::vector<cv::Point>  joint_coords;
