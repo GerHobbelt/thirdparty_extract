@@ -92,177 +92,190 @@ void extract_table_find(const std::string& path_pdf)
     
     // _generate_table_bbox().
     //
-    cv::Mat image = cv::imread(path_png);
-    cv::Mat image_grey;
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image.elemSize()=" << image.elemSize() << "\n";
-    cv::cvtColor(image, image_grey, cv::COLOR_BGR2GRAY);
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image_grey.elemSize()=" << image_grey.elemSize() << "\n";
-    
-    int image_width = image.cols;
-    int image_height = image.rows;
-    int pdf_width = 612;
-    int pdf_height = 792;
-    double image_width_scaler = 1.0 * image_width / pdf_width;
-    double image_height_scaler = 1.0 * image_height / pdf_height;
-    double pdf_width_scaler = 1.0 / image_width_scaler;
-    double pdf_height_scaler = 1.0 / image_height_scaler;
-    
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
-    
-    // Invert each pixel.
-    for (int i=0; i<image_grey.rows; ++i)
-    {
-        for (int j=0; j<image_grey.cols; ++j)
-        {
-            auto& p = image_grey.at<unsigned char>(i, j);
-            p = 255 - p;
-        }
-    }
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
-    cv::imwrite("et-gry-invert.png", image_grey);
-    
-    cv::Mat image_grey_threshold;
-    cv::adaptiveThreshold(
-            image_grey,
-            image_grey_threshold,
-            255,
-            cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv::THRESH_BINARY,
-            15 /*blocksize*/,
-            -2 /*C*/
-            );
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold) << "\n";
-    cv::imwrite("et-threshold.png", image_grey_threshold);
-    // Find lines
-    //
-    std::vector<cv::Rect>   vertical_segments;
-    std::vector<cv::Rect>   horizontal_segments;
-    
-    auto vertical_mask = image_grey.clone();
-    auto horizontal_mask = image_grey.clone();
-    
-    int line_scale = 15;
-    
-    //const cv::Mat image_grey_threshold_backup = image_grey_threshold;
-    
-    //for (int vertical=1; vertical >= 0; --vertical)
-    for (int vertical=0; vertical < 2; ++vertical)
-    {
-        //image_grey_threshold = image_grey_threshold_backup;
-        std::cerr << __FILE__ << ":" << __LINE__ << ": ------------------------------\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical=" << vertical << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " line_scale=" << line_scale << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold)
-                << " image_grey_threshold.size()=" << image_grey_threshold.size()
-                << "\n";
-        int size = (vertical) ? image_grey_threshold.rows : image_grey_threshold.cols;
-        size /= line_scale;
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " size=" << size << "\n";
-        
-        cv::Mat element = cv::getStructuringElement(
-                cv::MORPH_RECT,
-                (vertical) ? cv::Size(1, size) : cv::Size(size, 1)
-                );
-        if (0) std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " element=" << element
-                << "\n";
-        auto threshold = image_grey_threshold.clone();
-        cv::erode(image_grey_threshold, threshold, element);
-        {
-            std::ostringstream  path;
-            path << "et-erode-" << vertical << ".png";
-            imwrite(path.str(), threshold);
-        }
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " after erode():"
-                << " &threshold=" << &threshold
-                << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold)
-                << "\n";
+            // adaptive_threshold
+            cv::Mat image = cv::imread(path_png);
+            cv::Mat image_grey;
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image.elemSize()=" << image.elemSize() << "\n";
+            cv::cvtColor(image, image_grey, cv::COLOR_BGR2GRAY);
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image_grey.elemSize()=" << image_grey.elemSize() << "\n";
 
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold) << "\n";
-        int num_zero = 0;
-        int num_one = 0;
-        for (size_t i=0; i<threshold.total(); ++i)
-        {
-            if (threshold.at<uint8_t>(i) == 0)   num_zero += 1;
-            if (threshold.at<uint8_t>(i) == 1)   num_one += 1;
-        }
-        
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " threshold.total()=" << threshold.total()
-                << " threshold.size()=" << threshold.size()
-                << " threshold.size=" << threshold.size
-                << " threshold num_zero=" << num_zero
-                << " threshold num_one=" << num_one
-                << "\n";
-        auto dilate = threshold.clone();
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " dilate.size=" << dilate.size
-                << " dilate.elemSize()=" << dilate.elemSize()
-                << "\n";
-        cv::dilate(threshold, dilate, element);
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " after dilate():"
-                << " threshold.size=" << threshold.size
-                << "\n";
-        {
-            std::ostringstream  path;
-            path << "et-dilate-" << vertical << ".png";
-            imwrite(path.str(), dilate);
-        }
-        //cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
-        
-        if (vertical)   vertical_mask = dilate.clone();
-        else            horizontal_mask = dilate.clone();
-        
-        //cv::OutputArrayOfArrays contours;
-        std::cerr << __FILE__ << ":" << __LINE__ << ": threshold.size()=" << threshold.size() << "\n";
-        std::vector<std::vector<cv::Point>> contours;
-        //auto contours = threshold;
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " before calling cv::findContours:"
-                << " dilate.size=" << dilate.size
-                << " dilate.elemSize()=" << dilate.elemSize()
-                << "\n";
-        cv::findContours(dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-        std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
-        
-        if (1)
-        {
-            cv::Mat contours_image = cv::Mat::zeros(threshold.size(), CV_8UC3);
-            cv::Scalar colour(0, 0, 255);
-            cv::drawContours( contours_image, contours, -1, colour);
-            std::ostringstream path;
-            path << "et-contours-" << vertical << ".png";
-            cv::imwrite(path.str(), contours_image);
-        }
-        for (auto& c: contours)
-        {
-            cv::Rect    bounding_rect = cv::boundingRect(c);
-            int x1 = bounding_rect.x;
-            int x2 = bounding_rect.x + bounding_rect.width;
-            int y1 = bounding_rect.y;
-            int y2 = bounding_rect.y + bounding_rect.height;
-            if (vertical)
+            int image_width = image.cols;
+            int image_height = image.rows;
+            int pdf_width = 612;
+            int pdf_height = 792;
+            double image_width_scaler = 1.0 * image_width / pdf_width;
+            double image_height_scaler = 1.0 * image_height / pdf_height;
+            double pdf_width_scaler = 1.0 / image_width_scaler;
+            double pdf_height_scaler = 1.0 / image_height_scaler;
+
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
+
+            // Invert each pixel.
+            for (int i=0; i<image_grey.rows; ++i)
             {
-                vertical_segments.push_back(cv::Rect((x1 + x2) / 2, y1, 0 /*width*/, y2 - y1 /*height*/));
+                for (int j=0; j<image_grey.cols; ++j)
+                {
+                    auto& p = image_grey.at<unsigned char>(i, j);
+                    p = 255 - p;
+                }
             }
-            else
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
+            cv::imwrite("et-gry-invert.png", image_grey);
+
+            cv::Mat image_grey_threshold;
+            cv::adaptiveThreshold(
+                    image_grey,
+                    image_grey_threshold,
+                    255,
+                    cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                    cv::THRESH_BINARY,
+                    15 /*blocksize*/,
+                    -2 /*C*/
+                    );
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold) << "\n";
+            cv::imwrite("et-threshold.png", image_grey_threshold);
+            
+            // Find lines
+            //
+            std::vector<cv::Rect>   vertical_segments;
+            std::vector<cv::Rect>   horizontal_segments;
+
+            auto vertical_mask = image_grey.clone();
+            auto horizontal_mask = image_grey.clone();
+
+            int line_scale = 15;
+
+            //const cv::Mat image_grey_threshold_backup = image_grey_threshold;
+
+            //for (int vertical=1; vertical >= 0; --vertical)
+            for (int vertical=0; vertical < 2; ++vertical)
             {
-                horizontal_segments.push_back(cv::Rect(x1, (y1 + y2) / 2, x2 - x1 /*width*/, 0 /*height*/));
+                //image_grey_threshold = image_grey_threshold_backup;
+                std::cerr << __FILE__ << ":" << __LINE__ << ": ------------------------------\n";
+                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical=" << vertical << "\n";
+                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " line_scale=" << line_scale << "\n";
+                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold)
+                        << " image_grey_threshold.size()=" << image_grey_threshold.size()
+                        << "\n";
+                int size = (vertical) ? image_grey_threshold.rows : image_grey_threshold.cols;
+                size /= line_scale;
+                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " size=" << size << "\n";
+
+                cv::Mat element = cv::getStructuringElement(
+                        cv::MORPH_RECT,
+                        (vertical) ? cv::Size(1, size) : cv::Size(size, 1)
+                        );
+                if (0) std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " element=" << element
+                        << "\n";
+                auto threshold = image_grey_threshold.clone();
+                cv::erode(image_grey_threshold, threshold, element);
+                {
+                    std::ostringstream  path;
+                    path << "et-erode-" << vertical << ".png";
+                    imwrite(path.str(), threshold);
+                }
+                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " after erode():"
+                        << " &threshold=" << &threshold
+                        << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold)
+                        << "\n";
+
+                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold) << "\n";
+                int num_zero = 0;
+                int num_one = 0;
+                for (size_t i=0; i<threshold.total(); ++i)
+                {
+                    if (threshold.at<uint8_t>(i) == 0)   num_zero += 1;
+                    if (threshold.at<uint8_t>(i) == 1)   num_one += 1;
+                }
+
+                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " threshold.total()=" << threshold.total()
+                        << " threshold.size()=" << threshold.size()
+                        << " threshold.size=" << threshold.size
+                        << " threshold num_zero=" << num_zero
+                        << " threshold num_one=" << num_one
+                        << "\n";
+                auto dilate = threshold.clone();
+                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " dilate.size=" << dilate.size
+                        << " dilate.elemSize()=" << dilate.elemSize()
+                        << "\n";
+                cv::dilate(threshold, dilate, element);
+                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " after dilate():"
+                        << " threshold.size=" << threshold.size
+                        << "\n";
+                {
+                    std::ostringstream  path;
+                    path << "et-dilate-" << vertical << ".png";
+                    imwrite(path.str(), dilate);
+                }
+                //cv::dilate(threshold, dmask, element, cv::Point(-1, -1) /*anchor*/, 0 /*iterations*/);
+
+                if (vertical)   vertical_mask = dilate.clone();
+                else            horizontal_mask = dilate.clone();
+
+                //cv::OutputArrayOfArrays contours;
+                std::cerr << __FILE__ << ":" << __LINE__ << ": threshold.size()=" << threshold.size() << "\n";
+                std::vector<std::vector<cv::Point>> contours;
+                //auto contours = threshold;
+                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                        << " before calling cv::findContours:"
+                        << " dilate.size=" << dilate.size
+                        << " dilate.elemSize()=" << dilate.elemSize()
+                        << "\n";
+                
+                cv::findContours(dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+                std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
+
+                if (1)
+                {
+                    cv::Mat contours_image = cv::Mat::zeros(threshold.size(), CV_8UC3);
+                    cv::Scalar colour(0, 0, 255);
+                    cv::drawContours( contours_image, contours, -1, colour);
+                    std::ostringstream path;
+                    path << "et-contours-" << vertical << ".png";
+                    cv::imwrite(path.str(), contours_image);
+                }
+                for (auto& c: contours)
+                {
+                    cv::Rect    bounding_rect = cv::boundingRect(c);
+                    int x1 = bounding_rect.x;
+                    int x2 = bounding_rect.x + bounding_rect.width;
+                    int y1 = bounding_rect.y;
+                    int y2 = bounding_rect.y + bounding_rect.height;
+                    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "x1 y1 x2 y2: (" << x1 << ' ' << y1 << ' ' << x2 << ' ' << y2 << ")\n";
+                    if (vertical)
+                    {
+                        vertical_segments.push_back(cv::Rect((x1 + x2) / 2, y1, 0 /*width*/, y2 - y1 /*height*/));
+                    }
+                    else
+                    {
+                        horizontal_segments.push_back(cv::Rect(x1, (y1 + y2) / 2, x2 - x1 /*width*/, 0 /*height*/));
+                    }
+                }
             }
-        }
-    }
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical_segments.size()=" << vertical_segments.size() << "\n";
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " horizontal_segments.size()=" << horizontal_segments.size() << "\n";
-    // End of Find lines.
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical_segments.size()=" << vertical_segments.size() << "\n";
+            for (auto& i: vertical_segments)
+            {
+                std::cerr << "    " << i << "\n";
+            }
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " horizontal_segments.size()=" << horizontal_segments.size() << "\n";
+            for (auto& i: horizontal_segments)
+            {
+                std::cerr << "    " << i << "\n";
+            }
+        // End of Find lines.
+    // End of _generate_table_bbox.
     
     // contours = find_contours(vertical_mask, horizontal_mask)
     //auto mask = vertical_mask + horizontal_mask;
     auto mask = image_grey.clone();
     //cv::Mat mat = cv::Mat::zeros(threshold.size(), CV_8UC3);
-    for (int i = 0; i != vertical_mask.at<uint8_t>(i); ++i)
+    for (size_t i = 0; i != vertical_mask.total(); ++i)
     {
         int v = vertical_mask.at<uint8_t>(i);
         int h = horizontal_mask.at<uint8_t>(i);
@@ -286,8 +299,23 @@ void extract_table_find(const std::string& path_pdf)
             << " mask.elemSize()=" << mask.elemSize()
             << "\n";
     cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    //std::sort(contours.begin(), contours.end());
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " contours.size()=" << contours.size() << "\n";
+    std::sort(contours.begin(), contours.end(),
+            [] (const std::vector<cv::Point>& a, const std::vector<cv::Point>& b)
+            {
+                double a_area = cv::contourArea(a);
+                double b_area = cv::contourArea(b);
+                return a_area > b_area;
+                /*if (a.empty())  return false;
+                if (b.empty())  return true;
+                return a[0].y > b[0].y;*/
+            }
+            );
     // todo: take first 10 items.
+    for (size_t i = 0; i < 10 && i < contours.size(); ++i)
+    {
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    i=" << i << ": " << cv::contourArea(contours[i]) << "\n";
+    }
     std::vector<cv::Rect>   contours2;
     for (auto& c: contours)
     {
@@ -307,7 +335,7 @@ void extract_table_find(const std::string& path_pdf)
     // table_bbox = find_joints(contours, vertical_mask, horizontal_mask)
     //auto joints = vertical_mask * horizontal_mask;
     auto joints = image_grey.clone();
-    for (int i = 0; i != vertical_mask.at<uint8_t>(i); ++i)
+    for (size_t i = 0; i != vertical_mask.total(); ++i)
     {
         int v = vertical_mask.at<uint8_t>(i);
         int h = horizontal_mask.at<uint8_t>(i);
@@ -405,6 +433,15 @@ void extract_table_find(const std::string& path_pdf)
             << "\n";
     for (auto it: table_bbox)
     {
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " it.first=" << it.first
+                << "\n";
+        if (0) for (auto point: it.second)
+        {
+            std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                    << " point=" << point << "\n";
+        }
+        
         const cv::Rect& rect = it.first;
         std::vector<cv::Point>& points = it.second;
         
