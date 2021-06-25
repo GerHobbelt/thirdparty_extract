@@ -263,7 +263,7 @@ void extract_table_find(const std::string& path_pdf)
                     std::cerr << __FILE__ << ":" << __LINE__ << ":" << "x1 y1 x2 y2: (" << x1 << ' ' << y1 << ' ' << x2 << ' ' << y2 << ")\n";
                     if (vertical)
                     {
-                        cv::Rect rect((x1 + x2) / 2, y1, 0 /*width*/, y2 - y1 /*height*/);
+                        cv::Rect rect((x1 + x2) / 2, y2, 0 /*width*/, y1 - y2 /*height*/);
                         std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    " << str(rect) << "\n";
                         vertical_segments.push_back(rect);
                     }
@@ -534,6 +534,7 @@ void extract_table_find(const std::string& path_pdf)
         
         const cv::Rect& rect = it.first;
         std::vector<cv::Point>& points = it.second;
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rect=" << str(rect) << "\n";
         
         // _generate_columns_and_rows().
         //
@@ -544,10 +545,17 @@ void extract_table_find(const std::string& path_pdf)
         for (cv::Rect& r: vertical_segments)
         {
             std::cerr << "    " << str(r) << "\n";
-            if (rect.contains(cv::Point(r.x, r.y))
-                    && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
+            int v0 = r.x;
+            int v1 = r.y;
+            //int v2 = r.x + r.width;
+            int v3 = r.y + r.height;
+            if (v1 > rect.y - 2
+                    and v3 < rect.y + rect.height + 2
+                    and rect.x - 2 <= v0
+                    and v0 <= rect.x + rect.width + 2
                     )
             {
+                std::cerr << "    appending " << str(r) << "\n"; 
                 vertical_segments_in_rect.push_back(r);
             }
         }
@@ -556,10 +564,20 @@ void extract_table_find(const std::string& path_pdf)
         for (cv::Rect& r: horizontal_segments)
         {
             std::cerr << "    " << str(r) << "\n";
-            if (rect.contains(cv::Point(r.x, r.y))
-                    && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
+            int h0 = r.x;
+            int h1 = r.y;
+            int h2 = r.x + r.width;
+            //int h3 = r.y + r.height;
+            if (h0 > rect.x - 2
+                    and h2 < rect.x + rect.width + 2
+                    and rect.y - 2 <= h1
+                    and h1 <= rect.y + rect.height + 2
                     )
+            /*if (rect.contains(cv::Point(r.x, r.y))
+                    && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
+                    )*/
             {
+                std::cerr << "    appending " << str(r) << "\n"; 
                 horizontal_segments_in_rect.push_back(r);
             }
         }
@@ -570,13 +588,13 @@ void extract_table_find(const std::string& path_pdf)
                 << " vertical_segments_in_rect.size()=" << vertical_segments_in_rect.size() << "\n";
         for (auto& rect: vertical_segments_in_rect)
         {
-            std::cerr << "    " << rect << "\n";
+            std::cerr << "    " << str(rect) << "\n";
         }
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " horizontal_segments_in_rect.size()=" << horizontal_segments_in_rect.size() << "\n";
         for (auto& rect: horizontal_segments_in_rect)
         {
-            std::cerr << "    " << rect << "\n";
+            std::cerr << "    " << str(rect) << "\n";
         }
         
         // 
