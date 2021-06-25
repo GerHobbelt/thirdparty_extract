@@ -533,9 +533,14 @@ void extract_table_find(const std::string& path_pdf)
         }
         
         const cv::Rect& rect = it.first;
-        std::vector<cv::Point>& points = it.second;
         std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rect=" << str(rect) << "\n";
-        
+        std::vector<cv::Point>& points = it.second;
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " points.size()=" << points.size() << "\n";
+        for (auto i: points)
+        {
+            std::cerr << " (" << i.x << ' ' << i.y << ")";
+        }
+        std::cerr << "\n";
         // _generate_columns_and_rows().
         //
         
@@ -606,14 +611,39 @@ void extract_table_find(const std::string& path_pdf)
         points.push_back(cv::Point(rect.x + rect.width, rect.y + rect.height));
         
         // merge_close_lines
-        std::vector<int>    rows0;
-        std::vector<int>    cols0;
+        
+        std::vector<int>    rows00;
+        std::vector<int>    cols00;
         for (cv::Point& point: points)
         {
-            if (cols0.empty() || abs(point.x - cols0.back()) <= 2)    cols0.push_back(point.x);
-            if (rows0.empty() || abs(point.y - rows0.back()) <= 2)    rows0.push_back(point.y);
+            cols00.push_back(point.x);
+            rows00.push_back(point.y);
         }
+        std::sort(rows00.rbegin(), rows00.rend());
+        std::sort(cols00.begin(), cols00.end());
         
+        std::vector<int>    rows0;
+        std::vector<int>    cols0;
+        for (int y: rows00)
+        {
+            if (rows0.empty() || abs(y - rows0.back()) > 2)    rows0.push_back(y);
+            else rows0.back() = (rows0.back() + y) / 2;
+        }
+        for (int x: cols00)
+        {
+            if (cols0.empty() || abs(x - cols0.back()) > 2)    cols0.push_back(x);
+            else cols0.back() = (cols0.back() + x) / 2;
+        }
+
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rows0.size()=" << rows0.size() << ":";
+        for (int i: rows0) std::cerr << " " << i;
+        std::cerr << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " cols0.size()=" << cols0.size() << ":";
+        for (int i: cols0) std::cerr << " " << i;
+        std::cerr << "\n";
+        
+        
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## H ##\n";
         std::vector<std::pair<int, int>> rows;
         std::vector<std::pair<int, int>> cols;
         for (size_t i=0; i+1 < rows0.size(); ++i)
@@ -622,8 +652,21 @@ void extract_table_find(const std::string& path_pdf)
         }
         for (size_t i=0; i+1 < cols0.size(); ++i)
         {
-            cols.push_back(std::pair<int, int>(cols0[i], rows0[i+1]));
+            cols.push_back(std::pair<int, int>(cols0[i], cols0[i+1]));
         }
+        
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rows.size()=" << rows.size() << "\n";
+        for (auto it: rows)
+        {
+            std::cerr << " (" << it.first << ' ' << it.second << ")";
+        }
+        std::cerr << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " cols.size()=" << cols.size() << "\n";
+        for (auto it: cols)
+        {
+            std::cerr << " (" << it.first << ' ' << it.second << ")";
+        }
+        std::cerr << "\n";
         
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
                 << " cols.size()=" << cols.size()
