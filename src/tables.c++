@@ -810,11 +810,14 @@ void extract_table_find(const std::string& path_pdf)
     }
     
     std::cout << __FILE__ << ":" << __LINE__ << ":" << " tables.tables.size()=" << tables.tables.size() << "\n";
+    
+    std::cout << "Cells:\n";
     for (auto& table: tables.tables)
     {
+        std::cout << "    Rows: " << table.cells.size() << "\n";
         for (auto& row: table.cells)
         {
-            std::cerr << __FILE__ << ":" << __LINE__ << ":";
+            std::cout << "        Columns: " << row.size() << ":";
             for (auto& cell: row)
             {
                 std::cerr << " cell(" << cell.lb << ' ' << cell.rt << ')';
