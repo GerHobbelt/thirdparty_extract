@@ -1,5 +1,31 @@
 #include <opencv2/opencv.hpp>
 
+struct Out : std::ostream
+{
+    Out()
+    :
+    out(nullptr)
+    {
+    }
+    
+    Out(std::ostream& out)
+    :
+    out(&out)
+    {
+    }
+    
+    template<typename T> friend Out& operator<< (Out& out, const T& t)
+    {
+        if (out.out)    (*out.out) << t;
+        return out;
+    }
+    
+    std::ostream*   out;
+};
+
+Out out_(std::cerr);
+
+#define out out_ << __FILE__ << ':' << __LINE__ << ":"
 
 struct rect_compare
 {
@@ -91,7 +117,7 @@ void extract_table_find(const std::string& path_pdf)
     std::string path_png = path_pdf + ".1.png";
     std::string path_png_spec = path_pdf + "..png";
     std::string command = "../../build/debug-extract/mutool convert -O resolution=300 -o " + path_png_spec + " " + path_pdf;
-    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+    out << __FILE__ << ":" << __LINE__ << ":"
             << "running: " << command << "\n";
     int e = system(command.c_str());
     assert(!e);
@@ -102,9 +128,9 @@ void extract_table_find(const std::string& path_pdf)
             // adaptive_threshold
             cv::Mat image = cv::imread(path_png);
             cv::Mat image_grey;
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image.elemSize()=" << image.elemSize() << "\n";
+            out << "image.elemSize()=" << image.elemSize() << "\n";
             cv::cvtColor(image, image_grey, cv::COLOR_BGR2GRAY);
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << "image_grey.elemSize()=" << image_grey.elemSize() << "\n";
+            out << "image_grey.elemSize()=" << image_grey.elemSize() << "\n";
 
             int image_width = image.cols;
             int image_height = image.rows;
@@ -114,14 +140,14 @@ void extract_table_find(const std::string& path_pdf)
             double image_height_scaler = 1.0 * image_height / pdf_height;
             double pdf_width_scaler = 1.0 / image_width_scaler;
             double pdf_height_scaler = 1.0 / image_height_scaler;
-            std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            out
                     << " image_width_scaler=" << image_width_scaler
                     << " image_height_scaler=" << image_height_scaler
                     << " pdf_width_scaler=" << pdf_width_scaler
                     << " pdf_height_scaler=" << pdf_height_scaler
                     << "\n";
 
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
+            out << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
 
             // Invert each pixel.
             for (int i=0; i<image_grey.rows; ++i)
@@ -132,7 +158,7 @@ void extract_table_find(const std::string& path_pdf)
                     p = 255 - p;
                 }
             }
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
+            out << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
             cv::imwrite("et-gry-invert.png", image_grey);
 
             cv::Mat image_grey_threshold;
@@ -145,7 +171,7 @@ void extract_table_find(const std::string& path_pdf)
                     15 /*blocksize*/,
                     -2 /*C*/
                     );
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold) << "\n";
+            out << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold) << "\n";
             cv::imwrite("et-threshold.png", image_grey_threshold);
             
             // Find lines
@@ -164,22 +190,22 @@ void extract_table_find(const std::string& path_pdf)
             for (int vertical=0; vertical < 2; ++vertical)
             {
                 //image_grey_threshold = image_grey_threshold_backup;
-                std::cerr << __FILE__ << ":" << __LINE__ << ": ------------------------------\n";
-                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical=" << vertical << "\n";
-                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " line_scale=" << line_scale << "\n";
-                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                out << " ------------------------------\n";
+                out << " vertical=" << vertical << "\n";
+                out << " line_scale=" << line_scale << "\n";
+                out
                         << " mat_stats<uint8_t>(image_grey_threshold)=" << mat_stats<uint8_t>(image_grey_threshold)
                         << " image_grey_threshold.size()=" << image_grey_threshold.size()
                         << "\n";
                 int size = (vertical) ? image_grey_threshold.rows : image_grey_threshold.cols;
                 size /= line_scale;
-                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " size=" << size << "\n";
+                out << " size=" << size << "\n";
 
                 cv::Mat element = cv::getStructuringElement(
                         cv::MORPH_RECT,
                         (vertical) ? cv::Size(1, size) : cv::Size(size, 1)
                         );
-                if (0) std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                if (0) out
                         << " element=" << element
                         << "\n";
                 auto threshold = image_grey_threshold.clone();
@@ -189,13 +215,13 @@ void extract_table_find(const std::string& path_pdf)
                     path << "et-erode-" << vertical << ".png";
                     imwrite(path.str(), threshold);
                 }
-                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                out
                         << " after erode():"
                         << " &threshold=" << &threshold
                         << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold)
                         << "\n";
 
-                std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold) << "\n";
+                out << " mat_stats<uint8_t>(threshold)=" << mat_stats<uint8_t>(threshold) << "\n";
                 int num_zero = 0;
                 int num_one = 0;
                 for (size_t i=0; i<threshold.total(); ++i)
@@ -204,7 +230,7 @@ void extract_table_find(const std::string& path_pdf)
                     if (threshold.at<uint8_t>(i) == 1)   num_one += 1;
                 }
 
-                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                out
                         << " threshold.total()=" << threshold.total()
                         << " threshold.size()=" << threshold.size()
                         << " threshold.size=" << threshold.size
@@ -212,12 +238,12 @@ void extract_table_find(const std::string& path_pdf)
                         << " threshold num_one=" << num_one
                         << "\n";
                 auto dilate = threshold.clone();
-                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                out
                         << " dilate.size=" << dilate.size
                         << " dilate.elemSize()=" << dilate.elemSize()
                         << "\n";
                 cv::dilate(threshold, dilate, element);
-                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                out
                         << " after dilate():"
                         << " threshold.size=" << threshold.size
                         << "\n";
@@ -232,17 +258,17 @@ void extract_table_find(const std::string& path_pdf)
                 else            horizontal_mask = dilate.clone();
 
                 //cv::OutputArrayOfArrays contours;
-                std::cerr << __FILE__ << ":" << __LINE__ << ": threshold.size()=" << threshold.size() << "\n";
+                out << " threshold.size()=" << threshold.size() << "\n";
                 std::vector<std::vector<cv::Point>> contours;
                 //auto contours = threshold;
-                std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                out
                         << " before calling cv::findContours:"
                         << " dilate.size=" << dilate.size
                         << " dilate.elemSize()=" << dilate.elemSize()
                         << "\n";
                 
                 cv::findContours(dilate, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-                std::cerr << __FILE__ << ":" << __LINE__ << ": contours.size()=" << contours.size() << "\n";
+                out << " contours.size()=" << contours.size() << "\n";
 
                 if (1)
                 {
@@ -260,30 +286,30 @@ void extract_table_find(const std::string& path_pdf)
                     int x2 = bounding_rect.x + bounding_rect.width;
                     int y1 = bounding_rect.y;
                     int y2 = bounding_rect.y + bounding_rect.height;
-                    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "x1 y1 x2 y2: (" << x1 << ' ' << y1 << ' ' << x2 << ' ' << y2 << ")\n";
+                    out << "x1 y1 x2 y2: (" << x1 << ' ' << y1 << ' ' << x2 << ' ' << y2 << ")\n";
                     if (vertical)
                     {
                         cv::Rect rect((x1 + x2) / 2, y2, 0 /*width*/, y1 - y2 /*height*/);
-                        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    " << str(rect) << "\n";
+                        out << "    " << str(rect) << "\n";
                         vertical_segments.push_back(rect);
                     }
                     else
                     {
                         cv::Rect rect(x1, (y1 + y2) / 2, x2 - x1 /*width*/, 0 /*height*/);
-                        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    " << str(rect) << "\n";
+                        out << "    " << str(rect) << "\n";
                         horizontal_segments.push_back(rect);
                     }
                 }
             }
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## -A ## vertical_segments.size()=" << vertical_segments.size() << "\n";
+            out << " ## -A ## vertical_segments.size()=" << vertical_segments.size() << "\n";
             for (auto& i: vertical_segments)
             {
-                std::cerr << "    " << str(i) << "\n";
+                out << "    " << str(i) << "\n";
             }
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## -A ## horizontal_segments.size()=" << horizontal_segments.size() << "\n";
+            out << " ## -A ## horizontal_segments.size()=" << horizontal_segments.size() << "\n";
             for (auto& i: horizontal_segments)
             {
-                std::cerr << "    " << str(i) << "\n";
+                out << "    " << str(i) << "\n";
             }
         // End of Find lines.
     // End of _generate_table_bbox.
@@ -300,7 +326,7 @@ void extract_table_find(const std::string& path_pdf)
         if (t > 255) t = 255;
         mask.at<uint8_t>(i) = t;
     }
-    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+    out
             << " vertical_mask.size()=" << vertical_mask.size()
             << " vertical_mask.elemSize()=" << vertical_mask.elemSize()
             << " horizontal_mask.size()=" << horizontal_mask.size()
@@ -310,13 +336,13 @@ void extract_table_find(const std::string& path_pdf)
             << "\n";
     //std::vector<std::vector<unsigned char>> contours;
     std::vector<std::vector<cv::Point>> contours0;
-    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+    out
             << " before calling cv::findContours:"
             << " mask.size=" << mask.size
             << " mask.elemSize()=" << mask.elemSize()
             << "\n";
     cv::findContours(mask, contours0, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## B ## contours0.size()=" << contours0.size() << "\n";
+    out << " ## B ## contours0.size()=" << contours0.size() << "\n";
     std::sort(contours0.begin(), contours0.end(),
             [] (const std::vector<cv::Point>& a, const std::vector<cv::Point>& b)
             {
@@ -331,7 +357,7 @@ void extract_table_find(const std::string& path_pdf)
     // todo: take first 10 items.
     for (size_t i = 0; i < 10 && i < contours0.size(); ++i)
     {
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    i=" << i << ": " << cv::contourArea(contours0[i]) << "\n";
+        out << "    i=" << i << ": " << cv::contourArea(contours0[i]) << "\n";
     }
     
     // *** ok ***
@@ -344,10 +370,10 @@ void extract_table_find(const std::string& path_pdf)
         contours.push_back(cv::boundingRect(c_poly));
     }
     // contours is as returned by find_contours().
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## C ## contours.size()=" << contours.size() << "\n";
+    out << " ## C ## contours.size()=" << contours.size() << "\n";
     for (auto& r: contours)
     {
-        std::cerr << "    " << r << "\n";
+        out << "    " << r << "\n";
     }
     // *** contours is ok ***
     
@@ -370,10 +396,10 @@ void extract_table_find(const std::string& path_pdf)
         joints.at<uint8_t>(i) = t;
     }
     
-    /*std::cerr << __FILE__ << ":" << __LINE__ << ":" << " joints.size()=" << joints.size() << "\n";
+    /*out << " joints.size()=" << joints.size() << "\n";
     for (auto it: joints)
     {
-        std::cerr << "    " << it.first << ": " << it.second << "\n";
+        out << "    " << it.first << ": " << it.second << "\n";
     }*/
     
     std::map<cv::Rect, std::vector<cv::Point>, rect_compare>    table_bbox;
@@ -405,21 +431,21 @@ void extract_table_find(const std::string& path_pdf)
         r.y = rect.y + rect.height;
         r.width = rect.width;
         r.height = -rect.height;
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rect=" << rect << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    r=" << r << "\n";
+        out << " rect=" << rect << "\n";
+        out << "    r=" << r << "\n";
         table_bbox[r] = joint_coords;
     }
     // tables is table_bbox.
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "## D ##  table_bbox.size()=" << table_bbox.size() << "\n";
+    out << "## D ##  table_bbox.size()=" << table_bbox.size() << "\n";
     for (auto it: table_bbox)
     {
-        std::cerr << " " << it.first << "\n";
+        out << " " << it.first << ":";
         for (auto it2: it.second)
         {
-            std::cerr << " " << it2;
+            out_ << " " << it2;
         }
+        out_ << '\n';
     }
-    std::cerr << "\n";
     
     /* *** ok *** */
     
@@ -432,7 +458,7 @@ void extract_table_find(const std::string& path_pdf)
     auto scaling_factor_x = pdf_width_scaler;
     auto scaling_factor_y = pdf_height_scaler;
     auto img_y = image_height;
-    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+    out
             << " scaling_factor_x=" << scaling_factor_x
             << " scaling_factor_y=" << scaling_factor_y
             << " img_y=" << img_y
@@ -499,15 +525,15 @@ void extract_table_find(const std::string& path_pdf)
         rect.height = y2 - y1;
     }
     
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## E ## table_bbox.size()=" << table_bbox.size() << "\n";
+    out << " ## E ## table_bbox.size()=" << table_bbox.size() << "\n";
     for (auto& it: table_bbox)
     {
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## E ## table_bbox it.first=" << it.first << "\n";
+        out << " ## E ## table_bbox it.first=" << it.first << "\n";
         for (auto it2: it.second)
         {
-            std::cerr << "    " << it2 << "\n";
+            out << "    " << it2 << "\n";
         }
-        std::cerr << "\n";
+        out << "\n";
     }
     
     // sort tables based on y-coord
@@ -518,38 +544,38 @@ void extract_table_find(const std::string& path_pdf)
     // segments_in_bbox
     std::vector<cv::Rect>   vertical_segments_in_rect;
     std::vector<cv::Rect>   horizontal_segments_in_rect;
-    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+    out
             << " ## F ## table_bbox.size()=" << table_bbox.size()
             << "\n";
     for (auto it: table_bbox)
     {
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        out
                 << "    ## F ## it.first=" << it.first
                 << "\n";
         if (0) for (auto point: it.second)
         {
-            std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            out
                     << " point=" << point << "\n";
         }
         
         const cv::Rect& rect = it.first;
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rect=" << str(rect) << "\n";
+        out << " rect=" << str(rect) << "\n";
         std::vector<cv::Point>& points = it.second;
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " points.size()=" << points.size() << "\n";
+        out << " points.size()=" << points.size() << ":";
         for (auto i: points)
         {
-            std::cerr << " (" << i.x << ' ' << i.y << ")";
+            out_ << " (" << i.x << ' ' << i.y << ")";
         }
-        std::cerr << "\n";
+        out_ << "\n";
         // _generate_columns_and_rows().
         //
         
         // segments_in_bbox
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        out
                 << " ## G ## vertical_segments.size()=" << vertical_segments.size() << "\n";
         for (cv::Rect& r: vertical_segments)
         {
-            std::cerr << "    " << str(r) << "\n";
+            out << "    " << str(r) << "\n";
             int v0 = r.x;
             int v1 = r.y;
             //int v2 = r.x + r.width;
@@ -560,15 +586,15 @@ void extract_table_find(const std::string& path_pdf)
                     and v0 <= rect.x + rect.width + 2
                     )
             {
-                std::cerr << "    appending " << str(r) << "\n"; 
+                out << "    appending " << str(r) << "\n"; 
                 vertical_segments_in_rect.push_back(r);
             }
         }
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        out
                 << " ## G ## horizontal_segments.size()=" << horizontal_segments.size() << "\n";
         for (cv::Rect& r: horizontal_segments)
         {
-            std::cerr << "    " << str(r) << "\n";
+            out << "    " << str(r) << "\n";
             int h0 = r.x;
             int h1 = r.y;
             int h2 = r.x + r.width;
@@ -582,24 +608,24 @@ void extract_table_find(const std::string& path_pdf)
                     && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
                     )*/
             {
-                std::cerr << "    appending " << str(r) << "\n"; 
+                out << "    appending " << str(r) << "\n"; 
                 horizontal_segments_in_rect.push_back(r);
             }
         }
         
         // Find text inside <rect>.
         
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        out
                 << " vertical_segments_in_rect.size()=" << vertical_segments_in_rect.size() << "\n";
         for (auto& rect: vertical_segments_in_rect)
         {
-            std::cerr << "    " << str(rect) << "\n";
+            out << "    " << str(rect) << "\n";
         }
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        out
                 << " horizontal_segments_in_rect.size()=" << horizontal_segments_in_rect.size() << "\n";
         for (auto& rect: horizontal_segments_in_rect)
         {
-            std::cerr << "    " << str(rect) << "\n";
+            out << "    " << str(rect) << "\n";
         }
         
         // 
@@ -635,15 +661,15 @@ void extract_table_find(const std::string& path_pdf)
             else cols0.back() = (cols0.back() + x) / 2;
         }
 
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rows0.size()=" << rows0.size() << ":";
-        for (int i: rows0) std::cerr << " " << i;
-        std::cerr << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " cols0.size()=" << cols0.size() << ":";
-        for (int i: cols0) std::cerr << " " << i;
-        std::cerr << "\n";
+        out << " rows0.size()=" << rows0.size() << ":";
+        for (int i: rows0) out_ << " " << i;
+        out_ << "\n";
+        out << " cols0.size()=" << cols0.size() << ":";
+        for (int i: cols0) out_ << " " << i;
+        out_ << "\n";
         
         
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## H ##\n";
+        out << " ## H ##\n";
         std::vector<std::pair<int, int>> rows;
         std::vector<std::pair<int, int>> cols;
         for (size_t i=0; i+1 < rows0.size(); ++i)
@@ -655,20 +681,20 @@ void extract_table_find(const std::string& path_pdf)
             cols.push_back(std::pair<int, int>(cols0[i], cols0[i+1]));
         }
         
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rows.size()=" << rows.size() << "\n";
+        out << " rows.size()=" << rows.size() << ":";
         for (auto it: rows)
         {
-            std::cerr << " (" << it.first << ' ' << it.second << ")";
+            out_ << " (" << it.first << ' ' << it.second << ")";
         }
-        std::cerr << "\n";
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " cols.size()=" << cols.size() << "\n";
+        out_ << "\n";
+        out << " cols.size()=" << cols.size() << ":";
         for (auto it: cols)
         {
-            std::cerr << " (" << it.first << ' ' << it.second << ")";
+            out_ << " (" << it.first << ' ' << it.second << ")";
         }
-        std::cerr << "\n";
+        out_ << "\n";
         
-        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+        out
                 << " cols.size()=" << cols.size()
                 << " rows.size()=" << rows.size()
                 << "\n";
@@ -820,9 +846,9 @@ void extract_table_find(const std::string& path_pdf)
             std::cout << "        Columns: " << row.size() << ":";
             for (auto& cell: row)
             {
-                std::cerr << " cell(" << cell.lb << ' ' << cell.rt << ')';
+                out_ << " cell(" << cell.lb << ' ' << cell.rt << ')';
             }
-            std::cerr << '\n';
+            out_ << '\n';
         }
     }
 }
