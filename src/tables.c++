@@ -77,6 +77,13 @@ double mat_stats(const cv::Mat& mat)
     return total / mat.total();
 }
 
+static std::string str(const cv::Rect& rect)
+{
+    std::ostringstream s;
+    s << "((" << rect.x << " " << rect.y << ") (" << rect.x + rect.width << " " << rect.y + rect.height << "))";
+    return s.str();
+}
+
 void extract_table_find(const std::string& path_pdf)
 {
     // _generate_image().
@@ -107,6 +114,12 @@ void extract_table_find(const std::string& path_pdf)
             double image_height_scaler = 1.0 * image_height / pdf_height;
             double pdf_width_scaler = 1.0 / image_width_scaler;
             double pdf_height_scaler = 1.0 / image_height_scaler;
+            std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                    << " image_width_scaler=" << image_width_scaler
+                    << " image_height_scaler=" << image_height_scaler
+                    << " pdf_width_scaler=" << pdf_width_scaler
+                    << " pdf_height_scaler=" << pdf_height_scaler
+                    << "\n";
 
             std::cerr << __FILE__ << ":" << __LINE__ << ":" << " mat_stats<uint8_t>(image_grey)=" << mat_stats<uint8_t>(image_grey) << "\n";
 
@@ -250,23 +263,27 @@ void extract_table_find(const std::string& path_pdf)
                     std::cerr << __FILE__ << ":" << __LINE__ << ":" << "x1 y1 x2 y2: (" << x1 << ' ' << y1 << ' ' << x2 << ' ' << y2 << ")\n";
                     if (vertical)
                     {
-                        vertical_segments.push_back(cv::Rect((x1 + x2) / 2, y1, 0 /*width*/, y2 - y1 /*height*/));
+                        cv::Rect rect((x1 + x2) / 2, y1, 0 /*width*/, y2 - y1 /*height*/);
+                        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    " << str(rect) << "\n";
+                        vertical_segments.push_back(rect);
                     }
                     else
                     {
-                        horizontal_segments.push_back(cv::Rect(x1, (y1 + y2) / 2, x2 - x1 /*width*/, 0 /*height*/));
+                        cv::Rect rect(x1, (y1 + y2) / 2, x2 - x1 /*width*/, 0 /*height*/);
+                        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    " << str(rect) << "\n";
+                        horizontal_segments.push_back(rect);
                     }
                 }
             }
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " vertical_segments.size()=" << vertical_segments.size() << "\n";
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## -A ## vertical_segments.size()=" << vertical_segments.size() << "\n";
             for (auto& i: vertical_segments)
             {
-                std::cerr << "    " << i << "\n";
+                std::cerr << "    " << str(i) << "\n";
             }
-            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " horizontal_segments.size()=" << horizontal_segments.size() << "\n";
+            std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## -A ## horizontal_segments.size()=" << horizontal_segments.size() << "\n";
             for (auto& i: horizontal_segments)
             {
-                std::cerr << "    " << i << "\n";
+                std::cerr << "    " << str(i) << "\n";
             }
         // End of Find lines.
     // End of _generate_table_bbox.
@@ -292,15 +309,15 @@ void extract_table_find(const std::string& path_pdf)
             //<< " mask.elemSize()=" << mask.elemSize()
             << "\n";
     //std::vector<std::vector<unsigned char>> contours;
-    std::vector<std::vector<cv::Point>> contours;
+    std::vector<std::vector<cv::Point>> contours0;
     std::cerr << __FILE__ << ":" << __LINE__ << ":"
             << " before calling cv::findContours:"
             << " mask.size=" << mask.size
             << " mask.elemSize()=" << mask.elemSize()
             << "\n";
-    cv::findContours(mask, contours, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
-    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " contours.size()=" << contours.size() << "\n";
-    std::sort(contours.begin(), contours.end(),
+    cv::findContours(mask, contours0, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## B ## contours0.size()=" << contours0.size() << "\n";
+    std::sort(contours0.begin(), contours0.end(),
             [] (const std::vector<cv::Point>& a, const std::vector<cv::Point>& b)
             {
                 double a_area = cv::contourArea(a);
@@ -312,18 +329,27 @@ void extract_table_find(const std::string& path_pdf)
             }
             );
     // todo: take first 10 items.
-    for (size_t i = 0; i < 10 && i < contours.size(); ++i)
+    for (size_t i = 0; i < 10 && i < contours0.size(); ++i)
     {
-        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    i=" << i << ": " << cv::contourArea(contours[i]) << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    i=" << i << ": " << cv::contourArea(contours0[i]) << "\n";
     }
-    std::vector<cv::Rect>   contours2;
-    for (auto& c: contours)
+    
+    // *** ok ***
+    
+    std::vector<cv::Rect>   contours;
+    for (auto& c: contours0)
     {
         std::vector<cv::Point>  c_poly;
         cv::approxPolyDP(c, c_poly, 3 /*epsilon*/, true /*closed*/);
-        contours2.push_back(cv::boundingRect(c_poly));
+        contours.push_back(cv::boundingRect(c_poly));
     }
-    // contours2 is as returned by find_contours().
+    // contours is as returned by find_contours().
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## C ## contours.size()=" << contours.size() << "\n";
+    for (auto& r: contours)
+    {
+        std::cerr << "    " << r << "\n";
+    }
+    // *** contours is ok ***
     
     /* Lines are in:
         vertical_segments
@@ -343,8 +369,15 @@ void extract_table_find(const std::string& path_pdf)
         if (t > 255) t = 255;
         joints.at<uint8_t>(i) = t;
     }
+    
+    /*std::cerr << __FILE__ << ":" << __LINE__ << ":" << " joints.size()=" << joints.size() << "\n";
+    for (auto it: joints)
+    {
+        std::cerr << "    " << it.first << ": " << it.second << "\n";
+    }*/
+    
     std::map<cv::Rect, std::vector<cv::Point>, rect_compare>    table_bbox;
-    for (auto rect: contours2)
+    for (auto rect: contours)
     {
         cv::Mat roi(
                 joints,
@@ -365,11 +398,33 @@ void extract_table_find(const std::string& path_pdf)
                             )
                     );
         }
-        table_bbox[rect] = joint_coords;
+        //rect.y *= -1;
+        //rect.height *= -1;
+        cv::Rect r;
+        r.x = rect.x;
+        r.y = rect.y + rect.height;
+        r.width = rect.width;
+        r.height = -rect.height;
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " rect=" << rect << "\n";
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << "    r=" << r << "\n";
+        table_bbox[r] = joint_coords;
     }
     // tables is table_bbox.
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << "## D ##  table_bbox.size()=" << table_bbox.size() << "\n";
+    for (auto it: table_bbox)
+    {
+        std::cerr << " " << it.first << "\n";
+        for (auto it2: it.second)
+        {
+            std::cerr << " " << it2;
+        }
+    }
+    std::cerr << "\n";
+    
+    /* *** ok *** */
     
     auto table_bbox_unscaled = table_bbox;
+    assert(&table_bbox_unscaled != &table_bbox);
     
     // call scale_image().
     //    self.table_bbox, self.vertical_segments, self.horizontal_segments = scale_image(
@@ -377,47 +432,82 @@ void extract_table_find(const std::string& path_pdf)
     auto scaling_factor_x = pdf_width_scaler;
     auto scaling_factor_y = pdf_height_scaler;
     auto img_y = image_height;
+    std::cerr << __FILE__ << ":" << __LINE__ << ":"
+            << " scaling_factor_x=" << scaling_factor_x
+            << " scaling_factor_y=" << scaling_factor_y
+            << " img_y=" << img_y
+            << "\n";
     
     std::map<cv::Rect, std::vector<cv::Point>, rect_compare>    table_bbox2;
     for (auto it: table_bbox)
     {
         auto rect = it.first;
         auto points = it.second;
-        rect.x      *= scaling_factor_x;
-        rect.y      = (rect.y - img_y) * scaling_factor_y;
-        rect.width  *= scaling_factor_x;
-        rect.height *= scaling_factor_y;
-        /*std::vector<int>    jx;
-        std::vector<int>    jy;
-        for (auto point: points)
-        {
-            jx.push_back(scaling_factor_x * point.x);
-            jy.push_back(scaling_factor_y * point.y);
-        }*/
+        
+        int x1 = rect.x;
+        int y1 = rect.y;
+        int x2 = rect.x + rect.width;
+        int y2 = rect.y + rect.height;
+        x1 *= scaling_factor_x;
+        y1 = scaling_factor_y * abs(y1 - img_y);
+        x2 *= scaling_factor_x;
+        y2 = scaling_factor_y * abs(y2 - img_y);
+        rect.x = x1;
+        rect.y = y1;
+        rect.width = x2 - x1;
+        rect.height = y2 - y1;
+        
         std::vector<cv::Point>  points2 = points;
-        for (auto point: points2)
+        for (auto& point: points2)
         {
             point.x *= scaling_factor_x;
-            point.y = (point.y - img_y) * scaling_factor_y;
+            point.y = abs(point.y - img_y) * scaling_factor_y;
         }
         table_bbox2[rect] = points2;
     }
     std::swap(table_bbox, table_bbox2);
     
-    for (auto rect: vertical_segments)
+    for (auto& rect: vertical_segments)
     {
-        rect.x *= scaling_factor_x;
-        rect.y = (rect.y - img_y) * scaling_factor_y;
-        rect.width *= scaling_factor_x;
-        rect.height *= scaling_factor_y;
+        int x1 = rect.x;
+        int y1 = rect.y;
+        int x2 = rect.x + rect.width;
+        int y2 = rect.y + rect.height;
+        x1 = x1 * scaling_factor_x;
+        y1 = abs(y1 - img_y) * scaling_factor_y;
+        x2 = x2 * scaling_factor_x;
+        y2 = abs(y2 - img_y) * scaling_factor_y;
+        rect.x = x1;
+        rect.y = y1;
+        rect.width = x2 - x1;
+        rect.height = y2 - y1;
     }
     
-    for (auto rect: horizontal_segments)
+    for (auto& rect: horizontal_segments)
     {
-        rect.x *= scaling_factor_x;
-        rect.y = (rect.y - img_y) * scaling_factor_y;
-        rect.width *= scaling_factor_x;
-        rect.height *= scaling_factor_y;
+        int x1 = rect.x;
+        int y1 = rect.y;
+        int x2 = rect.x + rect.width;
+        int y2 = rect.y + rect.height;
+        x1 = x1 * scaling_factor_x;
+        y1 = abs(y1 - img_y) * scaling_factor_y;
+        x2 = x2 * scaling_factor_x;
+        y2 = abs(y2 - img_y) * scaling_factor_y;
+        rect.x = x1;
+        rect.y = y1;
+        rect.width = x2 - x1;
+        rect.height = y2 - y1;
+    }
+    
+    std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## E ## table_bbox.size()=" << table_bbox.size() << "\n";
+    for (auto& it: table_bbox)
+    {
+        std::cerr << __FILE__ << ":" << __LINE__ << ":" << " ## E ## table_bbox it.first=" << it.first << "\n";
+        for (auto it2: it.second)
+        {
+            std::cerr << "    " << it2 << "\n";
+        }
+        std::cerr << "\n";
     }
     
     // sort tables based on y-coord
@@ -429,12 +519,12 @@ void extract_table_find(const std::string& path_pdf)
     std::vector<cv::Rect>   vertical_segments_in_rect;
     std::vector<cv::Rect>   horizontal_segments_in_rect;
     std::cerr << __FILE__ << ":" << __LINE__ << ":"
-            << " table_bbox.size()=" << table_bbox.size()
+            << " ## F ## table_bbox.size()=" << table_bbox.size()
             << "\n";
     for (auto it: table_bbox)
     {
         std::cerr << __FILE__ << ":" << __LINE__ << ":"
-                << " it.first=" << it.first
+                << "    ## F ## it.first=" << it.first
                 << "\n";
         if (0) for (auto point: it.second)
         {
@@ -449,8 +539,11 @@ void extract_table_find(const std::string& path_pdf)
         //
         
         // segments_in_bbox
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " ## G ## vertical_segments.size()=" << vertical_segments.size() << "\n";
         for (cv::Rect& r: vertical_segments)
         {
+            std::cerr << "    " << str(r) << "\n";
             if (rect.contains(cv::Point(r.x, r.y))
                     && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
                     )
@@ -458,8 +551,11 @@ void extract_table_find(const std::string& path_pdf)
                 vertical_segments_in_rect.push_back(r);
             }
         }
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " ## G ## horizontal_segments.size()=" << horizontal_segments.size() << "\n";
         for (cv::Rect& r: horizontal_segments)
         {
+            std::cerr << "    " << str(r) << "\n";
             if (rect.contains(cv::Point(r.x, r.y))
                     && rect.contains(cv::Point(r.x + r.width, r.y + r.height))
                     )
@@ -469,6 +565,19 @@ void extract_table_find(const std::string& path_pdf)
         }
         
         // Find text inside <rect>.
+        
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " vertical_segments_in_rect.size()=" << vertical_segments_in_rect.size() << "\n";
+        for (auto& rect: vertical_segments_in_rect)
+        {
+            std::cerr << "    " << rect << "\n";
+        }
+        std::cerr << __FILE__ << ":" << __LINE__ << ":"
+                << " horizontal_segments_in_rect.size()=" << horizontal_segments_in_rect.size() << "\n";
+        for (auto& rect: horizontal_segments_in_rect)
+        {
+            std::cerr << "    " << rect << "\n";
+        }
         
         // 
         // cols, rows = zip(*self.table_bbox[tk])
