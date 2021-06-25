@@ -681,7 +681,8 @@ void extract_table_find(const std::string& path_pdf)
             std::vector<Cell>   row_cells;
             for (auto& col: cols)
             {
-                row_cells.push_back(Cell(col.first, row.first, col.second, row.second));
+                // Note we swap row.first/second.
+                row_cells.push_back(Cell(col.first, row.second, col.second, row.first));
             }
             table.cells.push_back( row_cells);
         }
