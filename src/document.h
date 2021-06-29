@@ -9,6 +9,16 @@ typedef struct
     double y;
 } point_t;
 
+const char* point_string(const point_t* point);
+
+typedef struct
+{
+    point_t min;
+    point_t max;
+} rect_t;
+
+const char* rect_string(const rect_t* rect);
+
 typedef struct
 {
     double  a;
@@ -114,6 +124,18 @@ file. */
 
 typedef struct
 {
+    rect_t  rect;
+} tableline_t;
+
+typedef struct
+{
+    tableline_t*    tablelines;
+    int             tablelines_num;
+} tablelines_t;
+
+
+typedef struct
+{
     span_t**    spans;
     int         spans_num;
     
@@ -129,6 +151,9 @@ typedef struct
     int             paragraphs_num;
     /* These refer to items in .lines. Initially empty, then set
     by extract_join(). */
+    
+    tablelines_t    tablelines_horizontal;
+    tablelines_t    tablelines_vertical;
 
 } page_t;
 /* A page. Contains different representations of the list of spans. */

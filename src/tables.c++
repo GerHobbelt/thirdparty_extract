@@ -846,7 +846,9 @@ void extract_table_find(const std::string& path_pdf)
             std::cout << "        Columns: " << row.size() << ":";
             for (auto& cell: row)
             {
+                out_ << (cell.left ? '|' : ' ');
                 out_ << " cell(" << cell.lb << ' ' << cell.rt << ')';
+                out_ << ' ' << (cell.right ? '|' : ' ');
             }
             out_ << '\n';
         }

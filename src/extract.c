@@ -41,6 +41,19 @@ static void char_init(char_t* item)
     item->adv = 0;
 }
 
+const char* point_string(const point_t* point)
+{
+    static char buffer[128];
+    snprintf(buffer, sizeof(buffer), "(%f %f)", point->x, point->y);
+    return buffer;
+}
+
+const char* rect_string(const rect_t* rect)
+{
+    static char buffer[256];
+    snprintf(buffer, sizeof(buffer), "((%f %f) (%f %f))", rect->min.x, rect->min.y, rect->max.x, rect->max.y);
+    return buffer;
+}
 
 const char* span_string(extract_alloc_t* alloc, span_t* span)
 {
@@ -536,7 +549,7 @@ struct extract_t
     int                 contentss_num;
     
     images_t            images;
-
+    
     extract_format_t    format;
     extract_odt_styles_t odt_styles;
 };
@@ -1053,6 +1066,87 @@ int extract_add_image(
     return e;
 }
 
+
+static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, rect_t* rect)
+{
+    if (extract_realloc(
+            alloc,
+            &tablelines->tablelines,
+            sizeof(*tablelines->tablelines) * (tablelines->tablelines_num + 1)
+            )) return -1;
+    tablelines->tablelines[ tablelines->tablelines_num].rect = *rect;
+    tablelines->tablelines_num += 1;
+    return 0;
+}
+
+int extract_add_path4(
+        extract_t*  extract,
+        double ctm_a,
+        double ctm_b,
+        double ctm_c,
+        double ctm_d,
+        double ctm_e,
+        double ctm_f,
+        double x0,
+        double y0,
+        double x1,
+        double y1,
+        double x2,
+        double y2,
+        double x3,
+        double y3
+        )
+{
+    page_t* page = extract->document.pages[extract->document.pages_num-1];
+    point_t points[4] = {
+            {x0, y0},
+            {x1, y1},
+            {x2, y2},
+            {x3, y3},
+            };
+    rect_t rect;
+    int i;
+    double dx;
+    double dy;
+    outf("extract_add_path4(): [(%f %f) (%f %f) (%f %f) (%f %f)]",
+            x0, y0, x1, y1, x2, y2, x3, y3);
+    /* Find first step with dx > 0. */
+    for (i=0; i<4; ++i)
+    {
+        if (points[(i+1) % 4].x > points[(i+0) % 4].x)    break;
+    }
+    outf("i=%i", i);
+    if (i == 4) return 0;
+    rect.min.x = points[(i+0) % 4].x;
+    rect.max.x = points[(i+1) % 4].x;
+    if (points[(i+2) % 4].x != rect.max.x)  return 0;
+    if (points[(i+3) % 4].x != rect.min.x)  return 0;
+    y0 = points[(i+1) % 4].y;
+    y1 = points[(i+2) % 4].y;
+    if (y0 == y1)   { outf0(""); return 0;}
+    if (points[(i+3) % 4].y != y1)  return 0;
+    if (points[(i+4) % 4].y != y0)  return 0;
+    rect.min.y = (y1 > y0) ? y0 : y1;
+    rect.max.y = (y1 > y0) ? y1 : y0;
+    
+    dx = rect.max.x - rect.min.x;
+    dy = rect.max.y - rect.min.y;
+    if (dx / dy > 5)
+    {
+        /* Horizontal line. */
+        outf0("have found horizontal line: %s", rect_string(&rect));
+        if (tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect)) return -1;
+    }
+    else if (dy / dx > 5)
+    {
+        /* Vertical line. */
+        outf0("have found vertical line: %s", rect_string(&rect));
+        if (tablelines_append(extract->alloc, &page->tablelines_vertical, &rect)) return -1;
+    }
+    return 0;
+}
+
+
 int extract_page_begin(extract_t* extract)
 {
     /* Appends new empty page_t to an extract->document. */
@@ -1066,6 +1160,10 @@ int extract_page_begin(extract_t* extract)
     page->paragraphs_num = 0;
     page->images = NULL;
     page->images_num = 0;
+    page->tablelines_horizontal.tablelines = NULL;
+    page->tablelines_horizontal.tablelines_num = 0;
+    page->tablelines_vertical.tablelines = NULL;
+    page->tablelines_vertical.tablelines_num = 0;
     if (extract_realloc2(
             extract->alloc,
             &extract->document.pages,

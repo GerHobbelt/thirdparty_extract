@@ -150,6 +150,25 @@ data_free
 */
 
 
+int extract_add_path4(
+        extract_t*  extract,
+        double ctm_a,
+        double ctm_b,
+        double ctm_c,
+        double ctm_d,
+        double ctm_e,
+        double ctm_f,
+        double x0,
+        double y0,
+        double x1,
+        double y1,
+        double x2,
+        double y2,
+        double x3,
+        double y3
+        );
+
+
 int extract_page_end(extract_t* extract);
 /* Must be called to finish page started by extract_page_begin(). */
 
