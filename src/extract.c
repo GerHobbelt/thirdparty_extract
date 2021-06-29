@@ -1185,6 +1185,145 @@ int extract_page_end(extract_t* extract)
     return 0;
 }
 
+
+static int tablelines_compare_x(const void* a, const void* b)
+{
+    const tableline_t*  aa = a;
+    const tableline_t*  bb = b;
+    if (aa->rect.min.x > bb->rect.min.x)    return +1;
+    if (aa->rect.min.x < bb->rect.min.x)    return -1;
+    return 0;
+}
+
+static int tablelines_compare_y(const void* a, const void* b)
+{
+    const tableline_t*  aa = a;
+    const tableline_t*  bb = b;
+    if (aa->rect.min.y > bb->rect.min.y)    return +1;
+    if (aa->rect.min.y < bb->rect.min.y)    return -1;
+    return 0;
+}
+
+static int table_find_y_range(extract_alloc_t* alloc, tablelines_t* all, double y_min, double y_max,
+        tablelines_t* out)
+{
+    int i;
+    for (i=0; i<all->tablelines_num; ++i)
+    {
+        if (all->tablelines[i].rect.min.y >= y_min && all->tablelines[i].rect.min.y < y_max)
+        {
+            if (extract_realloc(alloc, &out->tablelines, sizeof(*out->tablelines) * (out->tablelines_num + 1))) return -1;
+            out->tablelines[out->tablelines_num] = all->tablelines[i];
+            out->tablelines_num += 1;
+        }
+        else
+        {
+            outf0("Excluding line because outside y=%f..%f: %s", y_min, y_max, rect_string(&all->tablelines[i].rect));
+        }
+    }
+    return 0;
+}
+
+static int table_find(extract_alloc_t* alloc, tablelines_t* all_h, tablelines_t* all_v, double y_min, double y_max)
+{
+    int e = -1;
+    int i;
+    outf0("Looking at table y_min=%f y_max=%f", y_min, y_max);
+    tablelines_t    tl_h = {NULL, 0};
+    tablelines_t    tl_v = {NULL, 0};
+    if (table_find_y_range(alloc, all_h, y_min, y_max, &tl_h)) goto end;
+    if (table_find_y_range(alloc, all_v, y_min, y_max, &tl_v)) goto end;
+    qsort(tl_v.tablelines, tl_v.tablelines_num, sizeof(*tl_v.tablelines), tablelines_compare_x);
+    outf0("all_h->tablelines_num=%i tl_h->tablelines_num=%i",
+            all_h->tablelines_num,
+            tl_h.tablelines_num
+            );
+    outf0("all_v->tablelines_num=%i tl_v->tablelines_num=%i",
+            all_v->tablelines_num,
+            tl_v.tablelines_num
+            );
+    for (i=0; i<tl_h.tablelines_num; )
+    {
+        int i_next;
+        int j;
+        for (i_next=i+1; i_next<tl_h.tablelines_num; ++i_next)
+        {
+            if (tl_h.tablelines[i_next].rect.min.y != tl_h.tablelines[i].rect.min.y) break;
+        }
+        
+        for (j=0; j<tl_v.tablelines_num; )
+        {
+            int j_next;
+            int ii;
+            int jj;
+            int above ;
+            int left;
+            tableline_t* h0;
+            tableline_t* v0;
+            
+            for (j_next = j+1; j_next<tl_v.tablelines_num; ++j_next)
+            {
+                if (tl_v.tablelines[j_next].rect.min.x != tl_v.tablelines[j].rect.min.x) break;
+            }
+            
+            
+            rect_t rect;
+            rect.min.x = tl_v.tablelines[j].rect.min.x;
+            rect.min.y = tl_h.tablelines[i].rect.min.y;
+            rect.max.x = (j_next < tl_v.tablelines_num) ?  tl_v.tablelines[j_next].rect.min.x : rect.min.x;
+            rect.max.y = (i_next < tl_h.tablelines_num) ?  tl_h.tablelines[i_next].rect.min.y : rect.min.y;
+            
+            ///
+            
+            outf("Looking at cell: %s", rect_string(&rect));
+            
+            above = 0;
+            left = 0;
+            h0 = &tl_h.tablelines[i];
+            
+            for (ii=i; ii<i_next; ++ii)
+            {
+                tableline_t* h = &tl_h.tablelines[ii];
+                if (h->rect.min.x < rect.max.x && h->rect.max.x > rect.min.x)
+                {
+                    /* Horizontal line <h> overlaps rect.{min.x..max.x}. */
+                    above = 1;
+                    break;
+                }
+            }
+            
+            v0 = &tl_v.tablelines[j_next];
+            for (jj=j; jj< j_next; ++jj)
+            {
+                tableline_t* v = &tl_v.tablelines[jj];
+                if (v->rect.min.y < rect.max.y && v->rect.max.y > rect.min.y)
+                {
+                    /* Vertical line <v> overlaps rect.{min.y..max.y}. */
+                    left = 1;
+                    break;
+                }
+            }
+            
+            outf0("left=%i above=%i rect=%s size=(%f %f)",
+                    left,
+                    above,
+                    rect_string(&rect),
+                    rect.max.x - rect.min.x,
+                    rect.max.y - rect.min.y
+                    );
+            
+            j = j_next;
+        }
+        
+        i = i_next;
+    }
+    e = 0;
+    end:
+    extract_free(alloc, &tl_h.tablelines);
+    extract_free(alloc, &tl_v.tablelines);
+    return e;
+}
+
 int extract_process(
         extract_t*  extract,
         int         spacing,
@@ -1193,6 +1332,67 @@ int extract_process(
         )
 {
     int e = -1;
+    
+    {
+        /* Look for table cells. */
+        outf0("looking for tables...");
+        int p;
+        for (p=0; p<extract->document.pages_num; ++p)
+        {
+            page_t* page = extract->document.pages[p];
+            double miny;
+            double maxy;
+            int i;
+            qsort(
+                    page->tablelines_horizontal.tablelines,
+                    page->tablelines_horizontal.tablelines_num,
+                    sizeof(*page->tablelines_horizontal.tablelines),
+                    tablelines_compare_y
+                    );
+            qsort(
+                    page->tablelines_vertical.tablelines,
+                    page->tablelines_vertical.tablelines_num,
+                    sizeof(*page->tablelines_vertical.tablelines),
+                    tablelines_compare_y
+                    );
+            /* Look for completely separate regions that define different
+            tables. */
+            maxy = -999;
+            miny = maxy;
+            outf0("page->tablelines_vertical.tablelines_num=%i", page->tablelines_vertical.tablelines_num);
+            outf0("page->tablelines_horizontal.tablelines_num=%i", page->tablelines_horizontal.tablelines_num);
+            for (i=0; i<page->tablelines_vertical.tablelines_num; ++i)
+            {
+                tableline_t* tl = &page->tablelines_vertical.tablelines[i];
+                if (tl->rect.min.y > maxy + 10)
+                {
+                    /*outf0("i=%i: vertical gap, maxy=%f min.y=%f", i, maxy, tl->rect.min.y);
+                    if (extract_realloc(extract->alloc, &ymaxs, ymaxs_num + 1)) return -1;
+                    ymaxs[ymaxs_num] = maxy;
+                    ymaxs_num += 1;*/
+                    if (i)
+                    {
+                        table_find(
+                                extract->alloc,
+                                &page->tablelines_horizontal,
+                                &page->tablelines_vertical,
+                                miny - 10,
+                                maxy + 10
+                                );
+                    }
+                    miny = tl->rect.min.y;
+                }
+                if (tl->rect.max.y > maxy)  maxy = tl->rect.max.y;
+            }
+            table_find(
+                    extract->alloc,
+                    &page->tablelines_horizontal,
+                    &page->tablelines_vertical,
+                    miny - 10,
+                    maxy + 10
+                    );
+        }
+    }
     
     if (extract_realloc2(
             extract->alloc,
