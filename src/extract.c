@@ -1232,6 +1232,8 @@ static int tablelines_compare_y(const void* a, const void* b)
 
 static int table_find_y_range(extract_alloc_t* alloc, tablelines_t* all, double y_min, double y_max,
         tablelines_t* out)
+/* Makes <out> to contain all lines in <all> with y coordinate in the range
+y_min..y_max. */
 {
     int i;
     for (i=0; i<all->tablelines_num; ++i)
@@ -1250,7 +1252,40 @@ static int table_find_y_range(extract_alloc_t* alloc, tablelines_t* all, double 
     return 0;
 }
 
+static int get_paragraphs_text(
+        extract_alloc_t* alloc,
+        paragraph_t** paragraphs,
+        int paragraphs_num,
+        extract_astring_t* text
+        )
+{
+    int p;
+    for (p=0; p<paragraphs_num; ++p)
+    {
+        paragraph_t* paragraph = paragraphs[p];
+        int l;
+        for (l=0; l<paragraph->lines_num; ++l)
+        {
+            line_t* line = paragraph->lines[l];
+            int s;
+            for (s=0; s<line->spans_num; ++s)
+            {
+                span_t* span = line->spans[s];
+                int c;
+                for (c=0; c<span->chars_num; ++c)
+                {
+                    char_t* char_ = &span->chars[c];
+                    int cc = char_->ucs;
+                    if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
 static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, extract_astring_t* text)
+/* Makes <text> contain text inside <rect>. */
 {
     int p;
     
@@ -1296,7 +1331,24 @@ static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, ext
     return 0;
 }
 
-static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_t* all_v*/ page_t* page, double y_min, double y_max)
+typedef struct
+{
+    int             ix;
+    int             iy;
+    rect_t          rect;
+    uint8_t         left;
+    uint8_t         above;
+    int             ix_extend;
+    int             iy_extend;
+    line_t**        lines;
+    int             lines_num;
+    paragraph_t**   paragraphs;
+    int             paragraphs_num;
+} cell_t;
+
+static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
+/* Finds table made from lines whose y coordintes are in the range
+y_min..y_max. */
 {
     tablelines_t* all_h = &page->tablelines_horizontal;
     tablelines_t* all_v = &page->tablelines_vertical;
@@ -1316,6 +1368,10 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
             all_v->tablelines_num,
             tl_v.tablelines_num
             );
+    
+    cell_t**    cells = NULL;
+    int         cells_num = 0;
+    
     for (i=0; i<tl_h.tablelines_num; )
     {
         int i_next;
@@ -1330,8 +1386,6 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
             int j_next;
             int ii;
             int jj;
-            int above ;
-            int left;
             tableline_t* h0;
             tableline_t* v0;
             
@@ -1339,29 +1393,35 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
             {
                 if (tl_v.tablelines[j_next].rect.min.x != tl_v.tablelines[j].rect.min.x) break;
             }
+                        
+            cell_t* cell;
+            if (extract_malloc(alloc, &cell, sizeof(*cell))) goto end;
             
+            cell->iy = i;
+            cell->ix = j;
+            cell->rect.min.x = tl_v.tablelines[j].rect.min.x;
+            cell->rect.min.y = tl_h.tablelines[i].rect.min.y;
+            cell->rect.max.x = (j_next < tl_v.tablelines_num) ?  tl_v.tablelines[j_next].rect.min.x : cell->rect.min.x;
+            cell->rect.max.y = (i_next < tl_h.tablelines_num) ?  tl_h.tablelines[i_next].rect.min.y : cell->rect.min.y;
+            cell->above = 0;
+            cell->left = 0;
+            cell->ix_extend = j + 1;
+            cell->iy_extend = i + 1;
+            cell->lines = NULL;
+            cell->lines_num = 0;
+            cell->paragraphs = NULL;
+            cell->paragraphs_num = 0;
             
-            rect_t rect;
-            rect.min.x = tl_v.tablelines[j].rect.min.x;
-            rect.min.y = tl_h.tablelines[i].rect.min.y;
-            rect.max.x = (j_next < tl_v.tablelines_num) ?  tl_v.tablelines[j_next].rect.min.x : rect.min.x;
-            rect.max.y = (i_next < tl_h.tablelines_num) ?  tl_h.tablelines[i_next].rect.min.y : rect.min.y;
-            
-            ///
-            
-            outf("Looking at cell: %s", rect_string(&rect));
-            
-            above = 0;
-            left = 0;
+            outf("Looking at cell: %s", rect_string(&cell->rect));
             h0 = &tl_h.tablelines[i];
             
             for (ii=i; ii<i_next; ++ii)
             {
                 tableline_t* h = &tl_h.tablelines[ii];
-                if (h->rect.min.x < rect.max.x && h->rect.max.x > rect.min.x)
+                if (h->rect.min.x < cell->rect.max.x && h->rect.max.x > cell->rect.min.x)
                 {
                     /* Horizontal line <h> overlaps rect.{min.x..max.x}. */
-                    above = 1;
+                    cell->above = 1;
                     break;
                 }
             }
@@ -1370,23 +1430,26 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
             for (jj=j; jj< j_next; ++jj)
             {
                 tableline_t* v = &tl_v.tablelines[jj];
-                if (v->rect.min.y < rect.max.y && v->rect.max.y > rect.min.y)
+                if (v->rect.min.y < cell->rect.max.y && v->rect.max.y > cell->rect.min.y)
                 {
                     /* Vertical line <v> overlaps rect.{min.y..max.y}. */
-                    left = 1;
+                    cell->left = 1;
                     break;
                 }
             }
             
-            outf("left=%i above=%i rect=%s size=(%f %f)",
-                    left,
-                    above,
-                    rect_string(&rect),
-                    rect.max.x - rect.min.x,
-                    rect.max.y - rect.min.y
-                    );
+            if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
+            cells[cells_num] = cell;
+            cells_num += 1;
             
-            {
+            outf("left=%i above=%i rect=%s size=(%f %f)",
+                    cell->left,
+                    cell->above,
+                    rect_string(&cell->rect),
+                    cell->rect.max.x - cell->rect.min.x,
+                    cell->rect.max.y - cell->rect.min.y
+                    );
+            /*{
                 extract_astring_t text;
                 extract_astring_init(&text);
                 if (get_cell_text(alloc, page, &rect, &text)) goto end;
@@ -1394,7 +1457,7 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
                 {
                     outf0("i=%i j=%i: %s", i, j, text.chars);
                 }
-            }
+            }*/
             
             j = j_next;
         }
@@ -1402,66 +1465,50 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
         i = i_next;
     }
     
-    #if 0
-    outf0("tl_h.tablelines_num=%i tl_v.tablelines_num=%i",
-            tl_h.tablelines_num,
-            tl_v.tablelines_num
-            );
-    for (i=0; i<tl_h.tablelines_num; ++i)
+    /* Find cell extensions to right and down. */
+    for (i=0; i<cells_num; ++i)
     {
         int j;
-        for (j=0; j<tl_v.tablelines_num; ++j)
+        cell_t* cell = cells[i];
+        if (!cell->above || !cell->left) continue;
+        
+        for (j=i+1; j<cells_num; ++j)
         {
-            int ee;
-            line_t**    lines = NULL;
-            int         lines_num = 0;
-            paragraph_t**   paragraphs;
-            int             paragraphs_num;
-            rect_t rect;
-            rect.min.x = tl_v.tablelines[j].rect.min.x;
-            rect.min.y = tl_h.tablelines[i].rect.min.y;
-            rect.max.x = (j+1 < tl_v.tablelines_num) ?  tl_v.tablelines[j+1].rect.min.x : rect.min.x;
-            rect.max.y = (i+1 < tl_h.tablelines_num) ?  tl_h.tablelines[i+1].rect.min.y : rect.min.y;
-            ee = extract_document_join_page_rects(
-                    alloc,
-                    page,
-                    &rect,
-                    1 /*rects_num*/,
-                    &lines,
-                    &lines_num,
-                    &paragraphs,
-                    &paragraphs_num
-                    );
+            cell_t* cell2 = cells[j];
+            if (!cell2->left && cell2->ix == cell->ix_extend && cell2->iy == cell->iy)
             {
-                extract_astring_t   text;
-                int p;
-                extract_astring_init(&text);
-                for (p=0; p<paragraphs_num; ++p)
-                {
-                    paragraph_t* paragraph = paragraphs[p];
-                    int l;
-                    for (l=0; l<paragraph->lines_num; ++l)
-                    {
-                        line_t* line = paragraph->lines[l];
-                        int s;
-                        for (s=0; s<line->spans_num; ++s)
-                        {
-                            span_t* span = line->spans[s];
-                            int c;
-                            for (c=0; c<span->chars_num; ++c)
-                            {
-                                char_t* char_ = &span->chars[c];
-                                int cc = char_->ucs;
-                                if (extract_astring_cat_xmlc(alloc, &text, cc)) return -1;
-                            }
-                        }
-                    }
-                }
-                outf0("cell(%i %i): %s", j, i, text.chars);
+                cell->ix_extend += 1;
+                cell->rect.max.x = cell2->rect.max.x;
+            }
+            if (!cell2->above && cell2->iy == cell->iy_extend && cell2->ix == cell->ix)
+            {
+                cell->iy_extend += 1;
+                cell->rect.max.y = cell2->rect.max.y;
             }
         }
     }
-    #endif
+    
+    /* Show cell details. */
+    for (i=0; i<cells_num; ++i)
+    {
+        cell_t* cell = cells[i];
+        if (!cell->above || !cell->left) continue;
+        if (extract_document_join_page_rects(
+                alloc,
+                page,
+                &cell->rect,
+                1 /*rects_num*/,
+                &cell->lines,
+                &cell->lines_num,
+                &cell->paragraphs,
+                &cell->paragraphs_num
+                )) return -1;
+        {
+            extract_astring_t text = {NULL, 0};
+            if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+            outf0("Cell (%i %i): %s", cell->ix, cell->iy, text.chars);
+        }
+    }
     
     e = 0;
     end:
@@ -1521,8 +1568,6 @@ int extract_process(
                         table_find(
                                 extract->alloc,
                                 page,
-                                /*&page->tablelines_horizontal,
-                                &page->tablelines_vertical,*/
                                 miny - 10,
                                 maxy + 10
                                 );
@@ -1534,8 +1579,6 @@ int extract_process(
             table_find(
                     extract->alloc,
                     page,
-                    /*&page->tablelines_horizontal,
-                    &page->tablelines_vertical,*/
                     miny - 10,
                     maxy + 10
                     );
