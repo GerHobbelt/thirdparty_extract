@@ -50,9 +50,11 @@ const char* point_string(const point_t* point)
 
 const char* rect_string(const rect_t* rect)
 {
-    static char buffer[256];
-    snprintf(buffer, sizeof(buffer), "((%f %f) (%f %f))", rect->min.x, rect->min.y, rect->max.x, rect->max.y);
-    return buffer;
+    static char buffer[2][256];
+    static int i = 0;
+    i = (i + 1) % 2;
+    snprintf(buffer[i], sizeof(buffer), "((%f %f) (%f %f))", rect->min.x, rect->min.y, rect->max.x, rect->max.y);
+    return buffer[i];
 }
 
 const char* span_string(extract_alloc_t* alloc, span_t* span)
@@ -1218,6 +1220,8 @@ static int tablelines_compare_x(const void* a, const void* b)
     const tableline_t*  bb = b;
     if (aa->rect.min.x > bb->rect.min.x)    return +1;
     if (aa->rect.min.x < bb->rect.min.x)    return -1;
+    if (aa->rect.min.y > bb->rect.min.y)    return +1;
+    if (aa->rect.min.y < bb->rect.min.y)    return -1;
     return 0;
 }
 
@@ -1227,6 +1231,8 @@ static int tablelines_compare_y(const void* a, const void* b)
     const tableline_t*  bb = b;
     if (aa->rect.min.y > bb->rect.min.y)    return +1;
     if (aa->rect.min.y < bb->rect.min.y)    return -1;
+    if (aa->rect.min.x > bb->rect.min.x)    return +1;
+    if (aa->rect.min.x < bb->rect.min.x)    return -1;
     return 0;
 }
 
@@ -1372,6 +1378,19 @@ y_min..y_max. */
     cell_t**    cells = NULL;
     int         cells_num = 0;
     
+    outf0("h:");
+    for (i=0; i<tl_h.tablelines_num; ++i)
+    {
+        outf0("tl_h[%i]: %s", i, rect_string(&tl_h.tablelines[i].rect));
+    }
+    
+    outf0("v:");
+    for (i=0; i<tl_h.tablelines_num; ++i)
+    {
+        outf0("tl_v[%i]: %s", i, rect_string(&tl_v.tablelines[i].rect));
+    }
+    outf0("");
+    
     for (i=0; i<tl_h.tablelines_num; )
     {
         int i_next;
@@ -1415,15 +1434,32 @@ y_min..y_max. */
             outf("Looking at cell: %s", rect_string(&cell->rect));
             h0 = &tl_h.tablelines[i];
             
+            // this loop is not setting ->above enough...?
+            outf0("Looking to set above for i=%i j=%i rect=%s", i, j, rect_string(&cell->rect));
             for (ii=i; ii<i_next; ++ii)
             {
                 tableline_t* h = &tl_h.tablelines[ii];
+                outf0("ii=%i h=%s", ii, rect_string(&h->rect));
                 if (h->rect.min.x < cell->rect.max.x && h->rect.max.x > cell->rect.min.x)
                 {
                     /* Horizontal line <h> overlaps rect.{min.x..max.x}. */
+                    outf0("marking above=1. i=%i j=%i cell->rect=%s h->rect=%s",
+                            i, 
+                            j,
+                            rect_string(&cell->rect),
+                            rect_string(&h->rect)
+                            );
                     cell->above = 1;
                     break;
                 }
+            }
+            if (ii == i_next)
+            {
+                outf0("leaving above=0. i=%i j=%i cell->rect=%s",
+                        i, 
+                        j,
+                        rect_string(&cell->rect)
+                        );
             }
             
             v0 = &tl_v.tablelines[j_next];
@@ -1475,13 +1511,21 @@ y_min..y_max. */
         for (j=i+1; j<cells_num; ++j)
         {
             cell_t* cell2 = cells[j];
-            if (!cell2->left && cell2->ix == cell->ix_extend && cell2->iy == cell->iy)
+            if (cell2->rect.min.x == cell->rect.max.x && cell2->rect.min.y == cell2->rect.min.y && !cell2->left)
             {
                 cell->ix_extend += 1;
                 cell->rect.max.x = cell2->rect.max.x;
             }
-            if (!cell2->above && cell2->iy == cell->iy_extend && cell2->ix == cell->ix)
+            if (cell2->rect.min.y == cell->rect.max.y && cell2->rect.min.x == cell->rect.min.x && !cell2->above)
             {
+                outf0("extending cell (%i %i %s) down to cell (%i %i %s)",
+                        cell->ix,
+                        cell->iy,
+                        rect_string(&cell->rect),
+                        cell2->ix,
+                        cell2->iy,
+                        rect_string(&cell2->rect)
+                        );
                 cell->iy_extend += 1;
                 cell->rect.max.y = cell2->rect.max.y;
             }
@@ -1506,7 +1550,7 @@ y_min..y_max. */
         {
             extract_astring_t text = {NULL, 0};
             if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-            outf0("Cell (%i %i): %s", cell->ix, cell->iy, text.chars);
+            outf0("Cell (%i..+%i %i..+%i): %s", cell->ix, cell->ix_extend - cell->ix, cell->iy, cell->iy_extend - cell->iy, text.chars);
         }
     }
     
