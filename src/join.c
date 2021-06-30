@@ -290,36 +290,18 @@ static int make_lines(
     
     for (a=0; a<spans_num; ++a)
     {
-        //line_t** line;
         if (!s_span_inside_rects(spans[a], rects, rects_num))
         {
             continue;
         }
         if (extract_realloc(alloc, &lines, sizeof(*lines) * (lines_num + 1))) goto end;
-        //line = &lines[lines_num];
         if (extract_malloc(alloc, &lines[lines_num], sizeof(line_t))) goto end;
-        if (extract_malloc(alloc, &lines[lines_num]->spans, sizeof(span_t*) * 1)) goto end;
-        lines[lines_num]->spans[0] = spans[a];
-        lines[lines_num]->spans_num = 1;
         lines_num += 1;
+        if (extract_malloc(alloc, &lines[lines_num-1]->spans, sizeof(span_t*) * 1)) goto end;
+        lines[lines_num-1]->spans[0] = spans[a];
+        lines[lines_num-1]->spans_num = 1;
     }
     
-    #if 0
-    if (extract_malloc(alloc, &lines, sizeof(*lines) * lines_num)) goto end;
-
-    /* Ensure we can clean up after error. */
-    for (a=0; a<lines_num; ++a) {
-        lines[a] = NULL;
-    }
-    for (a=0; a<lines_num; ++a) {
-        if (extract_malloc(alloc, &lines[a], sizeof(line_t))) goto end;
-        lines[a]->spans_num = 0;
-        if (extract_malloc(alloc, &lines[a]->spans, sizeof(span_t*) * 1)) goto end;
-        lines[a]->spans_num = 1;
-        lines[a]->spans[0] = spans[a];
-        outfx("initial line a=%i: %s", a, line_string(lines[a]));
-    }
-    #endif
     num_compatible = 0;
 
     /* For each line, look for nearest aligned line, and append if found. */
@@ -1003,7 +985,7 @@ static int make_paragraphs(
     return ret;
 }
 
-static int extract_document_join_page_rects(
+int extract_document_join_page_rects(
         extract_alloc_t*    alloc,
         page_t*             page,
         rect_t*             rects,
@@ -1056,23 +1038,6 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document)
                 &page->paragraphs,
                 &page->paragraphs_num
                 )) return -1;
-        /*
-        if (make_lines(
-                alloc,
-                page->spans,
-                page->spans_num,
-                &page->lines,
-                &page->lines_num
-                )) goto end;
-
-        if (make_paragraphs(
-                alloc,
-                page->lines,
-                page->lines_num,
-                &page->paragraphs,
-                &page->paragraphs_num
-                )) goto end;
-        */
     }
 
     return 0;

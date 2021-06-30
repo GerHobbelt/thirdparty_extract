@@ -174,6 +174,20 @@ typedef struct
     int         imagetypes_num;
 } images_t;
 
+
+int extract_document_join_page_rects(
+        extract_alloc_t*    alloc,
+        page_t*             page,
+        rect_t*             rects,
+        int                 rects_num,
+        line_t***           lines,
+        int*                lines_num,
+        paragraph_t***      paragraphs,
+        int*                paragraphs_num
+        );
+/* Extrats text that is inside any of rects[0..rects_num], or all text if
+rects_num is zero. */
+
 int extract_document_join(extract_alloc_t* alloc, document_t* document);
 
 double extract_matrices_to_font_size(matrix_t* ctm, matrix_t* trm);
