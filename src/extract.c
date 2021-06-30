@@ -1230,8 +1230,56 @@ static int table_find_y_range(extract_alloc_t* alloc, tablelines_t* all, double 
     return 0;
 }
 
-static int table_find(extract_alloc_t* alloc, tablelines_t* all_h, tablelines_t* all_v, double y_min, double y_max)
+static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, extract_astring_t* text)
 {
+    int p;
+    
+    line_t**    lines = NULL;
+    int         lines_num = 0;
+    paragraph_t**   paragraphs;
+    int             paragraphs_num;
+    
+    if (extract_document_join_page_rects(
+            alloc,
+            page,
+            rect,
+            1 /*rects_num*/,
+            &lines,
+            &lines_num,
+            &paragraphs,
+            &paragraphs_num
+            )) return -1;
+    
+    for (p=0; p<paragraphs_num; ++p)
+    {
+        paragraph_t* paragraph = paragraphs[p];
+        int l;
+        for (l=0; l<paragraph->lines_num; ++l)
+        {
+            line_t* line = paragraph->lines[l];
+            int s;
+            for (s=0; s<line->spans_num; ++s)
+            {
+                span_t* span = line->spans[s];
+                int c;
+                for (c=0; c<span->chars_num; ++c)
+                {
+                    char_t* char_ = &span->chars[c];
+                    int cc = char_->ucs;
+                    if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
+                }
+            }
+        }
+    }
+    
+    /* todo: free paragraphs and lines here. */
+    return 0;
+}
+
+static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_t* all_v*/ page_t* page, double y_min, double y_max)
+{
+    tablelines_t* all_h = &page->tablelines_horizontal;
+    tablelines_t* all_v = &page->tablelines_vertical;
     int e = -1;
     int i;
     outf0("Looking at table y_min=%f y_max=%f", y_min, y_max);
@@ -1318,11 +1366,80 @@ static int table_find(extract_alloc_t* alloc, tablelines_t* all_h, tablelines_t*
                     rect.max.y - rect.min.y
                     );
             
+            {
+                extract_astring_t text;
+                extract_astring_init(&text);
+                if (get_cell_text(alloc, page, &rect, &text)) goto end;
+                outf0("i=%i j=%i: %s", i, j, text.chars);
+            }
+            
             j = j_next;
         }
         
         i = i_next;
     }
+    
+    #if 0
+    outf0("tl_h.tablelines_num=%i tl_v.tablelines_num=%i",
+            tl_h.tablelines_num,
+            tl_v.tablelines_num
+            );
+    for (i=0; i<tl_h.tablelines_num; ++i)
+    {
+        int j;
+        for (j=0; j<tl_v.tablelines_num; ++j)
+        {
+            int ee;
+            line_t**    lines = NULL;
+            int         lines_num = 0;
+            paragraph_t**   paragraphs;
+            int             paragraphs_num;
+            rect_t rect;
+            rect.min.x = tl_v.tablelines[j].rect.min.x;
+            rect.min.y = tl_h.tablelines[i].rect.min.y;
+            rect.max.x = (j+1 < tl_v.tablelines_num) ?  tl_v.tablelines[j+1].rect.min.x : rect.min.x;
+            rect.max.y = (i+1 < tl_h.tablelines_num) ?  tl_h.tablelines[i+1].rect.min.y : rect.min.y;
+            ee = extract_document_join_page_rects(
+                    alloc,
+                    page,
+                    &rect,
+                    1 /*rects_num*/,
+                    &lines,
+                    &lines_num,
+                    &paragraphs,
+                    &paragraphs_num
+                    );
+            {
+                extract_astring_t   text;
+                int p;
+                extract_astring_init(&text);
+                for (p=0; p<paragraphs_num; ++p)
+                {
+                    paragraph_t* paragraph = paragraphs[p];
+                    int l;
+                    for (l=0; l<paragraph->lines_num; ++l)
+                    {
+                        line_t* line = paragraph->lines[l];
+                        int s;
+                        for (s=0; s<line->spans_num; ++s)
+                        {
+                            span_t* span = line->spans[s];
+                            int c;
+                            for (c=0; c<span->chars_num; ++c)
+                            {
+                                char_t* char_ = &span->chars[c];
+                                int cc = char_->ucs;
+                                if (extract_astring_cat_xmlc(alloc, &text, cc)) return -1;
+                            }
+                        }
+                    }
+                }
+                outf0("cell(%i %i): %s", j, i, text.chars);
+            }
+        }
+    }
+    #endif
+    
     e = 0;
     end:
     extract_free(alloc, &tl_h.tablelines);
@@ -1380,8 +1497,9 @@ int extract_process(
                     {
                         table_find(
                                 extract->alloc,
-                                &page->tablelines_horizontal,
-                                &page->tablelines_vertical,
+                                page,
+                                /*&page->tablelines_horizontal,
+                                &page->tablelines_vertical,*/
                                 miny - 10,
                                 maxy + 10
                                 );
@@ -1392,8 +1510,9 @@ int extract_process(
             }
             table_find(
                     extract->alloc,
-                    &page->tablelines_horizontal,
-                    &page->tablelines_vertical,
+                    page,
+                    /*&page->tablelines_horizontal,
+                    &page->tablelines_vertical,*/
                     miny - 10,
                     maxy + 10
                     );
