@@ -228,6 +228,7 @@ static int lines_are_compatible(
     return 1;
 }
 
+#if 0
 static int s_span_inside_rects(extract_alloc_t* alloc, span_t* span, rect_t* rects, int rects_num)
 {
     int i;
@@ -266,6 +267,45 @@ static int s_span_inside_rects(extract_alloc_t* alloc, span_t* span, rect_t* rec
             );
     return 1;
 }
+#endif
+
+static int s_span_inside_rects2(extract_alloc_t* alloc, span_t* span, rect_t* rects, int rects_num,
+        span_t* o_span)
+/* Returns with <o_span> containing char_t's from <span> that are inside rects[]. */
+{
+    int c;
+    *o_span = *span;
+    o_span->chars = NULL;
+    o_span->chars_num = 0;
+    for (c=0; c<span->chars_num; ++c)
+    {
+        /* For now we just look at whether span's (x, y) is within any
+        rects[]. We could instead try to find character's bounding box etc. */
+        char_t* char_ = &span->chars[c];
+        int r;
+        for (r=0; r<rects_num; ++r)
+        {
+            rect_t* rect = &rects[r];
+            if (1
+                    && char_->x >= rect->min.x
+                    && char_->x < rect->max.x
+                    && char_->y >= rect->min.y
+                    && char_->y < rect->max.y
+                    )
+            {
+                if (span_append_c(alloc, o_span, char_->ucs))   return -1;
+                *span_char_last(o_span) = *char_;
+                break;
+            }
+        }
+    }
+    if (o_span->chars_num)
+    {
+        //outf0("  span: %s", span_string(alloc, span));
+        outf("o_span: %s", span_string(alloc, o_span));
+    }
+    return 0;
+}
 
 /* Creates representation of span_t's that consists of a list of line_t's, with
 each line_t contains pointers to a list of span_t's.
@@ -276,11 +316,16 @@ On entry:
     Original value of *o_lines and *o_lines_num are ignored.
 
     <spans> points to array of <spans_num> span_t*'s, each pointing to
-    an span_t.
+    a span_t.
 
 On exit:
     If we succeed, we return 0, with *o_lines pointing to array of *o_lines_num
-    line_t*'s, each pointing to an line_t.
+    line_t*'s, each pointing to a line_t.
+    
+    If <rects_num> is zero, each of these line_t's will contain pointers to
+    items in <spans>; otherwise each of the line_t's will contain new spans
+    which should be freed by the caller (spans are not necessarily wholy inside
+    or outside rects[] so we need to create new spams).
 
     Otherwise we return -1 with errno set. *o_lines and *o_lines_num are
     undefined.
@@ -305,18 +350,49 @@ static int make_lines(
     int         num_compatible;
     int         num_joins;
     
-    for (a=0; a<spans_num; ++a)
+    if (rects_num)
     {
-        if (!s_span_inside_rects(alloc, spans[a], rects, rects_num))
+        /* Make <lines> contain new span_t's and char_t's that are inside rects[]. */
+        for (a=0; a<spans_num; ++a)
         {
-            continue;
+            span_t* span;
+            if (extract_malloc(alloc, &span, sizeof(*span))) return -1;
+            span->chars = NULL;
+            span->chars_num = 0;
+            if (s_span_inside_rects2(alloc, spans[a], rects, rects_num, span)) return -1;
+            if (span->chars_num)
+            {
+                if (extract_realloc(alloc, &lines, sizeof(*lines) * (lines_num + 1))) goto end;
+                if (extract_malloc(alloc, &lines[lines_num], sizeof(line_t))) goto end;
+                lines_num += 1;
+                if (extract_malloc(alloc, &lines[lines_num-1]->spans, sizeof(span_t*) * 1)) goto end;
+                lines[lines_num-1]->spans[0] = span;
+                lines[lines_num-1]->spans_num = 1;
+            }
+            else
+            {
+                extract_free(alloc, &span);
+            }
         }
-        if (extract_realloc(alloc, &lines, sizeof(*lines) * (lines_num + 1))) goto end;
-        if (extract_malloc(alloc, &lines[lines_num], sizeof(line_t))) goto end;
-        lines_num += 1;
-        if (extract_malloc(alloc, &lines[lines_num-1]->spans, sizeof(span_t*) * 1)) goto end;
-        lines[lines_num-1]->spans[0] = spans[a];
-        lines[lines_num-1]->spans_num = 1;
+    }
+    else
+    {
+        /* Make <lines> be a copy of <spans>. */
+        lines_num = spans_num;
+        if (extract_malloc(alloc, &lines, sizeof(*lines) * lines_num)) goto end;
+
+        /* Ensure we can clean up after error. */
+        for (a=0; a<lines_num; ++a) {
+            lines[a] = NULL;
+        }
+        for (a=0; a<lines_num; ++a) {
+            if (extract_malloc(alloc, &lines[a], sizeof(line_t))) goto end;
+            lines[a]->spans_num = 0;
+            if (extract_malloc(alloc, &lines[a]->spans, sizeof(span_t*) * 1)) goto end;
+            lines[a]->spans_num = 1;
+            lines[a]->spans[0] = spans[a];
+            outfx("initial line a=%i: %s", a, line_string(lines[a]));
+        }
     }
     
     num_compatible = 0;

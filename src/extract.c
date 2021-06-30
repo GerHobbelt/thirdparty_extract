@@ -1079,7 +1079,7 @@ static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, r
     return 0;
 }
 
-point_t transform(double x, double y, 
+static point_t transform(double x, double y, 
         double ctm_a,
         double ctm_b,
         double ctm_c,
@@ -1390,7 +1390,10 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
                 extract_astring_t text;
                 extract_astring_init(&text);
                 if (get_cell_text(alloc, page, &rect, &text)) goto end;
-                outf("i=%i j=%i: %s", i, j, text.chars);
+                if (text.chars)
+                {
+                    outf0("i=%i j=%i: %s", i, j, text.chars);
+                }
             }
             
             j = j_next;
