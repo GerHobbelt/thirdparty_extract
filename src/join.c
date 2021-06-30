@@ -228,6 +228,27 @@ static int lines_are_compatible(
     return 1;
 }
 
+static int s_span_inside_rects(span_t* span, rect_t* rects, int rects_num)
+{
+    int i;
+    point_t p = {span->ctm.e, span->ctm.f};
+    if (!rects_num) return 1;
+    
+    for (i=0; i<rects_num; ++i)
+    {
+        rect_t* rect = &rects[i];
+        if (0
+                || p.x < rect->min.x
+                || p.x >= rect->max.x
+                || p.y < rect->min.y
+                || p.y >= rect->max.y
+                )
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
 
 /* Creates representation of span_t's that consists of a list of line_t's, with
 each line_t contains pointers to a list of span_t's.
@@ -251,6 +272,8 @@ static int make_lines(
         extract_alloc_t*    alloc,
         span_t**            spans,
         int                 spans_num,
+        rect_t*             rects,
+        int                 rects_num,
         line_t***           o_lines,
         int*                o_lines_num
         )
@@ -259,11 +282,29 @@ static int make_lines(
 
     /* Make an line_t for each span. Then we will join some of these
     line_t's together before returning. */
-    int         lines_num = spans_num;
+    int         lines_num = 0;
     line_t**    lines = NULL;
     int         a;
     int         num_compatible;
     int         num_joins;
+    
+    for (a=0; a<spans_num; ++a)
+    {
+        //line_t** line;
+        if (!s_span_inside_rects(spans[a], rects, rects_num))
+        {
+            continue;
+        }
+        if (extract_realloc(alloc, &lines, sizeof(*lines) * (lines_num + 1))) goto end;
+        //line = &lines[lines_num];
+        if (extract_malloc(alloc, &lines[lines_num], sizeof(line_t))) goto end;
+        if (extract_malloc(alloc, &lines[lines_num]->spans, sizeof(span_t*) * 1)) goto end;
+        lines[lines_num]->spans[0] = spans[a];
+        lines[lines_num]->spans_num = 1;
+        lines_num += 1;
+    }
+    
+    #if 0
     if (extract_malloc(alloc, &lines, sizeof(*lines) * lines_num)) goto end;
 
     /* Ensure we can clean up after error. */
@@ -278,7 +319,7 @@ static int make_lines(
         lines[a]->spans[0] = spans[a];
         outfx("initial line a=%i: %s", a, line_string(lines[a]));
     }
-
+    #endif
     num_compatible = 0;
 
     /* For each line, look for nearest aligned line, and append if found. */
@@ -962,10 +1003,40 @@ static int make_paragraphs(
     return ret;
 }
 
+static int extract_document_join_page_rects(
+        extract_alloc_t*    alloc,
+        page_t*             page,
+        rect_t*             rects,
+        int                 rects_num,
+        line_t***           lines,
+        int*                lines_num,
+        paragraph_t***      paragraphs,
+        int*                paragraphs_num
+        )
+{
+    if (make_lines(
+            alloc,
+            page->spans,
+            page->spans_num,
+            rects,
+            rects_num,
+            lines,
+            lines_num
+            )) return -1;
+
+    if (make_paragraphs(
+            alloc,
+            *lines,
+            *lines_num,
+            paragraphs,
+            paragraphs_num
+            )) return -1;
+    
+    return 0;
+}
+
 int extract_document_join(extract_alloc_t* alloc, document_t* document)
 {
-    int ret = -1;
-
     /* For each page in <document> we join spans into lines and paragraphs. A
     line is a list of spans that are at the same angle and on the same line. A
     paragraph is a list of lines that are at the same angle and close together.
@@ -975,6 +1046,17 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document)
         page_t* page = document->pages[p];
         outf("processing page %i: num_spans=%i", p, page->spans_num);
 
+        if (extract_document_join_page_rects(
+                alloc,
+                page,
+                NULL /*rects*/,
+                0 /*rects_num*/,
+                &page->lines,
+                &page->lines_num,
+                &page->paragraphs,
+                &page->paragraphs_num
+                )) return -1;
+        /*
         if (make_lines(
                 alloc,
                 page->spans,
@@ -990,11 +1072,8 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document)
                 &page->paragraphs,
                 &page->paragraphs_num
                 )) goto end;
+        */
     }
 
-    ret = 0;
-
-    end:
-
-    return ret;
+    return 0;
 }
