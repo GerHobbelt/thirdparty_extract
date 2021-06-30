@@ -1114,7 +1114,7 @@ int extract_add_path4(
         double y3
         )
 {
-    outf0("cmt=(%f %f %f %f %f %f)", ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
+    outf("cmt=(%f %f %f %f %f %f)", ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
     (void) ctm_a;
     (void) ctm_b;
     (void) ctm_c;
@@ -1151,7 +1151,7 @@ int extract_add_path4(
     if (points[(i+3) % 4].x != rect.min.x)  return 0;
     y0 = points[(i+1) % 4].y;
     y1 = points[(i+2) % 4].y;
-    if (y0 == y1)   { outf0(""); return 0;}
+    if (y0 == y1)   return 0;
     if (points[(i+3) % 4].y != y1)  return 0;
     if (points[(i+4) % 4].y != y0)  return 0;
     rect.min.y = (y1 > y0) ? y0 : y1;
@@ -1162,13 +1162,13 @@ int extract_add_path4(
     if (dx / dy > 5)
     {
         /* Horizontal line. */
-        outf0("have found horizontal line: %s", rect_string(&rect));
+        outf("have found horizontal line: %s", rect_string(&rect));
         if (tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect)) return -1;
     }
     else if (dy / dx > 5)
     {
         /* Vertical line. */
-        outf0("have found vertical line: %s", rect_string(&rect));
+        outf("have found vertical line: %s", rect_string(&rect));
         if (tablelines_append(extract->alloc, &page->tablelines_vertical, &rect)) return -1;
     }
     return 0;
@@ -1252,7 +1252,7 @@ y_min..y_max. */
         }
         else
         {
-            outf0("Excluding line because outside y=%f..%f: %s", y_min, y_max, rect_string(&all->tablelines[i].rect));
+            outf("Excluding line because outside y=%f..%f: %s", y_min, y_max, rect_string(&all->tablelines[i].rect));
         }
     }
     return 0;
@@ -1360,17 +1360,17 @@ y_min..y_max. */
     tablelines_t* all_v = &page->tablelines_vertical;
     int e = -1;
     int i;
-    outf0("Looking at table y_min=%f y_max=%f", y_min, y_max);
+    outf("Looking at table y_min=%f y_max=%f", y_min, y_max);
     tablelines_t    tl_h = {NULL, 0};
     tablelines_t    tl_v = {NULL, 0};
     if (table_find_y_range(alloc, all_h, y_min, y_max, &tl_h)) goto end;
     if (table_find_y_range(alloc, all_v, y_min, y_max, &tl_v)) goto end;
     qsort(tl_v.tablelines, tl_v.tablelines_num, sizeof(*tl_v.tablelines), tablelines_compare_x);
-    outf0("all_h->tablelines_num=%i tl_h->tablelines_num=%i",
+    outf("all_h->tablelines_num=%i tl_h->tablelines_num=%i",
             all_h->tablelines_num,
             tl_h.tablelines_num
             );
-    outf0("all_v->tablelines_num=%i tl_v->tablelines_num=%i",
+    outf("all_v->tablelines_num=%i tl_v->tablelines_num=%i",
             all_v->tablelines_num,
             tl_v.tablelines_num
             );
@@ -1378,6 +1378,7 @@ y_min..y_max. */
     cell_t**    cells = NULL;
     int         cells_num = 0;
     
+    /*
     outf0("h:");
     for (i=0; i<tl_h.tablelines_num; ++i)
     {
@@ -1390,7 +1391,7 @@ y_min..y_max. */
         outf0("tl_v[%i]: %s", i, rect_string(&tl_v.tablelines[i].rect));
     }
     outf0("");
-    
+    */
     for (i=0; i<tl_h.tablelines_num; )
     {
         int i_next;
@@ -1435,15 +1436,15 @@ y_min..y_max. */
             h0 = &tl_h.tablelines[i];
             
             // this loop is not setting ->above enough...?
-            outf0("Looking to set above for i=%i j=%i rect=%s", i, j, rect_string(&cell->rect));
+            outf("Looking to set above for i=%i j=%i rect=%s", i, j, rect_string(&cell->rect));
             for (ii=i; ii<i_next; ++ii)
             {
                 tableline_t* h = &tl_h.tablelines[ii];
-                outf0("ii=%i h=%s", ii, rect_string(&h->rect));
+                outf("ii=%i h=%s", ii, rect_string(&h->rect));
                 if (h->rect.min.x < cell->rect.max.x && h->rect.max.x > cell->rect.min.x)
                 {
                     /* Horizontal line <h> overlaps rect.{min.x..max.x}. */
-                    outf0("marking above=1. i=%i j=%i cell->rect=%s h->rect=%s",
+                    outf("marking above=1. i=%i j=%i cell->rect=%s h->rect=%s",
                             i, 
                             j,
                             rect_string(&cell->rect),
@@ -1455,7 +1456,7 @@ y_min..y_max. */
             }
             if (ii == i_next)
             {
-                outf0("leaving above=0. i=%i j=%i cell->rect=%s",
+                outf("leaving above=0. i=%i j=%i cell->rect=%s",
                         i, 
                         j,
                         rect_string(&cell->rect)
@@ -1518,7 +1519,7 @@ y_min..y_max. */
             }
             if (cell2->rect.min.y == cell->rect.max.y && cell2->rect.min.x == cell->rect.min.x && !cell2->above)
             {
-                outf0("extending cell (%i %i %s) down to cell (%i %i %s)",
+                outf("extending cell (%i %i %s) down to cell (%i %i %s)",
                         cell->ix,
                         cell->iy,
                         rect_string(&cell->rect),
@@ -1550,7 +1551,14 @@ y_min..y_max. */
         {
             extract_astring_t text = {NULL, 0};
             if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-            outf0("Cell (%i..+%i %i..+%i): %s", cell->ix, cell->ix_extend - cell->ix, cell->iy, cell->iy_extend - cell->iy, text.chars);
+            outf0("Cell (%i..+%i %i..+%i %s): %s",
+                    cell->ix,
+                    cell->ix_extend - cell->ix,
+                    cell->iy,
+                    cell->iy_extend - cell->iy,
+                    rect_string(&cell->rect),
+                    text.chars
+                    );
         }
     }
     
