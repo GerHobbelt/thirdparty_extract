@@ -1097,6 +1097,12 @@ int extract_add_path4(
         double y3
         )
 {
+    (void) ctm_a;
+    (void) ctm_b;
+    (void) ctm_c;
+    (void) ctm_d;
+    (void) ctm_e;
+    (void) ctm_f;
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     point_t points[4] = {
             {x0, y0},
