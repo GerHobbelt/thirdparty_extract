@@ -228,10 +228,10 @@ static int lines_are_compatible(
     return 1;
 }
 
-static int s_span_inside_rects(span_t* span, rect_t* rects, int rects_num)
+static int s_span_inside_rects(extract_alloc_t* alloc, span_t* span, rect_t* rects, int rects_num)
 {
     int i;
-    point_t p = {span->ctm.e, span->ctm.f};
+    point_t p = {span->chars[0].x, span->chars[0].y};
     if (!rects_num) return 1;
     
     for (i=0; i<rects_num; ++i)
@@ -244,9 +244,26 @@ static int s_span_inside_rects(span_t* span, rect_t* rects, int rects_num)
                 || p.y >= rect->max.y
                 )
         {
+            outf("span ctm=(%f %f) trm=(%f %f) p=%s not inside rect %s",
+                    span->ctm.e,
+                    span->ctm.f,
+                    span->trm.e,
+                    span->trm.f,
+                    point_string(&p),
+                    rect_string(rect)
+                    );
             return 0;
         }
     }
+    outf0("span ctm=(%f %f) trm=(%f %f) p=%s is inside rect %s: %s",
+            span->ctm.e,
+            span->ctm.f,
+            span->trm.e,
+            span->trm.f,
+            point_string(&p),
+            rect_string(&rects[0]),
+            span_string(alloc, span)
+            );
     return 1;
 }
 
@@ -290,7 +307,7 @@ static int make_lines(
     
     for (a=0; a<spans_num; ++a)
     {
-        if (!s_span_inside_rects(spans[a], rects, rects_num))
+        if (!s_span_inside_rects(alloc, spans[a], rects, rects_num))
         {
             continue;
         }

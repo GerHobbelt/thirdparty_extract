@@ -1079,6 +1079,21 @@ static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, r
     return 0;
 }
 
+point_t transform(double x, double y, 
+        double ctm_a,
+        double ctm_b,
+        double ctm_c,
+        double ctm_d,
+        double ctm_e,
+        double ctm_f
+        )
+{
+    point_t ret;
+    ret.x = ctm_a * x + ctm_b * y + ctm_e;
+    ret.y = ctm_c * x + ctm_d * y + ctm_f;
+    return ret;
+}
+
 int extract_add_path4(
         extract_t*  extract,
         double ctm_a,
@@ -1097,6 +1112,7 @@ int extract_add_path4(
         double y3
         )
 {
+    outf0("cmt=(%f %f %f %f %f %f)", ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
     (void) ctm_a;
     (void) ctm_b;
     (void) ctm_c;
@@ -1105,10 +1121,14 @@ int extract_add_path4(
     (void) ctm_f;
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     point_t points[4] = {
-            {x0, y0},
+            transform(x0, y0, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
+            transform(x1, y1, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
+            transform(x2, y2, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
+            transform(x3, y3, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f)
+            /*{x0, y0},
             {x1, y1},
             {x2, y2},
-            {x3, y3},
+            {x3, y3},*/
             };
     rect_t rect;
     int i;
@@ -1358,7 +1378,7 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
                 }
             }
             
-            outf0("left=%i above=%i rect=%s size=(%f %f)",
+            outf("left=%i above=%i rect=%s size=(%f %f)",
                     left,
                     above,
                     rect_string(&rect),
@@ -1370,7 +1390,7 @@ static int table_find(extract_alloc_t* alloc, /*tablelines_t* all_h, tablelines_
                 extract_astring_t text;
                 extract_astring_init(&text);
                 if (get_cell_text(alloc, page, &rect, &text)) goto end;
-                outf0("i=%i j=%i: %s", i, j, text.chars);
+                outf("i=%i j=%i: %s", i, j, text.chars);
             }
             
             j = j_next;
