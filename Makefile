@@ -206,6 +206,7 @@ exe_src = \
         src/docx_template.c \
         src/extract-exe.c \
         src/extract.c \
+        src/html.c \
         src/join.c \
         src/mem.c \
         src/odt.c \

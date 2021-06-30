@@ -1290,6 +1290,7 @@ static int get_paragraphs_text(
     return 0;
 }
 
+#if 0
 static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, extract_astring_t* text)
 /* Makes <text> contain text inside <rect>. */
 {
@@ -1336,6 +1337,7 @@ static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, ext
     /* todo: free paragraphs and lines here. */
     return 0;
 }
+#endif
 
 typedef struct
 {
