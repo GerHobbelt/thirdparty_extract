@@ -374,6 +374,7 @@ int extract_document_to_html_content(
             for (i=0; i<page->cells_num; ++i)
             {
                 cell_t* cell = page->cells[i];
+                if (!cell->above || !cell->left) continue;
                 if (cell->iy != iy)
                 {
                     extract_astring_cat(alloc, content, "\n<tr>\n");
@@ -389,7 +390,7 @@ int extract_document_to_html_content(
                     extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend - cell->iy);
                 }
                 extract_astring_cat(alloc, content, ">");
-                
+                //extract_astring_catf(alloc, content, "[ix=%i iy=%i] ", cell->ix, cell->iy);
                 extract_astring_t text = {NULL, 0};
                 if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
                 if (text.chars)
