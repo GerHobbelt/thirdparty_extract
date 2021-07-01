@@ -5,6 +5,7 @@
 #include "document.h"
 #include "docx.h"
 #include "docx_template.h"
+#include "html.h"
 #include "mem.h"
 #include "memento.h"
 #include "odt.h"
@@ -566,7 +567,7 @@ int extract_begin(
     int e = -1;
     extract_t*  extract;
     
-    if (format != extract_format_ODT && format != extract_format_DOCX)
+    if (format != extract_format_ODT && format != extract_format_DOCX && format != extract_format_HTML)
     {
         outf0("Invalid format=%i\n", format);
         errno = EINVAL;
@@ -1673,6 +1674,16 @@ int extract_process(
                 &extract->contentss[extract->contentss_num - 1]
                 )) goto end;
     }
+    else if (extract->format == extract_format_HTML)
+    {
+        if (extract_document_to_html_content(
+                extract->alloc,
+                &extract->document,
+                rotation,
+                images,
+                &extract->contentss[extract->contentss_num - 1]
+                )) goto end;
+    }
     else
     {
         outf0("Invalid format=%i", extract->format);
@@ -1738,6 +1749,7 @@ int extract_write(extract_t* extract, extract_buffer_t* buffer)
             if (extract_asprintf(extract->alloc, &text2, "Pictures/%s", image->name) < 0) goto end;
             if (extract_zip_write_file(zip, image->data, image->data_size, text2)) goto end;
         }
+        if (extract_zip_close(&zip)) goto end;
     }
     else if (extract->format == extract_format_DOCX)
     {
@@ -1769,6 +1781,15 @@ int extract_write(extract_t* extract, extract_buffer_t* buffer)
             if (extract_asprintf(extract->alloc, &text2, "word/media/%s", image->name) < 0) goto end;
             if (extract_zip_write_file(zip, image->data, image->data_size, text2)) goto end;
         }
+        if (extract_zip_close(&zip)) goto end;
+        
+    }
+    else if (extract->format == extract_format_HTML)
+    {
+        for (i=0; i<extract->contentss_num; ++i)
+        {
+            if (extract_buffer_write(buffer, extract->contentss[i].chars, extract->contentss[i].chars_num, NULL)) goto end;
+        }
     }
     else
     {
@@ -1778,15 +1799,11 @@ int extract_write(extract_t* extract, extract_buffer_t* buffer)
         return 1;
     }
     
-    if (extract_zip_close(&zip)) goto end;
-    assert(!zip);
-    
     e = 0;
     
     end:
     if (e) outf("failed: %s", strerror(errno));
     extract_free(extract->alloc, &text2);
-    extract_zip_close(&zip);
     
     return e;
 }

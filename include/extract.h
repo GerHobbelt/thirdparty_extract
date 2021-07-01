@@ -25,7 +25,8 @@ typedef struct extract_t extract_t;
 typedef enum
 {
     extract_format_ODT,
-    extract_format_DOCX
+    extract_format_DOCX,
+    extract_format_HTML
 } extract_format_t;
 
 
