@@ -122,10 +122,12 @@ typedef struct
 <name> and <id> are created to be unique identifiers for use in generated docx
 file. */
 
+
 typedef struct
 {
     rect_t  rect;
 } tableline_t;
+
 
 typedef struct
 {
@@ -149,6 +151,15 @@ typedef struct
     int             paragraphs_num;
 } cell_t;
 
+
+typedef struct
+{
+    point_t     pos;    // top-left.
+    cell_t**    cells;
+    int         cells_num;
+} table_t;
+
+
 typedef struct
 {
     span_t**    spans;
@@ -170,11 +181,12 @@ typedef struct
     tablelines_t    tablelines_horizontal;
     tablelines_t    tablelines_vertical;
     
-    cell_t**    cells;
-    int         cells_num;
+    table_t**   tables;
+    int         tables_num;
 
 } page_t;
 /* A page. Contains different representations of the list of spans. */
+
 
 typedef struct
 {

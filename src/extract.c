@@ -1193,8 +1193,8 @@ int extract_page_begin(extract_t* extract)
     page->tablelines_horizontal.tablelines_num = 0;
     page->tablelines_vertical.tablelines = NULL;
     page->tablelines_vertical.tablelines_num = 0;
-    page->cells = NULL;
-    page->cells_num = 0;
+    page->tables = NULL;
+    page->tables_num = 0;
     
     if (extract_realloc2(
             extract->alloc,
@@ -1366,8 +1366,8 @@ y_min..y_max. */
             tl_v.tablelines_num
             );
     
-    //cell_t**    cells = NULL;
-    //int         cells_num = 0;
+    cell_t**    cells = NULL;
+    int         cells_num = 0;
     
     /*
     outf0("h:");
@@ -1471,9 +1471,9 @@ y_min..y_max. */
                 }
             }
             
-            if (extract_realloc(alloc, &page->cells, sizeof(*page->cells) * (page->cells_num+1))) goto end;
-            page->cells[page->cells_num] = cell;
-            page->cells_num += 1;
+            if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
+            cells[cells_num] = cell;
+            cells_num += 1;
             
             outf("left=%i above=%i rect=%s size=(%f %f)",
                     cell->left,
@@ -1499,15 +1499,15 @@ y_min..y_max. */
     }
     
     /* Find cell extensions to right and down. */
-    for (i=0; i<page->cells_num; ++i)
+    for (i=0; i<cells_num; ++i)
     {
         int j;
-        cell_t* cell = page->cells[i];
+        cell_t* cell = cells[i];
         if (!cell->above || !cell->left) continue;
         
-        for (j=i+1; j<page->cells_num; ++j)
+        for (j=i+1; j<cells_num; ++j)
         {
-            cell_t* cell2 = page->cells[j];
+            cell_t* cell2 = cells[j];
             if (cell2->rect.min.x == cell->rect.max.x && cell2->rect.min.y == cell2->rect.min.y && !cell2->left)
             {
                 cell->ix_extend += 1;
@@ -1529,10 +1529,10 @@ y_min..y_max. */
         }
     }
     
-    /* Show cell details. */
-    for (i=0; i<page->cells_num; ++i)
+    /* Find paragraphs within each cell. */
+    for (i=0; i<cells_num; ++i)
     {
-        cell_t* cell = page->cells[i];
+        cell_t* cell = cells[i];
         if (!cell->above || !cell->left) continue;
         if (extract_document_join_page_rects(
                 alloc,
@@ -1547,7 +1547,7 @@ y_min..y_max. */
         {
             extract_astring_t text = {NULL, 0};
             if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-            outf0("Cell (%i..+%i %i..+%i %s): %s",
+            outf("Cell (%i..+%i %i..+%i %s): %s",
                     cell->ix,
                     cell->ix_extend - cell->ix,
                     cell->iy,
@@ -1557,6 +1557,14 @@ y_min..y_max. */
                     );
         }
     }
+    
+    if (extract_realloc(alloc, &page->tables, sizeof(*page->tables) * (page->tables_num + 1))) goto end;
+    if (extract_malloc(alloc, &page->tables[page->tables_num], sizeof(*page->tables[page->tables_num]))) goto end;
+    page->tables[page->tables_num]->pos.x = 0;
+    page->tables[page->tables_num]->pos.y = 0;
+    page->tables[page->tables_num]->cells = cells;
+    page->tables[page->tables_num]->cells_num = cells_num;
+    page->tables_num += 1;
     
     e = 0;
     end:

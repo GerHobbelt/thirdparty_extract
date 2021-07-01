@@ -38,36 +38,6 @@ static int extract_html_paragraph_finish(extract_alloc_t* alloc, extract_astring
 }
 
 #if 0
-static int extract_html_run_start(
-        extract_alloc_t* alloc,
-        extract_astring_t* content,
-        const char* font_name,
-        double font_size,
-        int bold,
-        int italic
-        )
-/* Starts a new run. Caller must ensure that extract_html_run_finish() was
-called to terminate any previous run. */
-{
-    (void) alloc;
-    (void) content;
-    (void) font_name;
-    (void) font_size;
-    (void) bold;
-    (void) italic;
-    int e = 0;
-    return e;
-}
-
-static int extract_html_run_finish(extract_alloc_t* alloc, extract_astring_t* content)
-{
-    (void) alloc;
-    (void) content;
-    return 0;
-}
-#endif
-
-#if 0
 static int extract_html_char_truncate_if(extract_astring_t* content, char c)
 /* Removes last char if it is <c>. */
 {
@@ -215,7 +185,6 @@ int extract_document_to_html_content(
         )
 {
     int ret = -1;
-    //int text_box_id = 0;
     int p;
     
     (void) rotation;
@@ -241,200 +210,54 @@ int extract_document_to_html_content(
             const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
             double rotate = atan2(ctm->b, ctm->a);
             (void) rotate;
-            #if 0
-            if (rotation && rotate != 0)
-            {
-            
-                /* Find extent of paragraphs with this same rotation. extent
-                will contain max width and max height of paragraphs, in units
-                before application of ctm, i.e. before rotation. */
-                point_t extent = {0, 0};
-                int p0 = p;
-                int p1;
-                
-                outf("rotate=%.2frad=%.1fdeg ctm: ef=(%f %f) abcd=(%f %f %f %f)",
-                        rotate, rotate * 180 / pi,
-                        ctm->e,
-                        ctm->f,
-                        ctm->a,
-                        ctm->b,
-                        ctm->c,
-                        ctm->d
-                        );
-                
-                {
-                    /* We assume that first span is at origin of text
-                    block. This assumes left-to-right text. */
-                    double rotate0 = rotate;
-                    const matrix_t* ctm0 = ctm;
-                    point_t origin = {
-                            paragraph->lines[0]->spans[0]->chars[0].x,
-                            paragraph->lines[0]->spans[0]->chars[0].y
-                            };
-                    matrix_t ctm_inverse = {1, 0, 0, 1, 0, 0};
-                    double ctm_det = ctm->a*ctm->d - ctm->b*ctm->c;
-                    if (ctm_det != 0) {
-                        ctm_inverse.a = +ctm->d / ctm_det;
-                        ctm_inverse.b = -ctm->b / ctm_det;
-                        ctm_inverse.c = -ctm->c / ctm_det;
-                        ctm_inverse.d = +ctm->a / ctm_det;
-                    }
-                    else {
-                        outf("cannot invert ctm=(%f %f %f %f)",
-                                ctm->a, ctm->b, ctm->c, ctm->d);
-                    }
-
-                    for (p=p0; p<page->paragraphs_num; ++p) {
-                        paragraph = page->paragraphs[p];
-                        ctm = &paragraph->lines[0]->spans[0]->ctm;
-                        rotate = atan2(ctm->b, ctm->a);
-                        if (rotate != rotate0) {
-                            break;
-                        }
-
-                        /* Update <extent>. */
-                        {
-                            int l;
-                            for (l=0; l<paragraph->lines_num; ++l) {
-                                line_t* line = paragraph->lines[l];
-                                span_t* span = line_span_last(line);
-                                char_t* char_ = span_char_last(span);
-                                double adv = char_->adv * matrix_expansion(span->trm);
-                                double x = char_->x + adv * cos(rotate);
-                                double y = char_->y + adv * sin(rotate);
-
-                                double dx = x - origin.x;
-                                double dy = y - origin.y;
-
-                                /* Position relative to origin and before box rotation. */
-                                double xx = ctm_inverse.a * dx + ctm_inverse.b * dy;
-                                double yy = ctm_inverse.c * dx + ctm_inverse.d * dy;
-                                yy = -yy;
-                                if (xx > extent.x) extent.x = xx;
-                                if (yy > extent.y) extent.y = yy;
-                                if (0) outf("rotate=%f p=%i: origin=(%f %f) xy=(%f %f) dxy=(%f %f) xxyy=(%f %f) span: %s",
-                                        rotate, p, origin.x, origin.y, x, y, dx, dy, xx, yy, span_string(alloc, span));
-                            }
-                        }
-                    }
-                    p1 = p;
-                    rotate = rotate0;
-                    ctm = ctm0;
-                    outf("rotate=%f p0=%i p1=%i. extent is: (%f %f)",
-                            rotate, p0, p1, extent.x, extent.y);
-                }
-                
-                /* Paragraphs p0..p1-1 have same rotation. We output them into
-                a single rotated text box. */
-                
-                /* We need unique id for text box. */
-                //text_box_id += 1;
-                
-                {
-                    /* Angles are in units of 1/60,000 degree. */
-                    int rot = (int) (rotate * 180 / pi * 60000);
-
-                    /* <wp:anchor distT=\.. etc are in EMU - 1/360,000 of a cm.
-                    relativeHeight is z-ordering. (wp:positionV:wp:posOffset,
-                    wp:positionV:wp:posOffset) is position of origin of box in
-                    EMU.
-
-                    The box rotates about its centre but we want to rotate
-                    about the origin (top-left). So we correct the position of
-                    box by subtracting the vector that the top-left moves when
-                    rotated by angle <rotate> about the middle. */
-                    double point_to_emu = 12700;    /* https://en.wikipedia.org/wiki/Office_Open_XML_file_formats#DrawingML */
-                    int x = (int) (ctm->e * point_to_emu);
-                    int y = (int) (ctm->f * point_to_emu);
-                    int w = (int) (extent.x * point_to_emu);
-                    int h = (int) (extent.y * point_to_emu);
-                    int dx;
-                    int dy;
-
-                    if (0) outf("rotate: %f rad, %f deg. rot=%i", rotate, rotate*180/pi, rot);
-
-                    h *= 2;
-                    /* We can't predict how much space Word will actually
-                    require for the rotated text, so make the box have the
-                    original width but allow text to take extra vertical
-                    space. There doesn't seem to be a way to make the text box
-                    auto-grow to contain the text. */
-
-                    dx = (int) ((1-cos(rotate)) * w / 2.0 + sin(rotate) * h / 2.0);
-                    dy = (int) ((cos(rotate)-1) * h / 2.0 + sin(rotate) * w / 2.0);
-                    outf("ctm->e,f=%f,%f rotate=%f => x,y=%ik %ik dx,dy=%ik %ik",
-                            ctm->e,
-                            ctm->f,
-                            rotate * 180/pi,
-                            x/1000,
-                            y/1000,
-                            dx/1000,
-                            dy/1000
-                            );
-                    x -= dx;
-                    y -= -dy;
-
-                    if (extract_document_output_rotated_paragraphs(alloc, page, p0, p1, rot, x, y, w, h, text_box_id, content, &state)) goto end;
-                }
-                p = p1 - 1;
-                //p = page->paragraphs_num - 1;
-            }
-            else
-            #endif
-            {
-                if (extract_document_to_html_content_paragraph(alloc, &state, paragraph, content)) goto end;
-            }
-        
+            if (extract_document_to_html_content_paragraph(alloc, &state, paragraph, content)) goto end;
         }
         
         {
-            extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
-            int iy = 0;
-            int i;
-            extract_astring_cat(alloc, content, "    <tr>\n        ");
-            for (i=0; i<page->cells_num; ++i)
+            int t;
+            outf0("page->tables_num=%i", page->tables_num);
+            for (t=0; t<page->tables_num; ++t)
             {
-                cell_t* cell = page->cells[i];
-                if (!cell->above || !cell->left) continue;
-                if (cell->iy != iy)
+                table_t* table = page->tables[t];
+                extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
+                int iy = 0;
+                int i;
+                extract_astring_cat(alloc, content, "    <tr>\n        ");
+                for (i=0; i<table->cells_num; ++i)
                 {
-                    if (i) extract_astring_cat(alloc, content, "\n    </tr>");
-                    extract_astring_cat(alloc, content, "\n    <tr>\n        ");
-                    iy = cell->iy;
+                    cell_t* cell = table->cells[i];
+                    if (!cell->above || !cell->left) continue;
+                    if (cell->iy != iy)
+                    {
+                        if (i) extract_astring_cat(alloc, content, "\n    </tr>");
+                        extract_astring_cat(alloc, content, "\n    <tr>\n        ");
+                        iy = cell->iy;
+                    }
+                    extract_astring_cat(alloc, content, "<td");
+                    if (cell->ix_extend - cell->ix > 1)
+                    {
+                        extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend - cell->ix);
+                    }
+                    if (cell->iy_extend - cell->iy > 1)
+                    {
+                        extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend - cell->iy);
+                    }
+                    extract_astring_cat(alloc, content, ">");
+                    //extract_astring_catf(alloc, content, "[ix=%i iy=%i] ", cell->ix, cell->iy);
+                    extract_astring_t text = {NULL, 0};
+                    if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+                    if (text.chars)
+                    {
+                        extract_astring_cat(alloc, content, text.chars);
+                    }
+                    extract_astring_cat(alloc, content, "</td>");
+
+                    extract_astring_free(alloc, &text);
                 }
-                extract_astring_cat(alloc, content, "<td");
-                if (cell->ix_extend - cell->ix > 1)
-                {
-                    extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend - cell->ix);
-                }
-                if (cell->iy_extend - cell->iy > 1)
-                {
-                    extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend - cell->iy);
-                }
-                extract_astring_cat(alloc, content, ">");
-                //extract_astring_catf(alloc, content, "[ix=%i iy=%i] ", cell->ix, cell->iy);
-                extract_astring_t text = {NULL, 0};
-                if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-                if (text.chars)
-                {
-                    extract_astring_cat(alloc, content, text.chars);
-                }
-                extract_astring_cat(alloc, content, "</td>");
-                
-                extract_astring_free(alloc, &text);
+                extract_astring_cat(alloc, content, "\n    </tr>\n");
+                extract_astring_cat(alloc, content, "</table>\n\n");
             }
-            extract_astring_cat(alloc, content, "\n    </tr>\n");
-            extract_astring_cat(alloc, content, "</table>\n\n");
         }
-        
-        #if 0
-        if (images) {
-            int i;
-            for (i=0; i<page->images_num; ++i) {
-                extract_document_append_image(alloc, content, &page->images[i]);
-            }
-        }
-        #endif
     }
     extract_astring_cat(alloc, content, "</body>\n");
     extract_astring_cat(alloc, content, "</html>\n");
