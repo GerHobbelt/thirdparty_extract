@@ -280,8 +280,10 @@ static int s_span_inside_rects2(
         )
 /* Returns with <o_span> containing char_t's from <span> that are inside
 rects[], and *span modified to remove any char_t's that we have moved to
-<o_span>. May return with span->chars_num == 0, in which case the caller should
-remove the span. */
+<o_span>.
+
+May return with span->chars_num == 0, in which case the caller must remove the
+span, because lots of code assumes that there are no empty spans. */
 {
     int c;
     *o_span = *span;
@@ -296,7 +298,7 @@ remove the span. */
         for (r=0; r<rects_num; ++r)
         {
             rect_t* rect = &rects[r];
-            if (char_->ucs != ucs_NONE
+            if (1
                     && char_->x >= rect->min.x
                     && char_->x < rect->max.x
                     && char_->y >= rect->min.y
@@ -305,7 +307,7 @@ remove the span. */
             {
                 if (span_append_c(alloc, o_span, char_->ucs))   return -1;
                 *span_char_last(o_span) = *char_;
-                char_->ucs = ucs_NONE; /* Ensure it is not used again. */
+                char_->ucs = ucs_NONE; /* Mark for removal below, so it is not used again. */
                 break;
             }
         }
@@ -323,10 +325,9 @@ remove the span. */
                 cc += 1;
             }
         }
-        if (cc != span->chars_num)
-        {
-            outf0("changing span->chars_num=%i to cc=%i", span->chars_num, cc);
-        }
+        /* This might set span->chars_num to zero; our caller needs to remove
+        the span - lots of code assumes that all spans contain at least one
+        character. */
         span->chars_num = cc;
     }
 
@@ -384,10 +385,6 @@ static int make_lines(
     if (rects_num)
     {
         /* Make <lines> contain new span_t's and char_t's that are inside rects[]. */
-        {
-            int i;
-            for (i=0; i<*spans_num; ++i) outf0("beforebefore: i=%i: spans[i]->chars_num=%i", i, spans[i]->chars_num);
-        }
         for (a=0; a<*spans_num; ++a)
         {
             span_t* span;
@@ -412,13 +409,13 @@ static int make_lines(
             
             if (!spans[a]->chars_num)
             {
+                /* All characters in this span are inside table, so remove
+                entire span, otherwise the same characters will end up being
+                output outside the table also. */
                 int i;
-                outf0("Removing span because s_span_inside_rects2() has set chars_num to zero. a=%i", a);
-                for (i=0; i<*spans_num; ++i) outf0("before: i=%i: spans[i]->chars_num=%i", i, spans[i]->chars_num);
                 memmove(&spans[a], &spans[a+1], sizeof(*spans) * ((*spans_num) - (a+1)));
                 *spans_num -= 1;
                 a -= 1;
-                for (i=0; i<*spans_num; ++i) outf0("after : i=%i: spans[i]->chars_num=%i", i, spans[i]->chars_num);
             }
         }
     }
