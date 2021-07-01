@@ -1431,7 +1431,6 @@ y_min..y_max. */
             outf("Looking at cell: %s", rect_string(&cell->rect));
             h0 = &tl_h.tablelines[i];
             
-            // this loop is not setting ->above enough...?
             outf("Looking to set above for i=%i j=%i rect=%s", i, j, rect_string(&cell->rect));
             for (ii=i; ii<i_next; ++ii)
             {
@@ -1482,16 +1481,6 @@ y_min..y_max. */
                     cell->rect.max.x - cell->rect.min.x,
                     cell->rect.max.y - cell->rect.min.y
                     );
-            /*{
-                extract_astring_t text;
-                extract_astring_init(&text);
-                if (get_cell_text(alloc, page, &rect, &text)) goto end;
-                if (text.chars)
-                {
-                    outf0("i=%i j=%i: %s", i, j, text.chars);
-                }
-            }*/
-            
             j = j_next;
         }
         
@@ -1533,6 +1522,7 @@ y_min..y_max. */
     for (i=0; i<cells_num; ++i)
     {
         cell_t* cell = cells[i];
+        extract_astring_t text = {NULL, 0};
         if (!cell->above || !cell->left) continue;
         if (extract_document_join_page_rects(
                 alloc,
@@ -1544,18 +1534,15 @@ y_min..y_max. */
                 &cell->paragraphs,
                 &cell->paragraphs_num
                 )) return -1;
-        {
-            extract_astring_t text = {NULL, 0};
-            if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-            outf("Cell (%i..+%i %i..+%i %s): %s",
-                    cell->ix,
-                    cell->ix_extend - cell->ix,
-                    cell->iy,
-                    cell->iy_extend - cell->iy,
-                    rect_string(&cell->rect),
-                    text.chars
-                    );
-        }
+        if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+        outf("Cell (%i..+%i %i..+%i %s): %s",
+                cell->ix,
+                cell->ix_extend - cell->ix,
+                cell->iy,
+                cell->iy_extend - cell->iy,
+                rect_string(&cell->rect),
+                text.chars
+                );
     }
     
     if (extract_realloc(alloc, &page->tables, sizeof(*page->tables) * (page->tables_num + 1))) goto end;

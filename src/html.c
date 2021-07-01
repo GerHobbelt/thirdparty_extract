@@ -27,27 +27,6 @@ docx_paragraph_finish(). */
 #include <sys/stat.h>
 
 
-static int extract_html_paragraph_start(extract_alloc_t* alloc, extract_astring_t* content)
-{
-    return extract_astring_cat(alloc, content, "\n\n<p>");
-}
-
-static int extract_html_paragraph_finish(extract_alloc_t* alloc, extract_astring_t* content)
-{
-    return extract_astring_cat(alloc, content, "\n</p>");
-}
-
-#if 0
-static int extract_html_char_truncate_if(extract_astring_t* content, char c)
-/* Removes last char if it is <c>. */
-{
-    if (content->chars_num && content->chars[content->chars_num-1] == c) {
-        extract_astring_truncate(content, 1);
-    }
-    return 0;
-}
-#endif
-
 typedef struct
 {
     const char* font_name;
@@ -60,66 +39,87 @@ typedef struct
 content, e.g. so we know whether a font has changed so need to start a new docx
 span. */
 
+void content_state_init(content_state_t* state)
+{
+    state->font_name = NULL;
+    state->font_size = 0;
+    state->font_bold = 0;
+    state->font_italic = 0;
+    state->ctm_prev = NULL;
+}
 
-static int extract_document_to_html_content_paragraph(
+static int paragraphs_to_html_content(
         extract_alloc_t*    alloc,
         content_state_t*    state,
-        paragraph_t*        paragraph,
+        paragraph_t**       paragraphs,
+        int                 paragraphs_num,
         extract_astring_t*  content
         )
-/* Append html for <paragraph> to <content>. Updates *state if we change
-font. */
+/* Append html for paragraphs[] to <content>. Updates *state if we change font
+etc. */
 {
     int e = -1;
-    int l;
-    if (extract_html_paragraph_start(alloc, content)) goto end;
-
-    for (l=0; l<paragraph->lines_num; ++l)
+    int p;
+    for (p=0; p<paragraphs_num; ++p)
     {
-        line_t* line = paragraph->lines[l];
-        int s;
-        for (s=0; s<line->spans_num; ++s)
-        {
-            int si;
-            span_t* span = line->spans[s];
-            double font_size_new;
-            state->ctm_prev = &span->ctm;
-            font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
-            if (span->font_bold != state->font_bold)
-            {
-                if (extract_astring_cat(alloc, content,
-                        span->font_bold ? "<b>" : "</b>"
-                        )) goto end;
-                state->font_bold = span->font_bold;
-            }
-            if (span->font_italic != state->font_italic)
-            {
-                if ( extract_astring_cat(alloc, content,
-                        span->font_italic ? "<i>" : "</i>"
-                        )) goto end;
-                state->font_italic = span->font_italic;
-            }
+        paragraph_t* paragraph = paragraphs[p];
+        int l;
+        if (extract_astring_cat(alloc, content, "\n\n<p>")) goto end;
 
-            for (si=0; si<span->chars_num; ++si)
+        for (l=0; l<paragraph->lines_num; ++l)
+        {
+            line_t* line = paragraph->lines[l];
+            int s;
+            for (s=0; s<line->spans_num; ++s)
             {
-                char_t* char_ = &span->chars[si];
-                int c = char_->ucs;
-                if (extract_astring_cat_xmlc(alloc, content, c)) goto end;
-                //extract_astring_cat(alloc, content, "[eos]");
+                int c;
+                span_t* span = line->spans[s];
+                double font_size_new;
+                state->ctm_prev = &span->ctm;
+                font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
+                if (span->font_bold != state->font_bold)
+                {
+                    if (extract_astring_cat(alloc, content,
+                            span->font_bold ? "<b>" : "</b>"
+                            )) goto end;
+                    state->font_bold = span->font_bold;
+                }
+                if (span->font_italic != state->font_italic)
+                {
+                    if ( extract_astring_cat(alloc, content,
+                            span->font_italic ? "<i>" : "</i>"
+                            )) goto end;
+                    state->font_italic = span->font_italic;
+                }
+
+                for (c=0; c<span->chars_num; ++c)
+                {
+                    char_t* char_ = &span->chars[c];
+                    if (extract_astring_cat_xmlc(alloc, content, char_->ucs)) goto end;
+                    //extract_astring_cat(alloc, content, "[eos]");
+                }
+                /* Remove any trailing '-' at end of line. */
+                //extract_astring_cat(alloc, content, "[eol]");
+                //if (extract_html_char_truncate_if(content, '-')) goto end;
             }
-            /* Remove any trailing '-' at end of line. */
-            if (content->chars_num && content->chars[content->chars_num-1] == '-')
+            
+            if (content->chars_num)
             {
-                content->chars_num -= 1;
+                if (content->chars[content->chars_num-1] == '-')    content->chars_num -= 1;
+                else if (content->chars[content->chars_num-1] != ' ')
+                {
+                    extract_astring_catc(alloc, content, ' ');
+                }
             }
-            else
-            {
-                extract_astring_catc(alloc, content, ' ');
-            }
-            //extract_astring_cat(alloc, content, "[eol]");
-            //if (extract_html_char_truncate_if(content, '-')) goto end;
         }
+        /*if (state->font_name)
+        {
+            if (extract_html_run_finish(alloc, content)) goto end;
+            state->font_name = NULL;
+        }*/
+        if (extract_astring_cat(alloc, content, "\n</p>")) goto end;
     }
+    
     if (state->font_bold)
     {
         if (extract_astring_cat(alloc, content, "</b>")) goto end;
@@ -130,12 +130,6 @@ font. */
         if (extract_astring_cat(alloc, content, "</i>")) goto end;
         state->font_italic = 0;
     }
-    /*if (state->font_name)
-    {
-        if (extract_html_run_finish(alloc, content)) goto end;
-        state->font_name = NULL;
-    }*/
-    if (extract_html_paragraph_finish(alloc, content)) goto end;
     
     e = 0;
     
@@ -197,21 +191,10 @@ int extract_document_to_html_content(
     for (p=0; p<document->pages_num; ++p)
     {
         page_t* page = document->pages[p];
-        int p;
         content_state_t state;
-        state.font_name = NULL;
-        state.font_size = 0;
-        state.font_bold = 0;
-        state.font_italic = 0;
-        state.ctm_prev = NULL;
+        content_state_init(&state);
         
-        for (p=0; p<page->paragraphs_num; ++p) {
-            paragraph_t* paragraph = page->paragraphs[p];
-            const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
-            double rotate = atan2(ctm->b, ctm->a);
-            (void) rotate;
-            if (extract_document_to_html_content_paragraph(alloc, &state, paragraph, content)) goto end;
-        }
+        if (paragraphs_to_html_content(alloc, &state, page->paragraphs, page->paragraphs_num, content)) goto end;
         
         {
             int t;
@@ -245,7 +228,8 @@ int extract_document_to_html_content(
                     extract_astring_cat(alloc, content, ">");
                     //extract_astring_catf(alloc, content, "[ix=%i iy=%i] ", cell->ix, cell->iy);
                     extract_astring_t text = {NULL, 0};
-                    if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+                    //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+                    if (paragraphs_to_html_content(alloc, &state, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
                     if (text.chars)
                     {
                         extract_astring_cat(alloc, content, text.chars);

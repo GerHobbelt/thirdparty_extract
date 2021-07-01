@@ -269,9 +269,19 @@ static int s_span_inside_rects(extract_alloc_t* alloc, span_t* span, rect_t* rec
 }
 #endif
 
-static int s_span_inside_rects2(extract_alloc_t* alloc, span_t* span, rect_t* rects, int rects_num,
-        span_t* o_span)
-/* Returns with <o_span> containing char_t's from <span> that are inside rects[]. */
+static const unsigned ucs_NONE = ((unsigned) -1);
+
+static int s_span_inside_rects2(
+        extract_alloc_t* alloc,
+        span_t* span,
+        rect_t* rects,
+        int rects_num,
+        span_t* o_span
+        )
+/* Returns with <o_span> containing char_t's from <span> that are inside
+rects[], and *span modified to remove any char_t's that we have moved to
+<o_span>. May return with span->chars_num == 0, in which case the caller should
+remove the span. */
 {
     int c;
     *o_span = *span;
@@ -286,7 +296,7 @@ static int s_span_inside_rects2(extract_alloc_t* alloc, span_t* span, rect_t* re
         for (r=0; r<rects_num; ++r)
         {
             rect_t* rect = &rects[r];
-            if (1
+            if (char_->ucs != ucs_NONE
                     && char_->x >= rect->min.x
                     && char_->x < rect->max.x
                     && char_->y >= rect->min.y
@@ -295,10 +305,31 @@ static int s_span_inside_rects2(extract_alloc_t* alloc, span_t* span, rect_t* re
             {
                 if (span_append_c(alloc, o_span, char_->ucs))   return -1;
                 *span_char_last(o_span) = *char_;
+                char_->ucs = ucs_NONE; /* Ensure it is not used again. */
                 break;
             }
         }
     }
+
+    /* Remove any char_t's that we've used. */
+    {
+        int cc = 0;
+        for (c=0; c<span->chars_num; ++c)
+        {
+            char_t* char_ = &span->chars[c];
+            if (char_->ucs != ucs_NONE)
+            {
+                span->chars[cc] = span->chars[c];
+                cc += 1;
+            }
+        }
+        if (cc != span->chars_num)
+        {
+            outf0("changing span->chars_num=%i to cc=%i", span->chars_num, cc);
+        }
+        span->chars_num = cc;
+    }
+
     if (o_span->chars_num)
     {
         //outf0("  span: %s", span_string(alloc, span));
@@ -333,7 +364,7 @@ On exit:
 static int make_lines(
         extract_alloc_t*    alloc,
         span_t**            spans,
-        int                 spans_num,
+        int*                spans_num,
         rect_t*             rects,
         int                 rects_num,
         line_t***           o_lines,
@@ -353,9 +384,14 @@ static int make_lines(
     if (rects_num)
     {
         /* Make <lines> contain new span_t's and char_t's that are inside rects[]. */
-        for (a=0; a<spans_num; ++a)
+        {
+            int i;
+            for (i=0; i<*spans_num; ++i) outf0("beforebefore: i=%i: spans[i]->chars_num=%i", i, spans[i]->chars_num);
+        }
+        for (a=0; a<*spans_num; ++a)
         {
             span_t* span;
+            if (spans[a]->chars_num == 0)   continue; /* In case used for table, */
             if (extract_malloc(alloc, &span, sizeof(*span))) return -1;
             span->chars = NULL;
             span->chars_num = 0;
@@ -373,12 +409,23 @@ static int make_lines(
             {
                 extract_free(alloc, &span);
             }
+            
+            if (!spans[a]->chars_num)
+            {
+                int i;
+                outf0("Removing span because s_span_inside_rects2() has set chars_num to zero. a=%i", a);
+                for (i=0; i<*spans_num; ++i) outf0("before: i=%i: spans[i]->chars_num=%i", i, spans[i]->chars_num);
+                memmove(&spans[a], &spans[a+1], sizeof(*spans) * ((*spans_num) - (a+1)));
+                *spans_num -= 1;
+                a -= 1;
+                for (i=0; i<*spans_num; ++i) outf0("after : i=%i: spans[i]->chars_num=%i", i, spans[i]->chars_num);
+            }
         }
     }
     else
     {
         /* Make <lines> be a copy of <spans>. */
-        lines_num = spans_num;
+        lines_num = *spans_num;
         if (extract_malloc(alloc, &lines, sizeof(*lines) * lines_num)) goto end;
 
         /* Ensure we can clean up after error. */
@@ -1092,7 +1139,7 @@ int extract_document_join_page_rects(
     if (make_lines(
             alloc,
             page->spans,
-            page->spans_num,
+            &page->spans_num,
             rects,
             rects_num,
             lines,
