@@ -1391,6 +1391,11 @@ y_min..y_max. */
         {
             if (tl_h.tablelines[i_next].rect.min.y != tl_h.tablelines[i].rect.min.y) break;
         }
+        if (i_next == tl_h.tablelines_num)
+        {
+            /* Ignore last row of points - cells need another row below. */
+            break;
+        }
         
         for (j=0; j<tl_v.tablelines_num; )
         {

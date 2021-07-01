@@ -304,6 +304,11 @@ test/generated/%.diff: test/generated/%.dir/ test/%.dir.ref/
 	@echo == Checking $<
 	diff -ru $^
 
+test/generated/%.html.diff: test/generated/%.html test/%.html.ref
+	@echo
+	@echo == Checking $<
+	diff -u $^
+
 # This checks that -t src/template.docx gives identical results.
 #
 test/generated/%.extract-template.docx.diff: test/generated/%.extract-template.docx.dir/ test/%.extract.docx.dir.ref/
@@ -390,6 +395,11 @@ test/generated/%.pdf.mutool.odt: test/%.pdf $(mutool)
 	@mkdir -p test/generated
 	$(mutool) convert -O mediabox-clip=no -o $@ $<
 
+test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+	@echo
+	@echo == Converting .pdf directly to .html using mutool.
+	@mkdir -p test/generated
+	$(mutool) convert -F docx -O mediabox-clip=no,html -o $@ $<
 
 # Valgrind test
 #

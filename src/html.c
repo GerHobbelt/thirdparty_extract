@@ -37,6 +37,7 @@ static int extract_html_paragraph_finish(extract_alloc_t* alloc, extract_astring
     return extract_astring_cat(alloc, content, "\n</p>");
 }
 
+#if 0
 static int extract_html_run_start(
         extract_alloc_t* alloc,
         extract_astring_t* content,
@@ -64,6 +65,7 @@ static int extract_html_run_finish(extract_alloc_t* alloc, extract_astring_t* co
     (void) content;
     return 0;
 }
+#endif
 
 static int extract_html_char_truncate_if(extract_astring_t* content, char c)
 /* Removes last char if it is <c>. */
@@ -101,51 +103,67 @@ font. */
     int l;
     if (extract_html_paragraph_start(alloc, content)) goto end;
 
-    for (l=0; l<paragraph->lines_num; ++l) {
+    for (l=0; l<paragraph->lines_num; ++l)
+    {
         line_t* line = paragraph->lines[l];
         int s;
-        for (s=0; s<line->spans_num; ++s) {
+        for (s=0; s<line->spans_num; ++s)
+        {
             int si;
             span_t* span = line->spans[s];
             double font_size_new;
             state->ctm_prev = &span->ctm;
             font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
-            if (!state->font_name
-                    || strcmp(span->font_name, state->font_name)
-                    || span->font_bold != state->font_bold
-                    || span->font_italic != state->font_italic
-                    || font_size_new != state->font_size
-                    ) {
-                if (state->font_name) {
-                    if (extract_html_run_finish(alloc, content)) goto end;
-                }
-                state->font_name = span->font_name;
-                state->font_bold = span->font_bold;
-                state->font_italic = span->font_italic;
-                state->font_size = font_size_new;
-                if (extract_html_run_start(
-                        alloc,
-                        content,
-                        state->font_name,
-                        state->font_size,
-                        state->font_bold,
-                        state->font_italic
+            if (span->font_bold != state->font_bold)
+            {
+                if (extract_astring_cat(alloc, content,
+                        span->font_bold ? "<b>" : "</b>"
                         )) goto end;
+                state->font_bold = span->font_bold;
+            }
+            if (span->font_italic != state->font_italic)
+            {
+                if ( extract_astring_cat(alloc, content,
+                        span->font_italic ? "<i>" : "</i>"
+                        )) goto end;
+                state->font_italic = span->font_italic;
             }
 
-            for (si=0; si<span->chars_num; ++si) {
+            for (si=0; si<span->chars_num; ++si)
+            {
                 char_t* char_ = &span->chars[si];
                 int c = char_->ucs;
                 if (extract_astring_cat_xmlc(alloc, content, c)) goto end;
+                //extract_astring_cat(alloc, content, "[eos]");
             }
             /* Remove any trailing '-' at end of line. */
-            if (extract_html_char_truncate_if(content, '-')) goto end;
+            if (content->chars_num && content->chars[content->chars_num-1] == '-')
+            {
+                content->chars_num -= 1;
+            }
+            else
+            {
+                extract_astring_catc(alloc, content, ' ');
+            }
+            //extract_astring_cat(alloc, content, "[eol]");
+            //if (extract_html_char_truncate_if(content, '-')) goto end;
         }
     }
-    if (state->font_name) {
+    if (state->font_bold)
+    {
+        if (extract_astring_cat(alloc, content, "</b>")) goto end;
+        state->font_bold = 0;
+    }
+    if (state->font_italic)
+    {
+        if (extract_astring_cat(alloc, content, "</i>")) goto end;
+        state->font_italic = 0;
+    }
+    /*if (state->font_name)
+    {
         if (extract_html_run_finish(alloc, content)) goto end;
         state->font_name = NULL;
-    }
+    }*/
     if (extract_html_paragraph_finish(alloc, content)) goto end;
     
     e = 0;
@@ -181,6 +199,7 @@ static int get_paragraphs_text(
                     if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
                 }
             }
+            if (extract_astring_catc(alloc, text, ' ')) return -1;
         }
     }
     return 0;
@@ -368,16 +387,18 @@ int extract_document_to_html_content(
         }
         
         {
-            extract_astring_cat(alloc, content, "<table border='1' style='border-collapse:collapse'>\n");
+            extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
             int iy = 0;
             int i;
+            extract_astring_cat(alloc, content, "    <tr>\n        ");
             for (i=0; i<page->cells_num; ++i)
             {
                 cell_t* cell = page->cells[i];
                 if (!cell->above || !cell->left) continue;
                 if (cell->iy != iy)
                 {
-                    extract_astring_cat(alloc, content, "\n<tr>\n");
+                    if (i) extract_astring_cat(alloc, content, "\n    </tr>");
+                    extract_astring_cat(alloc, content, "\n    <tr>\n        ");
                     iy = cell->iy;
                 }
                 extract_astring_cat(alloc, content, "<td");
@@ -401,7 +422,8 @@ int extract_document_to_html_content(
                 
                 extract_astring_free(alloc, &text);
             }
-            extract_astring_cat(alloc, content, "</table>\n");
+            extract_astring_cat(alloc, content, "\n    </tr>\n");
+            extract_astring_cat(alloc, content, "</table>\n\n");
         }
         
         #if 0
