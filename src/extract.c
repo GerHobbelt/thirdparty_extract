@@ -1193,6 +1193,9 @@ int extract_page_begin(extract_t* extract)
     page->tablelines_horizontal.tablelines_num = 0;
     page->tablelines_vertical.tablelines = NULL;
     page->tablelines_vertical.tablelines_num = 0;
+    page->cells = NULL;
+    page->cells_num = 0;
+    
     if (extract_realloc2(
             extract->alloc,
             &extract->document.pages,
@@ -1340,21 +1343,6 @@ static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, ext
 }
 #endif
 
-typedef struct
-{
-    int             ix;
-    int             iy;
-    rect_t          rect;
-    uint8_t         left;
-    uint8_t         above;
-    int             ix_extend;
-    int             iy_extend;
-    line_t**        lines;
-    int             lines_num;
-    paragraph_t**   paragraphs;
-    int             paragraphs_num;
-} cell_t;
-
 static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
 /* Finds table made from lines whose y coordintes are in the range
 y_min..y_max. */
@@ -1378,8 +1366,8 @@ y_min..y_max. */
             tl_v.tablelines_num
             );
     
-    cell_t**    cells = NULL;
-    int         cells_num = 0;
+    //cell_t**    cells = NULL;
+    //int         cells_num = 0;
     
     /*
     outf0("h:");
@@ -1478,9 +1466,9 @@ y_min..y_max. */
                 }
             }
             
-            if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
-            cells[cells_num] = cell;
-            cells_num += 1;
+            if (extract_realloc(alloc, &page->cells, sizeof(*page->cells) * (page->cells_num+1))) goto end;
+            page->cells[page->cells_num] = cell;
+            page->cells_num += 1;
             
             outf("left=%i above=%i rect=%s size=(%f %f)",
                     cell->left,
@@ -1506,15 +1494,15 @@ y_min..y_max. */
     }
     
     /* Find cell extensions to right and down. */
-    for (i=0; i<cells_num; ++i)
+    for (i=0; i<page->cells_num; ++i)
     {
         int j;
-        cell_t* cell = cells[i];
+        cell_t* cell = page->cells[i];
         if (!cell->above || !cell->left) continue;
         
-        for (j=i+1; j<cells_num; ++j)
+        for (j=i+1; j<page->cells_num; ++j)
         {
-            cell_t* cell2 = cells[j];
+            cell_t* cell2 = page->cells[j];
             if (cell2->rect.min.x == cell->rect.max.x && cell2->rect.min.y == cell2->rect.min.y && !cell2->left)
             {
                 cell->ix_extend += 1;
@@ -1537,9 +1525,9 @@ y_min..y_max. */
     }
     
     /* Show cell details. */
-    for (i=0; i<cells_num; ++i)
+    for (i=0; i<page->cells_num; ++i)
     {
-        cell_t* cell = cells[i];
+        cell_t* cell = page->cells[i];
         if (!cell->above || !cell->left) continue;
         if (extract_document_join_page_rects(
                 alloc,

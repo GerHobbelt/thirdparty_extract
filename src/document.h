@@ -136,6 +136,21 @@ typedef struct
 
 typedef struct
 {
+    int             ix;
+    int             iy;
+    rect_t          rect;
+    uint8_t         left;
+    uint8_t         above;
+    int             ix_extend;
+    int             iy_extend;
+    line_t**        lines;
+    int             lines_num;
+    paragraph_t**   paragraphs;
+    int             paragraphs_num;
+} cell_t;
+
+typedef struct
+{
     span_t**    spans;
     int         spans_num;
     
@@ -154,6 +169,9 @@ typedef struct
     
     tablelines_t    tablelines_horizontal;
     tablelines_t    tablelines_vertical;
+    
+    cell_t**    cells;
+    int         cells_num;
 
 } page_t;
 /* A page. Contains different representations of the list of spans. */
