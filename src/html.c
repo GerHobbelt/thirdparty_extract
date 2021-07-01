@@ -67,6 +67,7 @@ static int extract_html_run_finish(extract_alloc_t* alloc, extract_astring_t* co
 }
 #endif
 
+#if 0
 static int extract_html_char_truncate_if(extract_astring_t* content, char c)
 /* Removes last char if it is <c>. */
 {
@@ -75,7 +76,7 @@ static int extract_html_char_truncate_if(extract_astring_t* content, char c)
     }
     return 0;
 }
-
+#endif
 
 typedef struct
 {

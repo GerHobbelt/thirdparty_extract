@@ -96,7 +96,7 @@ endif
 
 # Default target - run all tests.
 #
-test: test-buffer test-misc test-src test-exe test-mutool test-gs
+test: test-buffer test-misc test-src test-exe test-mutool test-gs test-html
 	@echo $@: passed
 
 # Define the main test targets.
@@ -193,7 +193,8 @@ test_gs_fpp: $(gs)
 	ls test/generated/text_graphic_image.pdf.gs.*.docx | wc -l | grep '^ *1$$'
 	ls test/generated/Python2.pdf.gs.*.docx | wc -l | grep '^ *1$$'
 	ls test/generated/zlib.3.pdf.gs.*.docx | wc -l | grep '^ *2$$'
-	
+
+test-html: test/generated/table.pdf.mutool.html.diff
 
 # Main executable.
 #
