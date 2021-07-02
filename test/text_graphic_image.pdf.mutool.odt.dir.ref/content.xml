@@ -12,7 +12,7 @@
 
 <text:p><text:span text:style-name="T11">Gray RGB </text:span></text:p>
 
-<text:p><text:span text:style-name="T11">NeutralCIELAB</text:span></text:p>
+<text:p><text:span text:style-name="T11">Neutral CIELAB</text:span></text:p>
 <text:p text:style-name="Standard">
 <draw:frame draw:style-name="fr1" draw:name="Picture rId11" text:anchor-type="as-char" svg:width="4.277778in" svg:height="3.208333in" draw:z-index="0">
 <draw:image xlink:href="Pictures/image11.jpeg" xlink:type="simple" xlink:show="embed" xlink:actuate="onLoad" draw:mime-type="image/jpeg"/>

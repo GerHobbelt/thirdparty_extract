@@ -113,7 +113,11 @@
 </w:p>
 
 <w:p>
-<w:r><w:rPr><w:rFonts w:ascii="OpenSans" w:hAnsi="OpenSans"/><w:sz w:val="20.000000"/><w:szCs w:val="15.000000"/></w:rPr><w:t xml:space="preserve">For it needs a doctorAnd has the Measles yearly.</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="OpenSans" w:hAnsi="OpenSans"/><w:sz w:val="20.000000"/><w:szCs w:val="15.000000"/></w:rPr><w:t xml:space="preserve">For it needs a doctor </w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="OpenSans" w:hAnsi="OpenSans"/><w:sz w:val="20.000000"/><w:szCs w:val="15.000000"/></w:rPr><w:t xml:space="preserve">And has the Measles yearly.</w:t></w:r>
 </w:p>
 
 <w:p>

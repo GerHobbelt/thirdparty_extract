@@ -800,7 +800,11 @@ static int make_paragraphs(
                     contain any malloc-heap pointers so this doesn't leak. */
                     a_span->chars_num -= 1;
                 }
-                else {
+                else if (span_char_last(a_span)->ucs == ' ')
+                {
+                }
+                else
+                {
                     /* Insert space before joining adjacent lines. */
                     char_t* c_prev;
                     char_t* c;

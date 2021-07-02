@@ -916,6 +916,10 @@ int extract_add_char(
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     span_t* span = page->spans[page->spans_num - 1];
     
+    /* Ignore the specified <autosplit> - there seems no advantage to not
+    splitting spans on multiple lines, and not doing so causes problems with
+    missing spaces in the output. */
+    autosplit = 1;
     if (autosplit && y - extract->span_offset_y != 0) {
         
         double e = span->ctm.e + span->ctm.a * (x - extract->span_offset_x)
