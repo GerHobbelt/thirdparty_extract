@@ -412,7 +412,6 @@ static int make_lines(
                 /* All characters in this span are inside table, so remove
                 entire span, otherwise the same characters will end up being
                 output outside the table also. */
-                int i;
                 memmove(&spans[a], &spans[a+1], sizeof(*spans) * ((*spans_num) - (a+1)));
                 *spans_num -= 1;
                 a -= 1;
@@ -458,7 +457,7 @@ static int make_lines(
         }
 
         if (0 && a < 1) verbose = 1;
-        outfx("looking at line_a=%s", line_string2(line_a));
+        outfx("looking at line_a=%s", line_string2(alloc, line_a));
 
         span_a = line_span_last(line_a);
         angle_a = span_angle(span_a);

@@ -39,7 +39,7 @@ typedef struct
 content, e.g. so we know whether a font has changed so need to start a new docx
 span. */
 
-void content_state_init(content_state_t* state)
+static void content_state_init(content_state_t* state)
 {
     state->font_name = NULL;
     state->font_size = 0;
@@ -99,7 +99,7 @@ etc. */
                     //extract_astring_cat(alloc, content, "[eos]");
                 }
                 /* Remove any trailing '-' at end of line. */
-                //extract_astring_cat(alloc, content, "[eol]");
+                //extract_astring_cat(alloc, content, "[eos]");
                 //if (extract_html_char_truncate_if(content, '-')) goto end;
             }
             
@@ -137,6 +137,7 @@ etc. */
     return e;
 }
 
+#if 0
 static int get_paragraphs_text(
         extract_alloc_t* alloc,
         paragraph_t** paragraphs,
@@ -169,6 +170,7 @@ static int get_paragraphs_text(
     }
     return 0;
 }
+#endif
 
 int extract_document_to_html_content(
         extract_alloc_t*    alloc,
