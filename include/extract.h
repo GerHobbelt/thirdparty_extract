@@ -39,6 +39,11 @@ int extract_begin(
 allocation will be done with <alloc> (which can be NULL in which case we use
 malloc/free, or from extract_alloc_create()). */
 
+int extract_tables_csv_format(extract_t* extract, const char* path_format);
+/* Causes extract_process() to also write each tableas CSV to a file with path
+asprintf(path_format, n) where <n> is the table number, starting from 0. */
+
+
 
 int extract_read_intermediate(
         extract_t*          extract,
@@ -112,7 +117,7 @@ ucs
 adv
     Advance of this character.
 autosplit
-    If non-zero, we do additional splitting to stress the join algorithm.
+    Ignored as of 2021-07-02.
 */
 
 

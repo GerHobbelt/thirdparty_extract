@@ -555,6 +555,8 @@ struct extract_t
     
     extract_format_t    format;
     extract_odt_styles_t odt_styles;
+    
+    char*               tables_csv_format;
 };
 
 
@@ -586,12 +588,18 @@ int extract_begin(
     extract->image_n = 10;
     
     extract->format = format;
+    extract->tables_csv_format = NULL;
     
     e = 0;
     
     end:
     *pextract = (e) ? NULL : extract;
     return e;
+}
+
+int extract_tables_csv_format(extract_t* extract, const char* path_format)
+{
+    return extract_strdup(extract->alloc, path_format, &extract->tables_csv_format);
 }
 
 
@@ -1208,6 +1216,91 @@ int extract_page_end(extract_t* extract)
 }
 
 
+static int paragraphs_to_text_content(
+        extract_alloc_t* alloc,
+        paragraph_t** paragraphs,
+        int paragraphs_num,
+        extract_astring_t* text
+        )
+{
+    int p;
+    for (p=0; p<paragraphs_num; ++p)
+    {
+        paragraph_t* paragraph = paragraphs[p];
+        int l;
+        for (l=0; l<paragraph->lines_num; ++l)
+        {
+            line_t* line = paragraph->lines[l];
+            int s;
+            for (s=0; s<line->spans_num; ++s)
+            {
+                span_t* span = line->spans[s];
+                int c;
+                for (c=0; c<span->chars_num; ++c)
+                {
+                    char_t* char_ = &span->chars[c];
+                    int cc = char_->ucs;
+                    if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
+                }
+            }
+            if (extract_astring_catc(alloc, text, ' ')) return -1;
+            if (text->chars_num)
+            {
+                if (text->chars[text->chars_num-1] == '-')   text->chars_num -= 1;
+                else if (text->chars[text->chars_num-1] != ' ')
+                {
+                    extract_astring_catc(alloc, text, ' ');
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+
+static int extract_write_tables_csv(extract_t* extract)
+{
+    int i_table = 0;
+    int p;
+    if (!extract->tables_csv_format) return 0;
+    
+    outf0("extract_write_tables_csv(): path_format=%s", extract->tables_csv_format);
+    outf0("extract->document.pages_num=%i", extract->document.pages_num);
+    for (p=0; p<extract->document.pages_num; ++p)
+    {
+        page_t* page = extract->document.pages[p];
+        int t;
+        outf0("p=%i page->tables_num=%i", p, page->tables_num);
+        for (t=0; t<page->tables_num; ++t)
+        {
+            table_t* table = page->tables[t];
+            int c;
+            int iy;
+            char* path;
+            if (extract_asprintf(extract->alloc, &path, extract->tables_csv_format, i_table) < 0) return -1;
+            outf0("Writing table %i to: %s", t, path);
+            FILE* f = fopen(path, "w");
+            if (!f) return -1;
+            iy = 0;
+            for (c=0; c<table->cells_num; ++c)
+            {
+                cell_t* cell = table->cells[c];
+                if (cell->iy != iy) fprintf(f, "\n");
+                iy = cell->iy;
+                if (cell->ix != 0) fprintf(f, ",");
+                extract_astring_t text = {NULL, 0};
+                if (paragraphs_to_text_content(extract->alloc, cell->paragraphs, cell->paragraphs_num, &text)) return -1;
+                fprintf(f, "\"%s\"", text.chars ? text.chars : "");
+                extract_astring_free(extract->alloc, &text);
+            }
+            fprintf(f, "\n");
+            fclose(f);
+        }
+    }
+    return 0;
+}
+
+
 int extract_process(
         extract_t*  extract,
         int         spacing,
@@ -1270,6 +1363,11 @@ int extract_process(
     }
 
     if (extract_document_images(extract->alloc, &extract->document, &extract->images)) goto end;
+    
+    if (extract->tables_csv_format)
+    {
+        extract_write_tables_csv(extract);
+    }
     
     {
         int i;
@@ -1440,6 +1538,7 @@ int extract_write_template(
                 );
     }
 }
+
 
 void extract_end(extract_t** pextract)
 {
