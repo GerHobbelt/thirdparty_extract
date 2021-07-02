@@ -1153,6 +1153,25 @@ int extract_document_join_page_rects(
     return 0;
 }
 
+static int extract_document_join_page(
+        extract_alloc_t*    alloc,
+        page_t*             page
+        )
+{
+    if (extract_document_join_page_rects(
+            alloc,
+            page,
+            NULL /*rects*/,
+            0 /*rects_num*/,
+            &page->lines,
+            &page->lines_num,
+            &page->paragraphs,
+            &page->paragraphs_num
+            )) return -1;
+    
+    return 0;
+}
+
 int extract_document_join(extract_alloc_t* alloc, document_t* document)
 {
     /* For each page in <document> we join spans into lines and paragraphs. A
@@ -1164,16 +1183,7 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document)
         page_t* page = document->pages[p];
         outf("processing page %i: num_spans=%i", p, page->spans_num);
 
-        if (extract_document_join_page_rects(
-                alloc,
-                page,
-                NULL /*rects*/,
-                0 /*rects_num*/,
-                &page->lines,
-                &page->lines_num,
-                &page->paragraphs,
-                &page->paragraphs_num
-                )) return -1;
+        if (extract_document_join_page(alloc, page)) return -1;
     }
 
     return 0;
