@@ -1560,8 +1560,13 @@ y_min..y_max. */
     return e;
 }
 
-static int extract_page_tables_find(
-        extract_t*  extract,
+
+int extract_page_tables_find(
+        extract_alloc_t*    alloc,
+        page_t* page
+        );
+int extract_page_tables_find(
+        extract_alloc_t*    alloc,
         page_t* page
         )
 {
@@ -1598,7 +1603,7 @@ static int extract_page_tables_find(
             if (i)
             {
                 table_find(
-                        extract->alloc,
+                        alloc,
                         page,
                         miny - 10,
                         maxy + 10
@@ -1609,7 +1614,7 @@ static int extract_page_tables_find(
         if (tl->rect.max.y > maxy)  maxy = tl->rect.max.y;
     }
     table_find(
-            extract->alloc,
+            alloc,
             page,
             miny - 10,
             maxy + 10
@@ -1626,6 +1631,7 @@ int extract_process(
 {
     int e = -1;
     
+    #if 0
     {
         /* Look for table cells. */
         outf0("looking for tables...");
@@ -1634,60 +1640,9 @@ int extract_process(
         {
             page_t* page = extract->document.pages[p];
             if (extract_page_tables_find(extract, page)) goto end;
-            #if 0
-            page_t* page = extract->document.pages[p];
-            double miny;
-            double maxy;
-            int i;
-            qsort(
-                    page->tablelines_horizontal.tablelines,
-                    page->tablelines_horizontal.tablelines_num,
-                    sizeof(*page->tablelines_horizontal.tablelines),
-                    tablelines_compare_y
-                    );
-            qsort(
-                    page->tablelines_vertical.tablelines,
-                    page->tablelines_vertical.tablelines_num,
-                    sizeof(*page->tablelines_vertical.tablelines),
-                    tablelines_compare_y
-                    );
-            /* Look for completely separate regions that define different
-            tables. */
-            maxy = -999;
-            miny = maxy;
-            outf0("page->tablelines_vertical.tablelines_num=%i", page->tablelines_vertical.tablelines_num);
-            outf0("page->tablelines_horizontal.tablelines_num=%i", page->tablelines_horizontal.tablelines_num);
-            for (i=0; i<page->tablelines_vertical.tablelines_num; ++i)
-            {
-                tableline_t* tl = &page->tablelines_vertical.tablelines[i];
-                if (tl->rect.min.y > maxy + 10)
-                {
-                    /*outf0("i=%i: vertical gap, maxy=%f min.y=%f", i, maxy, tl->rect.min.y);
-                    if (extract_realloc(extract->alloc, &ymaxs, ymaxs_num + 1)) return -1;
-                    ymaxs[ymaxs_num] = maxy;
-                    ymaxs_num += 1;*/
-                    if (i)
-                    {
-                        table_find(
-                                extract->alloc,
-                                page,
-                                miny - 10,
-                                maxy + 10
-                                );
-                    }
-                    miny = tl->rect.min.y;
-                }
-                if (tl->rect.max.y > maxy)  maxy = tl->rect.max.y;
-            }
-            table_find(
-                    extract->alloc,
-                    page,
-                    miny - 10,
-                    maxy + 10
-                    );
-            #endif
         }
     }
+    #endif
     
     if (extract_realloc2(
             extract->alloc,
