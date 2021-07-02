@@ -1197,6 +1197,7 @@ y_min..y_max. */
     return 0;
 }
 
+#if 0
 static int get_paragraphs_text(
         extract_alloc_t* alloc,
         paragraph_t** paragraphs,
@@ -1228,6 +1229,7 @@ static int get_paragraphs_text(
     }
     return 0;
 }
+#endif
 
 #if 0
 static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, extract_astring_t* text)
@@ -1278,8 +1280,9 @@ static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, ext
 }
 #endif
 
+
 static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
-/* Finds table made from lines whose y coordintes are in the range
+/* Finds single table made from lines whose y coordintes are in the range
 y_min..y_max. */
 {
     tablelines_t* all_h = &page->tablelines_horizontal;
@@ -1287,6 +1290,9 @@ y_min..y_max. */
     int e = -1;
     int i;
     outf("Looking at table y_min=%f y_max=%f", y_min, y_max);
+    
+    /* Find subset of vertical and horizontal lines that are within range
+    y_min..y_max, and sort by y coordinate. */
     tablelines_t    tl_h = {NULL, 0};
     tablelines_t    tl_v = {NULL, 0};
     if (table_find_y_range(alloc, all_h, y_min, y_max, &tl_h)) goto end;
@@ -1301,23 +1307,14 @@ y_min..y_max. */
             tl_v.tablelines_num
             );
     
+    /* Find the cells defined by the vertical and horizontal lines.
+
+    It seems that lines can be disjoint, e.g. what looks like a single
+    horizontal line could be made up of multiple lines all with the same
+    y coordinate, so we use i_next and j_next to skip these sublines when
+    iterating. */
     cell_t**    cells = NULL;
     int         cells_num = 0;
-    
-    /*
-    outf0("h:");
-    for (i=0; i<tl_h.tablelines_num; ++i)
-    {
-        outf0("tl_h[%i]: %s", i, rect_string(&tl_h.tablelines[i].rect));
-    }
-    
-    outf0("v:");
-    for (i=0; i<tl_h.tablelines_num; ++i)
-    {
-        outf0("tl_v[%i]: %s", i, rect_string(&tl_v.tablelines[i].rect));
-    }
-    outf0("");
-    */
     for (i=0; i<tl_h.tablelines_num; )
     {
         int i_next;
@@ -1337,23 +1334,23 @@ y_min..y_max. */
             int j_next;
             int ii;
             int jj;
-            tableline_t* h0;
-            tableline_t* v0;
             
             for (j_next = j+1; j_next<tl_v.tablelines_num; ++j_next)
             {
                 if (tl_v.tablelines[j_next].rect.min.x != tl_v.tablelines[j].rect.min.x) break;
             }
                         
-            cell_t* cell;
-            if (extract_malloc(alloc, &cell, sizeof(*cell))) goto end;
+            if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
+            if (extract_malloc(alloc, &cells[cells_num], sizeof(*cells[cells_num]))) goto end;
+            cell_t* cell = cells[cells_num];
+            cells_num += 1;
             
             cell->iy = i;
             cell->ix = j;
             cell->rect.min.x = tl_v.tablelines[j].rect.min.x;
             cell->rect.min.y = tl_h.tablelines[i].rect.min.y;
-            cell->rect.max.x = (j_next < tl_v.tablelines_num) ?  tl_v.tablelines[j_next].rect.min.x : cell->rect.min.x;
-            cell->rect.max.y = (i_next < tl_h.tablelines_num) ?  tl_h.tablelines[i_next].rect.min.y : cell->rect.min.y;
+            cell->rect.max.x = (j_next < tl_v.tablelines_num) ? tl_v.tablelines[j_next].rect.min.x : cell->rect.min.x;
+            cell->rect.max.y = (i_next < tl_h.tablelines_num) ? tl_h.tablelines[i_next].rect.min.y : cell->rect.min.y;
             cell->above = 0;
             cell->left = 0;
             cell->ix_extend = j + 1;
@@ -1363,66 +1360,47 @@ y_min..y_max. */
             cell->paragraphs = NULL;
             cell->paragraphs_num = 0;
             
-            outf("Looking at cell: %s", rect_string(&cell->rect));
-            h0 = &tl_h.tablelines[i];
-            
+            /* Set cell->above if there is a horizontal line above the cell. */
             outf("Looking to set above for i=%i j=%i rect=%s", i, j, rect_string(&cell->rect));
-            for (ii=i; ii<i_next; ++ii)
+            for (ii = i; ii < i_next; ++ii)
             {
                 tableline_t* h = &tl_h.tablelines[ii];
-                outf("ii=%i h=%s", ii, rect_string(&h->rect));
                 if (h->rect.min.x < cell->rect.max.x && h->rect.max.x > cell->rect.min.x)
                 {
-                    /* Horizontal line <h> overlaps rect.{min.x..max.x}. */
-                    outf("marking above=1. i=%i j=%i cell->rect=%s h->rect=%s",
-                            i, 
-                            j,
-                            rect_string(&cell->rect),
-                            rect_string(&h->rect)
-                            );
                     cell->above = 1;
                     break;
                 }
             }
-            if (ii == i_next)
-            {
-                outf("leaving above=0. i=%i j=%i cell->rect=%s",
-                        i, 
-                        j,
-                        rect_string(&cell->rect)
-                        );
-            }
             
-            v0 = &tl_v.tablelines[j_next];
-            for (jj=j; jj< j_next; ++jj)
+            /* Set cell->left if there is a vertical line to the left of the cell. */
+            for (jj = j; jj < j_next; ++jj)
             {
                 tableline_t* v = &tl_v.tablelines[jj];
                 if (v->rect.min.y < cell->rect.max.y && v->rect.max.y > cell->rect.min.y)
                 {
-                    /* Vertical line <v> overlaps rect.{min.y..max.y}. */
                     cell->left = 1;
                     break;
                 }
             }
             
-            if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
-            cells[cells_num] = cell;
-            cells_num += 1;
-            
-            outf("left=%i above=%i rect=%s size=(%f %f)",
-                    cell->left,
-                    cell->above,
-                    rect_string(&cell->rect),
-                    cell->rect.max.x - cell->rect.min.x,
-                    cell->rect.max.y - cell->rect.min.y
-                    );
             j = j_next;
         }
         
         i = i_next;
     }
     
-    /* Find cell extensions to right and down. */
+    /* Find cell extensions to right and down - for example for adjacent cells ABC..., we extend
+    A to include cells BC.. until we reach a cell with .left set to one.
+    
+    ABCDE
+    FGHIJ
+    KLMNO
+    
+    When looking to extend cell A, we only look at BCDE and FK, we ignore cells
+    GHIJ and LMNO. So if BCDE have no left lines and FK have no above lines,
+    we ignore any lines in GHIJ and LMNO and make A extend to the entire 3x4
+    matrix.
+    */
     for (i=0; i<cells_num; ++i)
     {
         int j;
@@ -1439,25 +1417,19 @@ y_min..y_max. */
             }
             if (cell2->rect.min.y == cell->rect.max.y && cell2->rect.min.x == cell->rect.min.x && !cell2->above)
             {
-                outf("extending cell (%i %i %s) down to cell (%i %i %s)",
-                        cell->ix,
-                        cell->iy,
-                        rect_string(&cell->rect),
-                        cell2->ix,
-                        cell2->iy,
-                        rect_string(&cell2->rect)
-                        );
                 cell->iy_extend += 1;
                 cell->rect.max.y = cell2->rect.max.y;
             }
+            
+            if (cell2->rect.min.y > cell->rect.max.y) break;
         }
     }
     
-    /* Find paragraphs within each cell. */
+    /* Find text within each cell. We don't attempt to handle images within
+    cells. */
     for (i=0; i<cells_num; ++i)
     {
         cell_t* cell = cells[i];
-        extract_astring_t text = {NULL, 0};
         if (!cell->above || !cell->left) continue;
         if (extract_document_join_page_rects(
                 alloc,
@@ -1469,15 +1441,6 @@ y_min..y_max. */
                 &cell->paragraphs,
                 &cell->paragraphs_num
                 )) return -1;
-        if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-        outf("Cell (%i..+%i %i..+%i %s): %s",
-                cell->ix,
-                cell->ix_extend - cell->ix,
-                cell->iy,
-                cell->iy_extend - cell->iy,
-                rect_string(&cell->rect),
-                text.chars
-                );
     }
     
     if (extract_realloc(alloc, &page->tables, sizeof(*page->tables) * (page->tables_num + 1))) goto end;
@@ -1495,10 +1458,13 @@ y_min..y_max. */
     return e;
 }
 
+
 static int extract_page_tables_find(
         extract_alloc_t*    alloc,
         page_t*             page
         )
+/* Finds tables in <page>. Text spans inside tables are then removed from
+page->spans[]. */
 {
     double miny;
     double maxy;
@@ -1552,12 +1518,17 @@ static int extract_page_tables_find(
     return 0;
 }
 
+
 static int extract_document_join_page(
         extract_alloc_t*    alloc,
         page_t*             page
         )
+/* Finds tables and paragraphs on <page>. */
 {
+    /* Find tables on this page first. */
     if (extract_page_tables_find(alloc, page)) return -1;
+    
+    /* Now join remaining spans into lines and paragraphs. */
     if (extract_document_join_page_rects(
             alloc,
             page,
@@ -1571,6 +1542,8 @@ static int extract_document_join_page(
     
     return 0;
 }
+
+
 int extract_document_join(extract_alloc_t* alloc, document_t* document)
 {
     /* For each page in <document> we join spans into lines and paragraphs. A

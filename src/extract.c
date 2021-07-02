@@ -1116,22 +1116,12 @@ int extract_add_path4(
         )
 {
     outf("cmt=(%f %f %f %f %f %f)", ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
-    (void) ctm_a;
-    (void) ctm_b;
-    (void) ctm_c;
-    (void) ctm_d;
-    (void) ctm_e;
-    (void) ctm_f;
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     point_t points[4] = {
             transform(x0, y0, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
             transform(x1, y1, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
             transform(x2, y2, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
             transform(x3, y3, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f)
-            /*{x0, y0},
-            {x1, y1},
-            {x2, y2},
-            {x3, y3},*/
             };
     rect_t rect;
     int i;
@@ -1218,8 +1208,6 @@ int extract_page_end(extract_t* extract)
 }
 
 
-
-
 int extract_process(
         extract_t*  extract,
         int         spacing,
@@ -1228,19 +1216,6 @@ int extract_process(
         )
 {
     int e = -1;
-    
-    #if 0
-    {
-        /* Look for table cells. */
-        outf0("looking for tables...");
-        int p;
-        for (p=0; p<extract->document.pages_num; ++p)
-        {
-            page_t* page = extract->document.pages[p];
-            if (extract_page_tables_find(extract, page)) goto end;
-        }
-    }
-    #endif
     
     if (extract_realloc2(
             extract->alloc,
