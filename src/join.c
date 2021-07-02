@@ -1231,56 +1231,6 @@ static int get_paragraphs_text(
 }
 #endif
 
-#if 0
-static int get_cell_text(extract_alloc_t* alloc, page_t* page, rect_t* rect, extract_astring_t* text)
-/* Makes <text> contain text inside <rect>. */
-{
-    int p;
-    
-    line_t**    lines = NULL;
-    int         lines_num = 0;
-    paragraph_t**   paragraphs;
-    int             paragraphs_num;
-    
-    if (extract_document_join_page_rects(
-            alloc,
-            page,
-            rect,
-            1 /*rects_num*/,
-            &lines,
-            &lines_num,
-            &paragraphs,
-            &paragraphs_num
-            )) return -1;
-    
-    for (p=0; p<paragraphs_num; ++p)
-    {
-        paragraph_t* paragraph = paragraphs[p];
-        int l;
-        for (l=0; l<paragraph->lines_num; ++l)
-        {
-            line_t* line = paragraph->lines[l];
-            int s;
-            for (s=0; s<line->spans_num; ++s)
-            {
-                span_t* span = line->spans[s];
-                int c;
-                for (c=0; c<span->chars_num; ++c)
-                {
-                    char_t* char_ = &span->chars[c];
-                    int cc = char_->ucs;
-                    if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
-                }
-            }
-        }
-    }
-    
-    /* todo: free paragraphs and lines here. */
-    return 0;
-}
-#endif
-
-
 static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
 /* Finds single table made from lines whose y coordintes are in the range
 y_min..y_max. */
@@ -1289,7 +1239,6 @@ y_min..y_max. */
     tablelines_t* all_v = &page->tablelines_vertical;
     int e = -1;
     int i;
-    outf("Looking at table y_min=%f y_max=%f", y_min, y_max);
     
     /* Find subset of vertical and horizontal lines that are within range
     y_min..y_max, and sort by y coordinate. */
@@ -1298,14 +1247,6 @@ y_min..y_max. */
     if (table_find_y_range(alloc, all_h, y_min, y_max, &tl_h)) goto end;
     if (table_find_y_range(alloc, all_v, y_min, y_max, &tl_v)) goto end;
     qsort(tl_v.tablelines, tl_v.tablelines_num, sizeof(*tl_v.tablelines), tablelines_compare_x);
-    outf("all_h->tablelines_num=%i tl_h->tablelines_num=%i",
-            all_h->tablelines_num,
-            tl_h.tablelines_num
-            );
-    outf("all_v->tablelines_num=%i tl_v->tablelines_num=%i",
-            all_v->tablelines_num,
-            tl_v.tablelines_num
-            );
     
     /* Find the cells defined by the vertical and horizontal lines.
 
@@ -1334,6 +1275,7 @@ y_min..y_max. */
             int j_next;
             int ii;
             int jj;
+            cell_t* cell;
             
             for (j_next = j+1; j_next<tl_v.tablelines_num; ++j_next)
             {
@@ -1342,7 +1284,7 @@ y_min..y_max. */
                         
             if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
             if (extract_malloc(alloc, &cells[cells_num], sizeof(*cells[cells_num]))) goto end;
-            cell_t* cell = cells[cells_num];
+            cell = cells[cells_num];
             cells_num += 1;
             
             cell->iy = i;
@@ -1443,6 +1385,7 @@ y_min..y_max. */
                 )) return -1;
     }
     
+    /* Append the table we have found to page->tables[]. */
     if (extract_realloc(alloc, &page->tables, sizeof(*page->tables) * (page->tables_num + 1))) goto end;
     if (extract_malloc(alloc, &page->tables[page->tables_num], sizeof(*page->tables[page->tables_num]))) goto end;
     page->tables[page->tables_num]->pos.x = 0;
@@ -1483,19 +1426,13 @@ page->spans[]. */
             );
     /* Look for completely separate regions that define different
     tables. */
-    maxy = -999;
+    maxy = -9999999999;
     miny = maxy;
-    outf0("page->tablelines_vertical.tablelines_num=%i", page->tablelines_vertical.tablelines_num);
-    outf0("page->tablelines_horizontal.tablelines_num=%i", page->tablelines_horizontal.tablelines_num);
     for (i=0; i<page->tablelines_vertical.tablelines_num; ++i)
     {
         tableline_t* tl = &page->tablelines_vertical.tablelines[i];
         if (tl->rect.min.y > maxy + 10)
         {
-            /*outf0("i=%i: vertical gap, maxy=%f min.y=%f", i, maxy, tl->rect.min.y);
-            if (extract_realloc(extract->alloc, &ymaxs, ymaxs_num + 1)) return -1;
-            ymaxs[ymaxs_num] = maxy;
-            ymaxs_num += 1;*/
             if (i)
             {
                 table_find(

@@ -200,7 +200,7 @@ int extract_document_to_html_content(
         
         {
             int t;
-            outf0("page->tables_num=%i", page->tables_num);
+            outf("page->tables_num=%i", page->tables_num);
             for (t=0; t<page->tables_num; ++t)
             {
                 table_t* table = page->tables[t];

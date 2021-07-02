@@ -168,6 +168,8 @@ int extract_add_path4(
         double x3,
         double y3
         );
+/* Adds a four-element path. Path that define thin vertical/horizontal
+rectangles are used to find tables. */
 
 
 int extract_page_end(extract_t* extract);
