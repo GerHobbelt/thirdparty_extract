@@ -1396,43 +1396,26 @@ y_min..y_max. */
         for (y=0; y<cells_num_y; ++y)
         {
             cell_t* cell = cells[y * cells_num_x + x];
+            if (cell->left)
+            {
+                int xx;
+                for (xx=x+1; xx<cells_num_x; ++xx)
+                {
+                    if (cells[y * cells_num_x + xx]->left)  break;
+                }
+                cell->ix_extend = xx - x;
+                cell->rect.max.x = cells[y * cells_num_x + xx-1]->rect.max.x;
+            }
             if (cell->above)
             {
                 int yy;
                 for (yy=y+1; yy<cells_num_y; ++yy)
                 {
-                    cell_t* cell2 = cells[yy * cells_num_x + x];
-                    if (cell2->above) break;
-                    {
-                        cell->iy_extend += 1;
-                        cell->rect.max.y = cell2->rect.max.y;
-                    }
+                    if (cells[yy * cells_num_x + x]->above) break;
                 }
+                cell->iy_extend = yy - y;
+                cell->rect.max.y = cells[(yy-1) * cells_num_x + x]->rect.max.y;
             }
-        }
-    }
-    
-    for (i=0; i<cells_num; ++i)
-    {
-        int j;
-        cell_t* cell = cells[i];
-        if (!cell->above || !cell->left) continue;
-        
-        for (j=i+1; j<cells_num; ++j)
-        {
-            cell_t* cell2 = cells[j];
-            if (cell->left && fabs(cell2->rect.min.x - cell->rect.max.x) < 1 && fabs(cell2->rect.min.y - cell->rect.min.y) < 1 && !cell2->left)
-            {
-                cell->ix_extend += 1;
-                cell->rect.max.x = cell2->rect.max.x;
-            }
-            if (cell->above && fabs(cell2->rect.min.y - cell->rect.max.y) < 1 && fabs(cell2->rect.min.x - cell->rect.min.x) < 1 && !cell2->above)
-            {
-                //cell->iy_extend += 1;
-                //cell->rect.max.y = cell2->rect.max.y;
-            }
-            
-            if (cell2->rect.min.y > cell->rect.max.y) break;
         }
     }
     
