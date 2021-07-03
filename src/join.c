@@ -1388,24 +1388,30 @@ y_min..y_max. */
     we ignore any lines in GHIJ and LMNO and make A extend to the entire 3x4
     matrix.
     */
-    /*
+    
     int x;
     int y;
     for (x=0; x<cells_num_x; ++x)
     {
         for (y=0; y<cells_num_y; ++y)
         {
-            cell_t* cell = &cells[y][x];
+            cell_t* cell = cells[y * cells_num_x + x];
             if (cell->above)
             {
                 int yy;
                 for (yy=y+1; yy<cells_num_y; ++yy)
                 {
-                    cell_t* cell2 = &cells[yy][x];
-                    if (!cell2->above 
+                    cell_t* cell2 = cells[yy * cells_num_x + x];
+                    if (cell2->above) break;
+                    {
+                        cell->iy_extend += 1;
+                        cell->rect.max.y = cell2->rect.max.y;
+                    }
                 }
+            }
         }
-    }*/
+    }
+    
     for (i=0; i<cells_num; ++i)
     {
         int j;
@@ -1422,8 +1428,8 @@ y_min..y_max. */
             }
             if (cell->above && fabs(cell2->rect.min.y - cell->rect.max.y) < 1 && fabs(cell2->rect.min.x - cell->rect.min.x) < 1 && !cell2->above)
             {
-                cell->iy_extend += 1;
-                cell->rect.max.y = cell2->rect.max.y;
+                //cell->iy_extend += 1;
+                //cell->rect.max.y = cell2->rect.max.y;
             }
             
             if (cell2->rect.min.y > cell->rect.max.y) break;
