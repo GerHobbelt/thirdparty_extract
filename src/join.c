@@ -1289,6 +1289,17 @@ y_min..y_max. */
     if (table_find_y_range(alloc, all_v, y_min, y_max, &tl_v)) goto end;
     qsort(tl_v.tablelines, tl_v.tablelines_num, sizeof(*tl_v.tablelines), tablelines_compare_x);
     
+    outf0("all_h->tablelines_num=%i tl_h.tablelines_num=%i", all_h->tablelines_num, tl_h.tablelines_num);
+    for (i=0; i<tl_h.tablelines_num; ++i)
+    {
+        outf0("    %i: %s", i, rect_string(&tl_h.tablelines[i].rect));
+    }
+    
+    outf0("all_v->tablelines_num=%i tl_v.tablelines_num=%i", all_v->tablelines_num, tl_v.tablelines_num);
+    for (i=0; i<tl_v.tablelines_num; ++i)
+    {
+        outf0("    %i: %s", i, rect_string(&tl_v.tablelines[i].rect));
+    }
     /* Find the cells defined by the vertical and horizontal lines.
 
     It seems that lines can be disjoint, e.g. what looks like a single
@@ -1303,7 +1314,7 @@ y_min..y_max. */
         int j;
         for (i_next=i+1; i_next<tl_h.tablelines_num; ++i_next)
         {
-            if (tl_h.tablelines[i_next].rect.min.y - tl_h.tablelines[i].rect.min.y > 0.5) break;
+            if (tl_h.tablelines[i_next].rect.min.y - tl_h.tablelines[i].rect.min.y > 5) break;
         }
         if (i_next == tl_h.tablelines_num)
         {
@@ -1322,6 +1333,8 @@ y_min..y_max. */
             {
                 if (tl_v.tablelines[j_next].rect.min.x - tl_v.tablelines[j].rect.min.x > 0.5) break;
             }
+            outf0("i=%i j=%i tl_v.tablelines[j].rect=%s", i, j, rect_string(&tl_v.tablelines[j].rect));
+            
             if (j_next == tl_v.tablelines_num) break;
                         
             if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
@@ -1337,8 +1350,8 @@ y_min..y_max. */
             cell->rect.max.y = (i_next < tl_h.tablelines_num) ? tl_h.tablelines[i_next].rect.min.y : cell->rect.min.y;
             cell->above = 0;
             cell->left = 0;
-            cell->ix_extend = j + 1;
-            cell->iy_extend = i + 1;
+            cell->ix_extend = 1;
+            cell->iy_extend = 1;
             cell->lines = NULL;
             cell->lines_num = 0;
             cell->paragraphs = NULL;
@@ -1404,12 +1417,12 @@ y_min..y_max. */
         for (j=i+1; j<cells_num; ++j)
         {
             cell_t* cell2 = cells[j];
-            if (cell2->rect.min.x == cell->rect.max.x && cell2->rect.min.y == cell2->rect.min.y && !cell2->left)
+            if (fabs(cell2->rect.min.x - cell->rect.max.x) < 1 && fabs(cell2->rect.min.y - cell2->rect.min.y) < 1 && !cell2->left)
             {
                 cell->ix_extend += 1;
                 cell->rect.max.x = cell2->rect.max.x;
             }
-            if (cell2->rect.min.y == cell->rect.max.y && cell2->rect.min.x == cell->rect.min.x && !cell2->above)
+            if (fabs(cell2->rect.min.y - cell->rect.max.y) < 1 && fabs(cell2->rect.min.x - cell->rect.min.x) < 1 && !cell2->above)
             {
                 cell->iy_extend += 1;
                 cell->rect.max.y = cell2->rect.max.y;
