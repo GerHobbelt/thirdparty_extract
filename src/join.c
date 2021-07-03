@@ -1253,11 +1253,11 @@ static int overlap(double a_min, double a_max, double b_min, double b_max)
     else
     {
         double overlap = (c_max - c_min) / (a_max - a_min);
-        ret = overlap > 0.1;
+        ret = overlap > 0.5;
     }
     if (ret != ret_simple)
     {
-        outf0("a=%f..%f b=%f..%f ret_simple=%i c=%f..%f ret=%i",
+        outf("a=%f..%f b=%f..%f ret_simple=%i c=%f..%f ret=%i",
                 a_min,
                 a_max,
                 b_min,
@@ -1441,12 +1441,12 @@ y_min..y_max. */
         for (j=i+1; j<cells_num; ++j)
         {
             cell_t* cell2 = cells[j];
-            if (fabs(cell2->rect.min.x - cell->rect.max.x) < 1 && fabs(cell2->rect.min.y - cell->rect.min.y) < 1 && !cell2->left)
+            if (cell->left && fabs(cell2->rect.min.x - cell->rect.max.x) < 1 && fabs(cell2->rect.min.y - cell->rect.min.y) < 1 && !cell2->left)
             {
                 cell->ix_extend += 1;
                 cell->rect.max.x = cell2->rect.max.x;
             }
-            if (fabs(cell2->rect.min.y - cell->rect.max.y) < 1 && fabs(cell2->rect.min.x - cell->rect.min.x) < 1 && !cell2->above)
+            if (cell->above && fabs(cell2->rect.min.y - cell->rect.max.y) < 1 && fabs(cell2->rect.min.x - cell->rect.min.x) < 1 && !cell2->above)
             {
                 cell->iy_extend += 1;
                 cell->rect.max.y = cell2->rect.max.y;

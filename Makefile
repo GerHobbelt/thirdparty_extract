@@ -196,6 +196,11 @@ test_gs_fpp: $(gs)
 
 test-html: test/generated/table.pdf.mutool.html.diff
 
+test-tables: test/generated/row_span.pdf.mutool.html.diff
+
+test/generated/row_span.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/row_span.pdf $(mutool)
+	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
+
 # Main executable.
 #
 exe = src/build/extract-$(build).exe
