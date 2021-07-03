@@ -1308,6 +1308,8 @@ y_min..y_max. */
     iterating. */
     cell_t**    cells = NULL;
     int         cells_num = 0;
+    int         cells_num_x = 0;
+    int         cells_num_y = 0;
     for (i=0; i<tl_h.tablelines_num; )
     {
         int i_next;
@@ -1321,6 +1323,7 @@ y_min..y_max. */
             /* Ignore last row of points - cells need another row below. */
             break;
         }
+        cells_num_y += 1;
         
         for (j=0; j<tl_v.tablelines_num; )
         {
@@ -1341,6 +1344,7 @@ y_min..y_max. */
             if (extract_malloc(alloc, &cells[cells_num], sizeof(*cells[cells_num]))) goto end;
             cell = cells[cells_num];
             cells_num += 1;
+            if (i==0)   cells_num_x += 1;
             
             cell->iy = i;
             cell->ix = j;
@@ -1396,6 +1400,8 @@ y_min..y_max. */
         i = i_next;
     }
     
+    assert(cells_num == cells_num_x * cells_num_y);
+    
     /* Find cell extensions to right and down - for example for adjacent cells ABC..., we extend
     A to include cells BC.. until we reach a cell with .left set to one.
     
@@ -1408,6 +1414,24 @@ y_min..y_max. */
     we ignore any lines in GHIJ and LMNO and make A extend to the entire 3x4
     matrix.
     */
+    /*
+    int x;
+    int y;
+    for (x=0; x<cells_num_x; ++x)
+    {
+        for (y=0; y<cells_num_y; ++y)
+        {
+            cell_t* cell = &cells[y][x];
+            if (cell->above)
+            {
+                int yy;
+                for (yy=y+1; yy<cells_num_y; ++yy)
+                {
+                    cell_t* cell2 = &cells[yy][x];
+                    if (!cell2->above 
+                }
+        }
+    }*/
     for (i=0; i<cells_num; ++i)
     {
         int j;
@@ -1417,7 +1441,7 @@ y_min..y_max. */
         for (j=i+1; j<cells_num; ++j)
         {
             cell_t* cell2 = cells[j];
-            if (fabs(cell2->rect.min.x - cell->rect.max.x) < 1 && fabs(cell2->rect.min.y - cell2->rect.min.y) < 1 && !cell2->left)
+            if (fabs(cell2->rect.min.x - cell->rect.max.x) < 1 && fabs(cell2->rect.min.y - cell->rect.min.y) < 1 && !cell2->left)
             {
                 cell->ix_extend += 1;
                 cell->rect.max.x = cell2->rect.max.x;
