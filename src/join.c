@@ -1231,45 +1231,19 @@ static int get_paragraphs_text(
 }
 #endif
 
-static double min(double a, double b)
-{
-    return (a < b) ? a : b;
-}
-static double max(double a, double b)
-{
-    return (a > b) ? a : b;
-}
 
 static int overlap(double a_min, double a_max, double b_min, double b_max)
+/* Returns one if a_min..a_max significantly overlapps b_min..b_max, otherwise
+zero. */
 {
+    double overlap;
     assert(a_min < a_max);
     assert(b_min < b_max);
-    int ret_simple = (b_min < a_max && b_max > a_min);
-    int ret;
-    double c_min = max(a_min, b_min);
-    double c_max = min(a_max, b_max);
-    if (c_min == a_min && c_max == a_max) ret = 1;
-    else if (c_max <= c_min) ret = 0;
-    else
-    {
-        double overlap = (c_max - c_min) / (a_max - a_min);
-        ret = overlap > 0.5;
-    }
-    if (ret != ret_simple)
-    {
-        outf("a=%f..%f b=%f..%f ret_simple=%i c=%f..%f ret=%i",
-                a_min,
-                a_max,
-                b_min,
-                ret_simple,
-                b_max,
-                c_min,
-                c_max,
-                ret
-                );
-        //assert(0);
-    }
-    return ret;
+    if (b_min < a_min)  b_min = a_min;
+    if (b_max > a_max)  b_max = a_max;
+    if (b_max < b_min)  b_max = b_min;
+    overlap = (b_max - b_min) / (a_max - a_min);
+    return overlap > 0.8;
 }
 
 static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
