@@ -1231,6 +1231,47 @@ static int get_paragraphs_text(
 }
 #endif
 
+static double min(double a, double b)
+{
+    return (a < b) ? a : b;
+}
+static double max(double a, double b)
+{
+    return (a > b) ? a : b;
+}
+
+static int overlap(double a_min, double a_max, double b_min, double b_max)
+{
+    assert(a_min < a_max);
+    assert(b_min < b_max);
+    int ret_simple = (b_min < a_max && b_max > a_min);
+    int ret;
+    double c_min = max(a_min, b_min);
+    double c_max = min(a_max, b_max);
+    if (c_min == a_min && c_max == a_max) ret = 1;
+    else if (c_max <= c_min) ret = 0;
+    else
+    {
+        double overlap = (c_max - c_min) / (a_max - a_min);
+        ret = overlap > 0.1;
+    }
+    if (ret != ret_simple)
+    {
+        outf0("a=%f..%f b=%f..%f ret_simple=%i c=%f..%f ret=%i",
+                a_min,
+                a_max,
+                b_min,
+                ret_simple,
+                b_max,
+                c_min,
+                c_max,
+                ret
+                );
+        //assert(0);
+    }
+    return ret;
+}
+
 static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
 /* Finds single table made from lines whose y coordintes are in the range
 y_min..y_max. */
@@ -1262,7 +1303,7 @@ y_min..y_max. */
         int j;
         for (i_next=i+1; i_next<tl_h.tablelines_num; ++i_next)
         {
-            if (tl_h.tablelines[i_next].rect.min.y != tl_h.tablelines[i].rect.min.y) break;
+            if (tl_h.tablelines[i_next].rect.min.y - tl_h.tablelines[i].rect.min.y > 0.5) break;
         }
         if (i_next == tl_h.tablelines_num)
         {
@@ -1279,8 +1320,9 @@ y_min..y_max. */
             
             for (j_next = j+1; j_next<tl_v.tablelines_num; ++j_next)
             {
-                if (tl_v.tablelines[j_next].rect.min.x != tl_v.tablelines[j].rect.min.x) break;
+                if (tl_v.tablelines[j_next].rect.min.x - tl_v.tablelines[j].rect.min.x > 0.5) break;
             }
+            if (j_next == tl_v.tablelines_num) break;
                         
             if (extract_realloc(alloc, &cells, sizeof(*cells) * (cells_num+1))) goto end;
             if (extract_malloc(alloc, &cells[cells_num], sizeof(*cells[cells_num]))) goto end;
@@ -1307,7 +1349,12 @@ y_min..y_max. */
             for (ii = i; ii < i_next; ++ii)
             {
                 tableline_t* h = &tl_h.tablelines[ii];
-                if (h->rect.min.x < cell->rect.max.x && h->rect.max.x > cell->rect.min.x)
+                if (overlap(
+                        cell->rect.min.x,
+                        cell->rect.max.x,
+                        h->rect.min.x,
+                        h->rect.max.x
+                        ))
                 {
                     cell->above = 1;
                     break;
@@ -1318,7 +1365,12 @@ y_min..y_max. */
             for (jj = j; jj < j_next; ++jj)
             {
                 tableline_t* v = &tl_v.tablelines[jj];
-                if (v->rect.min.y < cell->rect.max.y && v->rect.max.y > cell->rect.min.y)
+                if (overlap(
+                        cell->rect.min.y,
+                        cell->rect.max.y,
+                        v->rect.min.y,
+                        v->rect.max.y
+                        ))
                 {
                     cell->left = 1;
                     break;
