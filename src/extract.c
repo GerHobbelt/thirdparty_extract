@@ -1274,7 +1274,7 @@ static int extract_write_tables_csv(extract_t* extract)
         for (t=0; t<page->tables_num; ++t)
         {
             table_t* table = page->tables[t];
-            int c;
+            int y;
             int iy;
             char* path;
             if (extract_asprintf(extract->alloc, &path, extract->tables_csv_format, i_table) < 0) return -1;
@@ -1282,18 +1282,21 @@ static int extract_write_tables_csv(extract_t* extract)
             FILE* f = fopen(path, "w");
             if (!f) return -1;
             iy = 0;
-            for (c=0; c<table->cells_num; ++c)
+            for (y=0; y<table->cells_num_y; ++y)
             {
-                cell_t* cell = table->cells[c];
-                if (cell->iy != iy) fprintf(f, "\n");
-                iy = cell->iy;
-                if (cell->ix != 0) fprintf(f, ",");
-                extract_astring_t text = {NULL, 0};
-                if (paragraphs_to_text_content(extract->alloc, cell->paragraphs, cell->paragraphs_num, &text)) return -1;
-                fprintf(f, "\"%s\"", text.chars ? text.chars : "");
-                extract_astring_free(extract->alloc, &text);
+                int x;
+                for (x=0; x<table->cells_num_x; ++x)
+                {
+                    cell_t* cell = table->cells[table->cells_num_x * y + x];
+                    if (x) fprintf(f, ",");
+                    extract_astring_t text = {NULL, 0};
+                    if (paragraphs_to_text_content(extract->alloc, cell->paragraphs, cell->paragraphs_num, &text)) return -1;
+                    fprintf(f, "\"%s\"", text.chars ? text.chars : "");
+                    extract_astring_free(extract->alloc, &text);
+                }
+                fprintf(f, "\n");
             }
-            fprintf(f, "\n");
+            //fprintf(f, "\n");
             fclose(f);
         }
     }

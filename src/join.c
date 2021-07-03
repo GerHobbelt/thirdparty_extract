@@ -1443,7 +1443,8 @@ y_min..y_max. */
     page->tables[page->tables_num]->pos.x = 0;
     page->tables[page->tables_num]->pos.y = 0;
     page->tables[page->tables_num]->cells = cells;
-    page->tables[page->tables_num]->cells_num = cells_num;
+    page->tables[page->tables_num]->cells_num_x = cells_num_x;
+    page->tables[page->tables_num]->cells_num_y = cells_num_y;
     page->tables_num += 1;
     
     e = 0;

@@ -209,7 +209,7 @@ int extract_document_to_html_content(
                 extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
                 int iy = 0;
                 int i;
-                
+                #if 0
                 for (i=0; i<table->cells_num; ++i)
                 {
                     cell_t* cell = table->cells[i];
@@ -223,8 +223,43 @@ int extract_document_to_html_content(
                     fprintf(stderr, cell->above ? "-" : " ");
                     fprintf(stderr, " ");*/
                 }
+                #endif
                 fprintf(stderr, "\n");
                 
+                int y;
+                for (y=0; y<table->cells_num_y; ++y)
+                {
+                    int x;
+                    extract_astring_cat(alloc, content, "    <tr>\n        ");
+                    for (x=0; x<table->cells_num_x; ++x)
+                    {
+                        cell_t* cell = table->cells[y*table->cells_num_x + x];
+                        if (!cell->above || !cell->left) continue;
+                        extract_astring_cat(alloc, content, "<td");
+                        if (cell->ix_extend > 1)
+                        {
+                            extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend);
+                        }
+                        if (cell->iy_extend > 1)
+                        {
+                            extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend);
+                        }
+                        extract_astring_cat(alloc, content, ">");
+                        
+                        extract_astring_t text = {NULL, 0};
+                        //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+                        if (paragraphs_to_html_content(alloc, &state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
+                        if (text.chars)
+                        {
+                            extract_astring_cat(alloc, content, text.chars);
+                        }
+                        extract_astring_cat(alloc, content, "</td>");
+
+                        extract_astring_free(alloc, &text);
+                    }
+                    extract_astring_cat(alloc, content, "\n    </tr>\n");
+                }
+                #if 0
                 iy = 0;
                 extract_astring_cat(alloc, content, "    <tr>\n        ");
                 for (i=0; i<table->cells_num; ++i)
@@ -238,17 +273,16 @@ int extract_document_to_html_content(
                     }
                     if (!cell->above || !cell->left)
                     {
-                        //extract_astring_cat(alloc, content, "<td></td>");
                         continue;
                     }
                     extract_astring_cat(alloc, content, "<td");
-                    if (cell->ix_extend /*- cell->ix*/ > 1)
+                    if (cell->ix_extend > 1)
                     {
-                        extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend /*- cell->ix*/);
+                        extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend);
                     }
-                    if (cell->iy_extend /*- cell->iy*/ > 1)
+                    if (cell->iy_extend > 1)
                     {
-                        extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend /*- cell->iy*/);
+                        extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend);
                     }
                     extract_astring_cat(alloc, content, ">");
                     //extract_astring_catf(alloc, content, "[ix=%i iy=%i a=%i l=%i] ", cell->ix, cell->iy, cell->above, cell->left);
@@ -264,6 +298,7 @@ int extract_document_to_html_content(
                     extract_astring_free(alloc, &text);
                 }
                 extract_astring_cat(alloc, content, "\n    </tr>\n");
+                #endif
                 extract_astring_cat(alloc, content, "</table>\n\n");
             }
         }

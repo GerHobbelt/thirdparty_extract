@@ -156,7 +156,8 @@ typedef struct
 {
     point_t     pos;    // top-left.
     cell_t**    cells;
-    int         cells_num;
+    int         cells_num_x;
+    int         cells_num_y;
 } table_t;
 
 
