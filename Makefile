@@ -194,17 +194,44 @@ test_gs_fpp: $(gs)
 	ls test/generated/Python2.pdf.gs.*.docx | wc -l | grep '^ *1$$'
 	ls test/generated/zlib.3.pdf.gs.*.docx | wc -l | grep '^ *2$$'
 
+
 test-html: test/generated/table.pdf.mutool.html.diff
 
 #test-tables: test/generated/row_span.pdf.mutool.html.diff
 
-test_tables_pdfs = $(wildcard ../../../camelot/docs/benchmark/lattice/row_span/*.pdf)
-test_tables_pdfs_leafs = $(notdir $(table_test_pdfs)
-test_tables_targets = $(patsubst %.pdf, test/generated/%.pdf.mutool.html, $(test_tables_pdfs_leafs))
-test/generated/%.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/%.pdf $(mutool)
-	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
+#test_tables_pdfs = $(wildcard ../../../camelot/docs/benchmark/lattice/row_span/*.pdf)
+#test_tables_pdfs_leafs = $(notdir $(table_test_pdfs)
+#test_tables_targets = $(patsubst %.pdf, test/generated/%.pdf.mutool.html, $(test_tables_pdfs_leafs))
+#test/generated/%.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/%.pdf $(mutool)
+#	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
 #test/generated/row_span.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/row_span.pdf $(mutool)
 #	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
+pdfs_tables = \
+        test/electoral_roll.pdf \
+        test/table.pdf \
+        test/twotables_2.pdf \
+        test/twotables_1.pdf \
+        test/column_span_2.pdf \
+        test/background_lines_1.pdf \
+
+pdfs_tables_html = $(patsubst test/%, test/generated/%.mutool.html.diff, $(pdfs_tables))
+pdfs_tables_csv = $(patsubst test/%, test/generated/%.mutool-0.csv.diff, $(pdfs_tables))
+
+test-tables: $(pdfs_tables_html) $(pdfs_tables_csv)
+
+test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
+
+test/generated/%.pdf.mutool.html.diff: test/generated/%.pdf.mutool.html test/%.pdf.mutool.html.ref
+	@echo
+	@echo == Checking $<
+	diff -u $^
+
+test/generated/%.pdf.mutool-0.csv.diff: test/generated/%.pdf.mutool.html-0.csv test/%.pdf.mutool-0.csv.ref
+	@echo
+	@echo == Checking $<
+	diff -u $^
+
 
 # Main executable.
 #
@@ -406,11 +433,11 @@ test/generated/%.pdf.mutool.odt: test/%.pdf $(mutool)
 	@mkdir -p test/generated
 	$(mutool) convert -O mediabox-clip=no -o $@ $<
 
-test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
-	@echo
-	@echo == Converting .pdf directly to .html using mutool.
-	@mkdir -p test/generated
-	$(mutool) convert -F docx -O mediabox-clip=no,html -o $@ $<
+#test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+#	@echo
+#	@echo == Converting .pdf directly to .html using mutool.
+#	@mkdir -p test/generated
+#	$(mutool) convert -F docx -O mediabox-clip=no,html -o $@ $<
 
 # Valgrind test
 #

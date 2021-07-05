@@ -1345,18 +1345,29 @@ static int extract_write_tables_csv(extract_t* extract)
             if (extract_asprintf(extract->alloc, &path, extract->tables_csv_format, extract->tables_csv_i) < 0) return -1;
             extract->tables_csv_i += 1;
             outf0("Writing table %i to: %s", t, path);
+            outf0("table->cells_num_x=%i", table->cells_num_x);
+            outf0("table->cells_num_y=%i", table->cells_num_y);
             FILE* f = fopen(path, "w");
             if (!f) return -1;
             iy = 0;
             for (y=0; y<table->cells_num_y; ++y)
             {
                 int x;
+                int have_output = 0;
                 for (x=0; x<table->cells_num_x; ++x)
                 {
                     cell_t* cell = table->cells[table->cells_num_x * y + x];
-                    if (x) fprintf(f, ",");
+                    //if (!cell->above || !cell->left) continue;
+                    if (y==0)
+                    {
+                        outf0("y=0 x=%i cell->rect=%s", x, rect_string(&cell->rect));
+                    }
+                    if (have_output) fprintf(f, ",");
+                    have_output = 1;
                     extract_astring_t text = {NULL, 0};
                     if (paragraphs_to_text_content(extract->alloc, cell->paragraphs, cell->paragraphs_num, &text)) return -1;
+                    /* Reference cvs output trims trailing spaces. */
+                    astring_char_truncate_if(&text, ' ');
                     fprintf(f, "\"%s\"", text.chars ? text.chars : "");
                     extract_astring_free(extract->alloc, &text);
                 }
