@@ -105,7 +105,7 @@ etc. */
                 //if (extract_html_char_truncate_if(content, '-')) goto end;
             }
             
-            if (content->chars_num)
+            if (content->chars_num && l+1 < paragraph->lines_num)
             {
                 if (content->chars[content->chars_num-1] == '-')    content->chars_num -= 1;
                 else if (content->chars[content->chars_num-1] != ' ')
@@ -205,28 +205,33 @@ int extract_document_to_html_content(
             outf("page->tables_num=%i", page->tables_num);
             for (t=0; t<page->tables_num; ++t)
             {
+                int y;
                 table_t* table = page->tables[t];
                 extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
-                int iy = 0;
+                //int iy = 0;
                 int i;
-                #if 0
-                for (i=0; i<table->cells_num; ++i)
-                {
-                    cell_t* cell = table->cells[i];
-                    if (cell->iy != iy) fprintf(stderr, "\n");
-                    iy = cell->iy;
-                    fprintf(stderr,
-                            " [i=% 4i (% 3i % 3i) l=%i a=%i ix_extend=%i iy_extend=% 3i]",
-                            i, cell->ix, cell->iy, cell->left, cell->above, cell->ix_extend, cell->iy_extend
-                            );
-                    /*fprintf(stderr, cell->left ? "|" : " ");
-                    fprintf(stderr, cell->above ? "-" : " ");
-                    fprintf(stderr, " ");*/
-                }
-                #endif
-                fprintf(stderr, "\n");
                 
-                int y;
+                if (0)
+                {
+                    /* Show raw cells info. */
+                    for (y=0; y<table->cells_num_y; ++y)
+                    {
+                        int x;
+                        for (x=0; x<table->cells_num_x; ++x)
+                        {
+                            cell_t* cell = table->cells[y*table->cells_num_x + x];
+                            fprintf(stderr,
+                                    " [i=% 4i (% 3i % 3i) l=%i a=%i ix_extend=%i iy_extend=% 3i]",
+                                    i, cell->ix, cell->iy, cell->left, cell->above, cell->ix_extend, cell->iy_extend
+                                    );
+                            /*fprintf(stderr, cell->left ? "|" : " ");
+                            fprintf(stderr, cell->above ? "-" : " ");
+                            fprintf(stderr,   " ");*/                      
+                        }
+                        fprintf(stderr, "\n");
+                    }
+                }
+                
                 for (y=0; y<table->cells_num_y; ++y)
                 {
                     int x;
@@ -259,46 +264,6 @@ int extract_document_to_html_content(
                     }
                     extract_astring_cat(alloc, content, "\n    </tr>\n");
                 }
-                #if 0
-                iy = 0;
-                extract_astring_cat(alloc, content, "    <tr>\n        ");
-                for (i=0; i<table->cells_num; ++i)
-                {
-                    cell_t* cell = table->cells[i];
-                    if (cell->iy != iy)
-                    {
-                        if (i) extract_astring_cat(alloc, content, "\n    </tr>");
-                        extract_astring_cat(alloc, content, "\n    <tr>\n        ");
-                        iy = cell->iy;
-                    }
-                    if (!cell->above || !cell->left)
-                    {
-                        continue;
-                    }
-                    extract_astring_cat(alloc, content, "<td");
-                    if (cell->ix_extend > 1)
-                    {
-                        extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend);
-                    }
-                    if (cell->iy_extend > 1)
-                    {
-                        extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend);
-                    }
-                    extract_astring_cat(alloc, content, ">");
-                    //extract_astring_catf(alloc, content, "[ix=%i iy=%i a=%i l=%i] ", cell->ix, cell->iy, cell->above, cell->left);
-                    extract_astring_t text = {NULL, 0};
-                    //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-                    if (paragraphs_to_html_content(alloc, &state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
-                    if (text.chars)
-                    {
-                        extract_astring_cat(alloc, content, text.chars);
-                    }
-                    extract_astring_cat(alloc, content, "</td>");
-
-                    extract_astring_free(alloc, &text);
-                }
-                extract_astring_cat(alloc, content, "\n    </tr>\n");
-                #endif
                 extract_astring_cat(alloc, content, "</table>\n\n");
             }
         }

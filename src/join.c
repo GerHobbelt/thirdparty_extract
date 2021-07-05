@@ -1243,6 +1243,13 @@ zero. */
     if (b_max > a_max)  b_max = a_max;
     if (b_max < b_min)  b_max = b_min;
     overlap = (b_max - b_min) / (a_max - a_min);
+    int ret0 = overlap > 0.2;
+    int ret1 = overlap > 0.8;
+    if (ret0 != ret1)
+    {
+        outf0("warning, unclear overlap=%f: a=%f..%f b=%f..%f", overlap, a_min, a_max, b_min, b_max);
+    }
+    //assert(ret0 == ret1);
     return overlap > 0.8;
 }
 
@@ -1263,16 +1270,20 @@ y_min..y_max. */
     if (table_find_y_range(alloc, all_v, y_min, y_max, &tl_v)) goto end;
     qsort(tl_v.tablelines, tl_v.tablelines_num, sizeof(*tl_v.tablelines), tablelines_compare_x);
     
-    outf0("all_h->tablelines_num=%i tl_h.tablelines_num=%i", all_h->tablelines_num, tl_h.tablelines_num);
-    for (i=0; i<tl_h.tablelines_num; ++i)
+    if (0)
     {
-        outf0("    %i: %s", i, rect_string(&tl_h.tablelines[i].rect));
-    }
-    
-    outf0("all_v->tablelines_num=%i tl_v.tablelines_num=%i", all_v->tablelines_num, tl_v.tablelines_num);
-    for (i=0; i<tl_v.tablelines_num; ++i)
-    {
-        outf0("    %i: %s", i, rect_string(&tl_v.tablelines[i].rect));
+        /* Show raw lines info. */
+        outf0("all_h->tablelines_num=%i tl_h.tablelines_num=%i", all_h->tablelines_num, tl_h.tablelines_num);
+        for (i=0; i<tl_h.tablelines_num; ++i)
+        {
+            outf0("    %i: %s", i, rect_string(&tl_h.tablelines[i].rect));
+        }
+
+        outf0("all_v->tablelines_num=%i tl_v.tablelines_num=%i", all_v->tablelines_num, tl_v.tablelines_num);
+        for (i=0; i<tl_v.tablelines_num; ++i)
+        {
+            outf0("    %i: %s", i, rect_string(&tl_v.tablelines[i].rect));
+        }
     }
     /* Find the cells defined by the vertical and horizontal lines.
 
@@ -1310,7 +1321,7 @@ y_min..y_max. */
             {
                 if (tl_v.tablelines[j_next].rect.min.x - tl_v.tablelines[j].rect.min.x > 0.5) break;
             }
-            outf0("i=%i j=%i tl_v.tablelines[j].rect=%s", i, j, rect_string(&tl_v.tablelines[j].rect));
+            outf("i=%i j=%i tl_v.tablelines[j].rect=%s", i, j, rect_string(&tl_v.tablelines[j].rect));
             
             if (j_next == tl_v.tablelines_num) break;
                         

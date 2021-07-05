@@ -896,6 +896,7 @@ int extract_span_begin(
     span_t* span;
     assert(extract->document.pages_num > 0);
     page = extract->document.pages[extract->document.pages_num-1];
+    outf("extract_span_begin()");
     span = page_span_append(extract->alloc, page);
     if (!span) goto end;
     span->ctm.a = ctm_a;
@@ -940,6 +941,7 @@ int extract_add_char(
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     span_t* span = page->spans[page->spans_num - 1];
     
+    outf("extract_add_char() (%f %f) ucs=%i=%c", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : ' ');
     /* Ignore the specified <autosplit> - there seems no advantage to not
     splitting spans on multiple lines, and not doing so causes problems with
     missing spaces in the output. */
@@ -1105,6 +1107,16 @@ static point_t transform(double x, double y,
     return ret;
 }
 
+static min(double a, double b)
+{
+    return (a < b) ? a : b;
+}
+
+static max(double a, double b)
+{
+    return (a > b) ? a : b;
+}
+
 int extract_add_path4(
         extract_t*  extract,
         double ctm_a,
@@ -1123,7 +1135,10 @@ int extract_add_path4(
         double y3
         )
 {
-    outf("cmt=(%f %f %f %f %f %f)", ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
+    outf("cmt=(%f %f %f %f %f %f) points=[(%f %f) (%f %f) (%f %f) (%f %f)]",
+            ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f,
+            x0, y0, x1, y1, x2, y2, x3, y3
+            );
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     point_t points[4] = {
             transform(x0, y0, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f),
@@ -1169,6 +1184,46 @@ int extract_add_path4(
         /* Vertical line. */
         outf("have found vertical line: %s", rect_string(&rect));
         if (tablelines_append(extract->alloc, &page->tablelines_vertical, &rect)) return -1;
+    }
+    return 0;
+}
+
+
+int extract_add_line(
+        extract_t*  extract,
+        double ctm_a,
+        double ctm_b,
+        double ctm_c,
+        double ctm_d,
+        double ctm_e,
+        double ctm_f,
+        double x0,
+        double y0,
+        double x1,
+        double y1
+        )
+{
+    page_t* page = extract->document.pages[extract->document.pages_num-1];
+    point_t p0 = transform(x0, y0, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
+    point_t p1 = transform(x1, y1, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
+    
+    rect_t  rect;
+    rect.min.x = min(p0.x, p1.x);
+    rect.min.y = min(p0.y, p1.y);
+    rect.max.x = max(p0.x, p1.x);
+    rect.max.y = max(p0.y, p1.y);
+    
+    outf0("%s: %s", __FUNCTION__, rect_string(&rect));
+    if (rect.min.x == rect.max.x && rect.min.y == rect.max.y)
+    {
+    }
+    else if (rect.min.x == rect.max.x)
+    {
+        return tablelines_append(extract->alloc, &page->tablelines_vertical, &rect);
+    }
+    else if (rect.min.y == rect.max.y)
+    {
+        return tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect);
     }
     return 0;
 }
@@ -1243,8 +1298,7 @@ static int paragraphs_to_text_content(
                     if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
                 }
             }
-            if (extract_astring_catc(alloc, text, ' ')) return -1;
-            if (text->chars_num)
+            if (text->chars_num && l+1 < paragraph->lines_num)
             {
                 if (text->chars[text->chars_num-1] == '-')   text->chars_num -= 1;
                 else if (text->chars[text->chars_num-1] != ' ')

@@ -196,10 +196,15 @@ test_gs_fpp: $(gs)
 
 test-html: test/generated/table.pdf.mutool.html.diff
 
-test-tables: test/generated/row_span.pdf.mutool.html.diff
+#test-tables: test/generated/row_span.pdf.mutool.html.diff
 
-test/generated/row_span.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/row_span.pdf $(mutool)
+test_tables_pdfs = $(wildcard ../../../camelot/docs/benchmark/lattice/row_span/*.pdf)
+test_tables_pdfs_leafs = $(notdir $(table_test_pdfs)
+test_tables_targets = $(patsubst %.pdf, test/generated/%.pdf.mutool.html, $(test_tables_pdfs_leafs))
+test/generated/%.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/%.pdf $(mutool)
 	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
+#test/generated/row_span.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/row_span.pdf $(mutool)
+#	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
 
 # Main executable.
 #
