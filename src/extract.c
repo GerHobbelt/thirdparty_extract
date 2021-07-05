@@ -557,6 +557,7 @@ struct extract_t
     extract_odt_styles_t odt_styles;
     
     char*               tables_csv_format;
+    int                 tables_csv_i;
 };
 
 
@@ -589,6 +590,7 @@ int extract_begin(
     
     extract->format = format;
     extract->tables_csv_format = NULL;
+    extract->tables_csv_i = 0;
     
     e = 0;
     
@@ -1107,12 +1109,12 @@ static point_t transform(double x, double y,
     return ret;
 }
 
-static min(double a, double b)
+static double min(double a, double b)
 {
     return (a < b) ? a : b;
 }
 
-static max(double a, double b)
+static double max(double a, double b)
 {
     return (a > b) ? a : b;
 }
@@ -1197,6 +1199,7 @@ int extract_add_line(
         double ctm_d,
         double ctm_e,
         double ctm_f,
+        double width,
         double x0,
         double y0,
         double x1,
@@ -1206,23 +1209,32 @@ int extract_add_line(
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     point_t p0 = transform(x0, y0, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
     point_t p1 = transform(x1, y1, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
-    
+    double width2 = width * sqrt( fabs( ctm_a * ctm_d - ctm_b * ctm_c));
     rect_t  rect;
     rect.min.x = min(p0.x, p1.x);
     rect.min.y = min(p0.y, p1.y);
     rect.max.x = max(p0.x, p1.x);
     rect.max.y = max(p0.y, p1.y);
     
-    outf0("%s: %s", __FUNCTION__, rect_string(&rect));
+    outf("%s: width=%f ((%f %f)(%f %f)) rect=%s",
+            __FUNCTION__,
+            width,
+            x0, y0, x1, y1,
+            rect_string(&rect)
+            );
     if (rect.min.x == rect.max.x && rect.min.y == rect.max.y)
     {
     }
     else if (rect.min.x == rect.max.x)
     {
+        rect.min.x -= width2 / 2;
+        rect.max.x += width2 / 2;
         return tablelines_append(extract->alloc, &page->tablelines_vertical, &rect);
     }
     else if (rect.min.y == rect.max.y)
     {
+        rect.min.y -= width2 / 2;
+        rect.max.y += width2 / 2;
         return tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect);
     }
     return 0;
@@ -1314,7 +1326,6 @@ static int paragraphs_to_text_content(
 
 static int extract_write_tables_csv(extract_t* extract)
 {
-    int i_table = 0;
     int p;
     if (!extract->tables_csv_format) return 0;
     
@@ -1331,7 +1342,8 @@ static int extract_write_tables_csv(extract_t* extract)
             int y;
             int iy;
             char* path;
-            if (extract_asprintf(extract->alloc, &path, extract->tables_csv_format, i_table) < 0) return -1;
+            if (extract_asprintf(extract->alloc, &path, extract->tables_csv_format, extract->tables_csv_i) < 0) return -1;
+            extract->tables_csv_i += 1;
             outf0("Writing table %i to: %s", t, path);
             FILE* f = fopen(path, "w");
             if (!f) return -1;

@@ -1476,6 +1476,7 @@ page->spans[]. */
     double miny;
     double maxy;
     int i;
+    double margin = 1;
     qsort(
             page->tablelines_horizontal.tablelines,
             page->tablelines_horizontal.tablelines_num,
@@ -1495,15 +1496,15 @@ page->spans[]. */
     for (i=0; i<page->tablelines_vertical.tablelines_num; ++i)
     {
         tableline_t* tl = &page->tablelines_vertical.tablelines[i];
-        if (tl->rect.min.y > maxy + 10)
+        if (tl->rect.min.y > maxy + margin)
         {
             if (i)
             {
                 table_find(
                         alloc,
                         page,
-                        miny - 10,
-                        maxy + 10
+                        miny - margin,
+                        maxy + margin
                         );
             }
             miny = tl->rect.min.y;
@@ -1513,8 +1514,8 @@ page->spans[]. */
     table_find(
             alloc,
             page,
-            miny - 10,
-            maxy + 10
+            miny - margin,
+            maxy + margin
             );
     return 0;
 }

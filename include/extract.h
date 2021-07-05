@@ -173,7 +173,7 @@ int extract_add_path4(
         double x3,
         double y3
         );
-/* Adds a four-element path. Path that define thin vertical/horizontal
+/* Adds a four-element path. Paths that define thin vertical/horizontal
 rectangles are used to find tables. */
 
 
@@ -185,11 +185,13 @@ int extract_add_line(
         double ctm_d,
         double ctm_e,
         double ctm_f,
+        double width,
         double x0,
         double y0,
         double x1,
         double y1
         );
+/* Adds a stroked line. Vertical/horizontal lines are used to find tables. */
 
 
 int extract_page_end(extract_t* extract);
