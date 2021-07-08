@@ -206,31 +206,31 @@ test-html: test/generated/table.pdf.mutool.html.diff
 #	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
 #test/generated/row_span.pdf.mutool.html: ../../../camelot/docs/benchmark/lattice/row_span/row_span.pdf $(mutool)
 #	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
-pdfs_tables = \
-        test/electoral_roll.pdf \
-        test/table.pdf \
-        test/twotables_2.pdf \
-        test/twotables_1.pdf \
-        test/column_span_2.pdf \
-        test/background_lines_1.pdf \
-
-pdfs_tables_html = $(patsubst test/%, test/generated/%.mutool.html.diff, $(pdfs_tables))
-pdfs_tables_csv = $(patsubst test/%, test/generated/%.mutool-0.csv.diff, $(pdfs_tables))
-
-test-tables: $(pdfs_tables_html) $(pdfs_tables_csv)
-
-test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
-	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
-
-test/generated/%.pdf.mutool.html.diff: test/generated/%.pdf.mutool.html test/%.pdf.mutool.html.ref
-	@echo
-	@echo == Checking $<
-	diff -u $^
-
-test/generated/%.pdf.mutool-0.csv.diff: test/generated/%.pdf.mutool.html-0.csv test/%.pdf.mutool-0.csv.ref
-	@echo
-	@echo == Checking $<
-	diff -u $^
+#pdfs_tables = \
+#        test/electoral_roll.pdf \
+#        test/table.pdf \
+#        test/twotables_2.pdf \
+#        test/twotables_1.pdf \
+#        test/column_span_2.pdf \
+#        test/background_lines_1.pdf \
+#
+#pdfs_tables_html = $(patsubst test/%, test/generated/%.mutool.html.diff, $(pdfs_tables))
+#pdfs_tables_csv = $(patsubst test/%, test/generated/%.mutool-0.csv.diff, $(pdfs_tables))
+#
+#test-tables: $(pdfs_tables_html) $(pdfs_tables_csv)
+#
+#test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+#	$(mutool) convert -F docx -O html,tables-csv-format=$@-%i.csv -o $@ $<
+#
+#test/generated/%.pdf.mutool.html.diff: test/generated/%.pdf.mutool.html test/%.pdf.mutool.html.ref
+#	@echo
+#	@echo == Checking $<
+#	diff -u $^
+#
+#test/generated/%.pdf.mutool-0.csv.diff: test/generated/%.pdf.mutool.html-0.csv test/%.pdf.mutool-0.csv.ref
+#	@echo
+#	@echo == Checking $<
+#	diff -u $^
 
 
 # Main executable.

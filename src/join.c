@@ -1007,6 +1007,9 @@ static int make_paragraphs(
                 else if (span_char_last(a_span)->ucs == ' ')
                 {
                 }
+                else if (span_char_last(a_span)->ucs == '/')
+                {
+                }
                 else
                 {
                     /* Insert space before joining adjacent lines. */
@@ -1253,6 +1256,32 @@ zero. */
     return overlap > 0.8;
 }
 
+void cell_init(cell_t* cell)
+{
+    cell->iy = -1;
+    cell->ix = -1;
+    cell->rect.min.x = 0;
+    cell->rect.min.y = 0;
+    cell->rect.max.x = 0;
+    cell->rect.max.y = 0;
+    cell->above = 0;
+    cell->left = 0;
+    cell->ix_extend = 0;
+    cell->iy_extend = 0;
+    cell->lines = NULL;
+    cell->lines_num = 0;
+    cell->paragraphs = NULL;
+    cell->paragraphs_num = 0;
+}
+
+void cell_free(extract_alloc_t* alloc, cell_t* cell)
+{
+    /* Do shallow free - lines and paragraphs are owned by the page_t. */
+    extract_free(alloc, &cell->lines);
+    extract_free(alloc, &cell->paragraphs);
+}
+
+
 static int table_find(extract_alloc_t* alloc, page_t* page, double y_min, double y_max)
 /* Finds single table made from lines whose y coordintes are in the range
 y_min..y_max. */
@@ -1427,6 +1456,42 @@ y_min..y_max. */
                 cell->iy_extend = yy - y;
                 cell->rect.max.y = cells[(yy-1) * cells_num_x + x]->rect.max.y;
             }
+        }
+    }
+    
+    /* Remove cols and rows where no cells have .above and .left - these will
+    not appear. */
+    //int xx = 0;
+    for (x=0; x<cells_num_x; ++x)
+    {
+        int has_cells = 0;
+        for (y=0; y<cells_num_y; ++y)
+        {
+            cell_t* cell = cells[y * cells_num_x + x];
+            if (cell->above && cell->left)
+            {
+                has_cells = 1;
+                break;
+            }
+        }
+        if (!has_cells)
+        {
+            /* Remove column <x>. */
+            outf0("Removing column %i. cells_num=%i cells_num_x=%i cells_num_y=%i", x, cells_num, cells_num_x, cells_num_y);
+            int j = 0;
+            for (i=0; i<cells_num; ++i)
+            {
+                if (i % cells_num_x == x)
+                {
+                    cell_free(alloc, cells[i]);
+                    extract_free(alloc, &cells[i]);
+                    continue;
+                }
+                cells[j] = cells[i];
+                j += 1;
+            }
+            cells_num -= cells_num_y;
+            cells_num_x -= 1;
         }
     }
     

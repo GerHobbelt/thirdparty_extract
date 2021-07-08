@@ -1305,15 +1305,57 @@ static int paragraphs_to_text_content(
                 int c;
                 for (c=0; c<span->chars_num; ++c)
                 {
+                    /* We encode each character as utf8. */
                     char_t* char_ = &span->chars[c];
-                    int cc = char_->ucs;
-                    if (extract_astring_cat_xmlc(alloc, text, cc)) return -1;
+                    unsigned cc = char_->ucs;
+                    if (cc < 0x80)
+                    {
+                        if (extract_astring_catc(alloc, text, (char) cc)) return -1;
+                    }
+                    else if (cc < 0x0800)
+                    {
+                        char ccc[2] = 
+                        {
+                            ((cc >> 6) & 0x1f) | 0xc0,
+                            ((cc >> 0) & 0x3f) | 0x80
+                        };
+                        if (extract_astring_catl(alloc, text, ccc, sizeof(ccc))) return -1;
+                    }
+                    else if (cc < 0x10000)
+                    {
+                        char ccc[3] = 
+                        {
+                            ((cc >> 12) & 0x0f) | 0xe0,
+                            ((cc >>  6) & 0x3f) | 0x80,
+                            ((cc >>  0) & 0x3f) | 0x80
+                        };
+                        if (extract_astring_catl(alloc, text, ccc, sizeof(ccc))) return -1;
+                    }
+                    else if (cc < 0x110000)
+                    {
+                        char ccc[4] = 
+                        {
+                            ((cc >> 18) & 0x07) | 0xf0,
+                            ((cc >> 12) & 0x3f) | 0x80,
+                            ((cc >>  6) & 0x3f) | 0x80,
+                            ((cc >>  0) & 0x3f) | 0x80
+                        };
+                        if (extract_astring_catl(alloc, text, ccc, sizeof(ccc))) return -1;
+                    }
+                    else
+                    {
+                        /* Use replacement character. */
+                        char ccc[4] = { 0xef, 0xbf, 0xbd, 0};
+                        if (extract_astring_catl(alloc, text, ccc, sizeof(ccc))) return -1;
+                    }
                 }
             }
-            if (text->chars_num && l+1 < paragraph->lines_num)
+            if (0 && text->chars_num && l+1 < paragraph->lines_num)
             {
                 if (text->chars[text->chars_num-1] == '-')   text->chars_num -= 1;
-                else if (text->chars[text->chars_num-1] != ' ')
+                else if (text->chars[text->chars_num-1] != ' '
+                        && text->chars[text->chars_num-1] != '/'
+                        )
                 {
                     extract_astring_catc(alloc, text, ' ');
                 }
@@ -1329,13 +1371,13 @@ static int extract_write_tables_csv(extract_t* extract)
     int p;
     if (!extract->tables_csv_format) return 0;
     
-    outf0("extract_write_tables_csv(): path_format=%s", extract->tables_csv_format);
-    outf0("extract->document.pages_num=%i", extract->document.pages_num);
+    outf("extract_write_tables_csv(): path_format=%s", extract->tables_csv_format);
+    outf("extract->document.pages_num=%i", extract->document.pages_num);
     for (p=0; p<extract->document.pages_num; ++p)
     {
         page_t* page = extract->document.pages[p];
         int t;
-        outf0("p=%i page->tables_num=%i", p, page->tables_num);
+        outf("p=%i page->tables_num=%i", p, page->tables_num);
         for (t=0; t<page->tables_num; ++t)
         {
             table_t* table = page->tables[t];
@@ -1344,9 +1386,9 @@ static int extract_write_tables_csv(extract_t* extract)
             char* path;
             if (extract_asprintf(extract->alloc, &path, extract->tables_csv_format, extract->tables_csv_i) < 0) return -1;
             extract->tables_csv_i += 1;
-            outf0("Writing table %i to: %s", t, path);
-            outf0("table->cells_num_x=%i", table->cells_num_x);
-            outf0("table->cells_num_y=%i", table->cells_num_y);
+            outf("Writing table %i to: %s", t, path);
+            outf("table->cells_num_x=%i", table->cells_num_x);
+            outf("table->cells_num_y=%i", table->cells_num_y);
             FILE* f = fopen(path, "w");
             if (!f) return -1;
             iy = 0;
@@ -1360,7 +1402,7 @@ static int extract_write_tables_csv(extract_t* extract)
                     //if (!cell->above || !cell->left) continue;
                     if (y==0)
                     {
-                        outf0("y=0 x=%i cell->rect=%s", x, rect_string(&cell->rect));
+                        outf("y=0 x=%i cell->rect=%s", x, rect_string(&cell->rect));
                     }
                     if (have_output) fprintf(f, ",");
                     have_output = 1;

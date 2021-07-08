@@ -37,9 +37,23 @@ def get_pdfs():
     for pdf in pdfs:
         yield Pdf(pdf)
 
+def make_textfile(path_in, path_out):
+    print(f'Converting {path_in} to {path_out}')
+    try:
+        f_in0 = open(path_in, 'rb')
+    except Exception:
+        return
+    with f_in0 as f_in:
+        with open(path_out, 'w') as f_out:
+            for line in f_in:
+                #print(f'line={line}')
+                print(repr(line), file=f_out)
+
 def run_tests():
     mutool = f'{dir_mupdf}/build/debug-extract/mutool'
-
+    num_errors = 0
+    num = 0
+    summary = ''
     for pdf in get_pdfs():
         print()
         print('-'*80)
@@ -52,14 +66,42 @@ def run_tests():
         print(f'Have converted {pdf} to:')
         print(f'    {pdf.out_html}')
         print(f'    {pdf.out_csv_arg}')
+        summary += f'{pdf.pdf}:\n'
         for csv_ref, csv_generated in pdf.csvs():
-            command_diff = f'diff -uw {csv_ref} {csv_generated}'
+            make_textfile(csv_ref, f'{csv_ref}.txt')
+            make_textfile(csv_generated, f'{csv_generated}.txt')
+            if pdf.leaf == 'column_span_2.pdf':
+                # Special case - modify reference cvs to match our (better) output.
+                with open(f'{csv_ref}.txt') as f:
+                    t = f.read()
+                t2 = t
+                t2 = t2.replace(
+                        'b\'"Investigations","No. ofHHs","Age/Sex/Physiological  Group","Preva-lence","C.I*","RelativePrecision","Sample sizeper State"\\n\'',
+                        'b\'"Investigations","No. of HHs","Age/Sex/Physiological Group","Prevalence","C.I*","Relative Precision","Sample size per State"\\n\'',
+                        )
+                nl = '\n'
+                assert t2 != t, f'lines are: {nl.join(t.split(nl))}'
+                with open(f'{csv_ref}.txt', 'w') as f:
+                    f.write(t2)
+            command_diff = f'diff -uw {csv_ref}.txt {csv_generated}.txt'
             print(f'Running command: {command_diff}')
             sys.stdout.flush()
             if subprocess.run(command_diff, shell=1).returncode:
-                print(f'Diff returned non-zero')
+                print(f'Diff returned non-zero.')
+                num_errors += 1
+                summary += f'    e=1: {csv_generated}\n'
             else:
-                print(f'CSV output is identical.')
+                print(f'Diff returned zero.')
+                summary += f'    e=0: {csv_generated}\n'
+            num += 1
+    print(f'{summary}')
+    print(f'errors/all={num_errors}/{num}')
+
+def compare_csv(ref_csv, csv):
+    make_textfile(ref_csv, f'{ref_csv}.txt')
+    make_textfile(csv, f'{csv}.txt')
+    command = f'diff -u {ref_csv}.txt {csv}.txt'
+    subprocess.run(command_diff, shell=1)
 
 if __name__ == '__main__':
     args = iter(sys.argv[1:])
@@ -68,12 +110,41 @@ if __name__ == '__main__':
             arg = next(args)
         except Exception:
             break
-        if arg == 'test':
+        if 0:
+            pass
+        elif arg == 'build':
+            command = f'../../../julian-tools/jtest.py -b ../../build/debug-extract/ .'
+            subprocess.check_call(command, shell=1)
+        elif arg == 'test':
             run_tests()
+        elif arg == 'html':
+            with open('extract-table.html', 'w') as f:
+                print(f'<html>', file=f)
+                print(f'<body>', file=f)
+                print(f'<h1>Currently successful extract table examples</h1>', file=f)
+                print(f'<ul>', file=f)
+                for n in (
+                        'table',
+                        'agstat',
+                        'row_span',
+                        'background_lines_1',
+                        'column_span_1',
+                        'column_span_2',
+                        'row_span',
+                        ):
+                    print(f'    <li>{n}', file=f)
+                    print(f'    <ul>', file=f)
+                    print(f'        <li><a href="https://ghostscript.com/~julian/extract/{n}.pdf">{n}.pdf</a> => <a href="https://ghostscript.com/~julian/extract/{n}.pdf.mutool.html">{n}.pdf.mutool.html</a>', file=f)
+                    print(f'        <li><iframe width=40% src="https://ghostscript.com/~julian/extract/{n}.pdf"></iframe> <iframe width=40% src="https://ghostscript.com/~julian/extract/{n}.pdf.mutool.html"></iframe>', file=f)
+                    print(f'    </ul>', file=f)
+                print(f'</ul>', file=f)
+                print(f'</body>', file=f)
+                print(f'</html>', file=f)
         elif arg == 'upload':
-            destination = next(args)
-            
+            #destination = next(args)
+            destination = 'julian@casper.ghostscript.com:public_html/extract/'
             command = f'rsync -ai \\\n'
+            command += f' extract-table.html'
             for pdf in get_pdfs():
                 command += f' {pdf.pdf} {pdf.out_html} \\\n'
                 for csv_ref, csv_generated in pdf.csvs():

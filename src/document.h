@@ -151,6 +151,8 @@ typedef struct
     int             paragraphs_num;
 } cell_t;
 
+void cell_init(cell_t* cell);
+void cell_free(extract_alloc_t* alloc, cell_t* cell);
 
 typedef struct
 {

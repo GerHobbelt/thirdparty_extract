@@ -232,8 +232,8 @@ int extract_document_to_html_content(
                     }
                 }
                 
-                outf0("table->cells_num_x=%i", table->cells_num_x);
-                outf0("table->cells_num_y=%i", table->cells_num_y);
+                outf("table->cells_num_x=%i", table->cells_num_x);
+                outf("table->cells_num_y=%i", table->cells_num_y);
                 for (y=0; y<table->cells_num_y; ++y)
                 {
                     int x;
