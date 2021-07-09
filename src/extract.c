@@ -898,7 +898,22 @@ int extract_span_begin(
     span_t* span;
     assert(extract->document.pages_num > 0);
     page = extract->document.pages[extract->document.pages_num-1];
-    outf("extract_span_begin()");
+    outf("extract_span_begin(): ctm=(%f %f %f %f %f %f) trm=(%f %f %f %f %f %f) font_name=%s, wmode=%i",
+            ctm_a,
+            ctm_b,
+            ctm_c,
+            ctm_d,
+            ctm_e,
+            ctm_f,
+            trm_a,
+            trm_b,
+            trm_c,
+            trm_d,
+            trm_e,
+            trm_f,
+            font_name,
+            wmode
+            );
     span = page_span_append(extract->alloc, page);
     if (!span) goto end;
     span->ctm.a = ctm_a;
@@ -907,12 +922,30 @@ int extract_span_begin(
     span->ctm.d = ctm_d;
     span->ctm.e = ctm_e;
     span->ctm.f = ctm_f;
+    
     span->trm.a = trm_a;
     span->trm.b = trm_b;
     span->trm.c = trm_c;
     span->trm.d = trm_d;
     span->trm.e = trm_e;
     span->trm.f = trm_f;
+    
+    /*
+    span->ctm.a = trm_a * ctm_a + trm_b + ctm_c;
+    span->ctm.b = trm_a * ctm_b + trm_b * ctm_d;
+    span->ctm.c = trm_c * ctm_a + trm_d * ctm_c;
+    span->ctm.d = trm_c * ctm_b + trm_d * ctm_d;
+    span->ctm.e = trm_e + ctm_e;
+    span->ctm.f = trm_f + ctm_f;
+    
+    span->trm.a = 1;
+    span->trm.b = 0;
+    span->trm.c = 0;
+    span->trm.d = 1;
+    span->trm.e = 0;
+    span->trm.f = 0;
+    */
+    
     {
         const char* ff = strchr(font_name, '+');
         const char* f = (ff) ? ff+1 : font_name;
@@ -943,12 +976,57 @@ int extract_add_char(
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     span_t* span = page->spans[page->spans_num - 1];
     
-    outf("extract_add_char() (%f %f) ucs=%i=%c", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : ' ');
+    outf("extract_add_char() (%f %f) ucs=%i=%c adv=%f", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : ' ', adv);
     /* Ignore the specified <autosplit> - there seems no advantage to not
     splitting spans on multiple lines, and not doing so causes problems with
     missing spaces in the output. */
     autosplit = 1;
-    if (autosplit && y - extract->span_offset_y != 0) {
+    
+    if (span->chars_num)
+    {
+        point_t dir;
+        if (span->wmode) {
+            dir.x = 0;
+            dir.y = 1;
+        }
+        else {
+            dir.x = 1;
+            dir.y = 0;
+        }
+        dir = multiply_matrix_point(span->ctm, dir);
+
+        char_t* char_prev = &span->chars[span->chars_num - 1];
+        
+        double xx = span->ctm.a * x + span->ctm.c * y + span->ctm.e;
+        double yy = span->ctm.b * x + span->ctm.d * y + span->ctm.f;
+        double dx = xx - char_prev->x;
+        double dy = yy - char_prev->y;
+        double a = atan2(dy, dx);
+        double span_a = atan2(dir.y, dir.x);
+        if (fabs(span_a - a) > 0.01)
+        {
+            /* Create new span. */
+            outf("chars_num=%i prev=(%f %f) => (%f %f) xy=(%f %f) => xxyy=(%f %f) delta=(%f %f) a=%f not in line with dir=(%f %f) a=%f: ",
+                    span->chars_num,
+                    char_prev->pre_x, char_prev->pre_y,
+                    char_prev->x, char_prev->y,
+                    x, y,
+                    xx, yy,
+                    dx, dy, a,
+                    dir.x, dir.y, span_a
+                    );
+            span_t* span0 = span;
+            extract->num_spans_autosplit += 1;
+            span = page_span_append(extract->alloc, page);
+            if (!span) goto end;
+            *span = *span0;
+            span->chars = NULL;
+            span->chars_num = 0;
+            if (extract_strdup(extract->alloc, span0->font_name, &span->font_name)) goto end;
+        }
+    }
+    
+    if (0 && autosplit && y - extract->span_offset_y != 0) {
         
         double e = span->ctm.e + span->ctm.a * (x - extract->span_offset_x)
                 + span->ctm.b * (y - extract->span_offset_y);
@@ -984,17 +1062,17 @@ int extract_add_char(
     if (span_append_c(extract->alloc, span, 0 /*c*/)) goto end;
     char_ = &span->chars[ span->chars_num-1];
     
-    char_->pre_x = x - extract->span_offset_x;
-    char_->pre_y = y - extract->span_offset_y;
+    char_->pre_x = x;// - extract->span_offset_x;
+    char_->pre_y = y;// - extract->span_offset_y;
 
-    char_->x = span->ctm.a * char_->pre_x + span->ctm.b * char_->pre_y;
-    char_->y = span->ctm.c * char_->pre_x + span->ctm.d * char_->pre_y;
+    char_->x = span->ctm.a * char_->pre_x + span->ctm.c * char_->pre_y + span->ctm.e;
+    char_->y = span->ctm.b * char_->pre_x + span->ctm.d * char_->pre_y + span->ctm.f;
     
     char_->adv = adv;
     char_->ucs = ucs;
 
-    char_->x += span->ctm.e;
-    char_->y += span->ctm.f;
+    //char_->x += span->ctm.e;
+    //char_->y += span->ctm.f;
 
     {
         int page_spans_num_old = page->spans_num;
