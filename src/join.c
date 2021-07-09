@@ -83,6 +83,10 @@ static double span_angle(span_t* span)
 {
     if (0)
     {
+        /* This is an attempt to take into account the trm matrix when looking
+        at spans, because for agstat.pdf vertical text seems to be achieved
+        by making trm rotate by 90 degrees. But it messes up the ordering of
+        rotated paragraphs in Python2.pdf so is disabled for now. */
         matrix_t m = multiply_matrix_matrix(span->trm, span->ctm);
         point_t dir;
         dir.x = span->wmode ? 0 : 1;

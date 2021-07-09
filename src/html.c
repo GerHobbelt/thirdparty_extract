@@ -48,6 +48,79 @@ static void content_state_init(content_state_t* state)
     state->ctm_prev = NULL;
 }
 
+static int paragraph_to_html_content(
+        extract_alloc_t*    alloc,
+        content_state_t*    state,
+        paragraph_t*        paragraph,
+        int                 single_line,
+        extract_astring_t*  content
+        )
+{
+    int e = -1;
+    char* endl = (single_line) ? "" : "\n";
+    int l;
+    if (extract_astring_catf(alloc, content, "%s%s<p>", endl, endl)) goto end;
+
+    for (l=0; l<paragraph->lines_num; ++l)
+    {
+        line_t* line = paragraph->lines[l];
+        int s;
+        for (s=0; s<line->spans_num; ++s)
+        {
+            int c;
+            span_t* span = line->spans[s];
+            double font_size_new;
+            state->ctm_prev = &span->ctm;
+            font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
+            if (span->font_bold != state->font_bold)
+            {
+                if (extract_astring_cat(alloc, content,
+                        span->font_bold ? "<b>" : "</b>"
+                        )) goto end;
+                state->font_bold = span->font_bold;
+            }
+            if (span->font_italic != state->font_italic)
+            {
+                if ( extract_astring_cat(alloc, content,
+                        span->font_italic ? "<i>" : "</i>"
+                        )) goto end;
+                state->font_italic = span->font_italic;
+            }
+
+            for (c=0; c<span->chars_num; ++c)
+            {
+                char_t* char_ = &span->chars[c];
+                if (extract_astring_cat_xmlc(alloc, content, char_->ucs)) goto end;
+                //extract_astring_cat(alloc, content, "[eos]");
+            }
+            /* Remove any trailing '-' at end of line. */
+            //extract_astring_cat(alloc, content, "[eos]");
+            //if (extract_html_char_truncate_if(content, '-')) goto end;
+        }
+
+        if (content->chars_num && l+1 < paragraph->lines_num)
+        {
+            if (content->chars[content->chars_num-1] == '-')    content->chars_num -= 1;
+            else if (content->chars[content->chars_num-1] != ' ')
+            {
+                extract_astring_catc(alloc, content, ' ');
+            }
+        }
+    }
+    /*if (state->font_name)
+    {
+        if (extract_html_run_finish(alloc, content)) goto end;
+        state->font_name = NULL;
+    }*/
+    if (extract_astring_catf(alloc, content, "%s</p>", endl)) goto end;
+    
+    e = 0;
+    
+    end:
+    return e;
+}
+
+
 static int paragraphs_to_html_content(
         extract_alloc_t*    alloc,
         content_state_t*    state,
@@ -61,65 +134,10 @@ etc. */
 {
     int e = -1;
     int p;
-    char* endl = (single_line) ? "" : "\n";
     for (p=0; p<paragraphs_num; ++p)
     {
         paragraph_t* paragraph = paragraphs[p];
-        int l;
-        if (extract_astring_catf(alloc, content, "%s%s<p>", endl, endl)) goto end;
-
-        for (l=0; l<paragraph->lines_num; ++l)
-        {
-            line_t* line = paragraph->lines[l];
-            int s;
-            for (s=0; s<line->spans_num; ++s)
-            {
-                int c;
-                span_t* span = line->spans[s];
-                double font_size_new;
-                state->ctm_prev = &span->ctm;
-                font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
-                if (span->font_bold != state->font_bold)
-                {
-                    if (extract_astring_cat(alloc, content,
-                            span->font_bold ? "<b>" : "</b>"
-                            )) goto end;
-                    state->font_bold = span->font_bold;
-                }
-                if (span->font_italic != state->font_italic)
-                {
-                    if ( extract_astring_cat(alloc, content,
-                            span->font_italic ? "<i>" : "</i>"
-                            )) goto end;
-                    state->font_italic = span->font_italic;
-                }
-
-                for (c=0; c<span->chars_num; ++c)
-                {
-                    char_t* char_ = &span->chars[c];
-                    if (extract_astring_cat_xmlc(alloc, content, char_->ucs)) goto end;
-                    //extract_astring_cat(alloc, content, "[eos]");
-                }
-                /* Remove any trailing '-' at end of line. */
-                //extract_astring_cat(alloc, content, "[eos]");
-                //if (extract_html_char_truncate_if(content, '-')) goto end;
-            }
-            
-            if (content->chars_num && l+1 < paragraph->lines_num)
-            {
-                if (content->chars[content->chars_num-1] == '-')    content->chars_num -= 1;
-                else if (content->chars[content->chars_num-1] != ' ')
-                {
-                    extract_astring_catc(alloc, content, ' ');
-                }
-            }
-        }
-        /*if (state->font_name)
-        {
-            if (extract_html_run_finish(alloc, content)) goto end;
-            state->font_name = NULL;
-        }*/
-        if (extract_astring_catf(alloc, content, "%s</p>", endl)) goto end;
+        if (paragraph_to_html_content(alloc, state, paragraph, single_line, content)) goto end;
     }
     
     if (state->font_bold)
@@ -138,6 +156,75 @@ etc. */
     end:
     return e;
 }
+
+static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t* table, extract_astring_t* content)
+{
+    int e = -1;
+    extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
+    int y;
+    int i;
+
+    if (0)
+    {
+        /* Show raw cells info. */
+        for (y=0; y<table->cells_num_y; ++y)
+        {
+            int x;
+            for (x=0; x<table->cells_num_x; ++x)
+            {
+                cell_t* cell = table->cells[y*table->cells_num_x + x];
+                fprintf(stderr,
+                        " [i=% 4i (% 3i % 3i) l=%i a=%i ix_extend=%i iy_extend=% 3i]",
+                        i, cell->ix, cell->iy, cell->left, cell->above, cell->ix_extend, cell->iy_extend
+                        );
+                /*fprintf(stderr, cell->left ? "|" : " ");
+                fprintf(stderr, cell->above ? "-" : " ");
+                fprintf(stderr,   " ");*/                      
+            }
+            fprintf(stderr, "\n");
+        }
+    }
+
+    outf("table->cells_num_x=%i", table->cells_num_x);
+    outf("table->cells_num_y=%i", table->cells_num_y);
+    for (y=0; y<table->cells_num_y; ++y)
+    {
+        int x;
+        extract_astring_cat(alloc, content, "    <tr>\n        ");
+        for (x=0; x<table->cells_num_x; ++x)
+        {
+            cell_t* cell = table->cells[y*table->cells_num_x + x];
+            if (!cell->above || !cell->left) continue;
+            extract_astring_cat(alloc, content, "<td");
+            if (cell->ix_extend > 1)
+            {
+                extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend);
+            }
+            if (cell->iy_extend > 1)
+            {
+                extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend);
+            }
+            extract_astring_cat(alloc, content, ">");
+
+            extract_astring_t text = {NULL, 0};
+            //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+            if (paragraphs_to_html_content(alloc, state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
+            if (text.chars)
+            {
+                extract_astring_cat(alloc, content, text.chars);
+            }
+            extract_astring_cat(alloc, content, "</td>");
+
+            extract_astring_free(alloc, &text);
+        }
+        extract_astring_cat(alloc, content, "\n    </tr>\n");
+    }
+    extract_astring_cat(alloc, content, "</table>\n\n");
+    e = 0;
+    end:
+    return e;
+}
+
 
 #if 0
 static int get_paragraphs_text(
@@ -207,66 +294,7 @@ int extract_document_to_html_content(
             {
                 int y;
                 table_t* table = page->tables[t];
-                extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
-                //int iy = 0;
-                int i;
-                
-                if (0)
-                {
-                    /* Show raw cells info. */
-                    for (y=0; y<table->cells_num_y; ++y)
-                    {
-                        int x;
-                        for (x=0; x<table->cells_num_x; ++x)
-                        {
-                            cell_t* cell = table->cells[y*table->cells_num_x + x];
-                            fprintf(stderr,
-                                    " [i=% 4i (% 3i % 3i) l=%i a=%i ix_extend=%i iy_extend=% 3i]",
-                                    i, cell->ix, cell->iy, cell->left, cell->above, cell->ix_extend, cell->iy_extend
-                                    );
-                            /*fprintf(stderr, cell->left ? "|" : " ");
-                            fprintf(stderr, cell->above ? "-" : " ");
-                            fprintf(stderr,   " ");*/                      
-                        }
-                        fprintf(stderr, "\n");
-                    }
-                }
-                
-                outf("table->cells_num_x=%i", table->cells_num_x);
-                outf("table->cells_num_y=%i", table->cells_num_y);
-                for (y=0; y<table->cells_num_y; ++y)
-                {
-                    int x;
-                    extract_astring_cat(alloc, content, "    <tr>\n        ");
-                    for (x=0; x<table->cells_num_x; ++x)
-                    {
-                        cell_t* cell = table->cells[y*table->cells_num_x + x];
-                        if (!cell->above || !cell->left) continue;
-                        extract_astring_cat(alloc, content, "<td");
-                        if (cell->ix_extend > 1)
-                        {
-                            extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend);
-                        }
-                        if (cell->iy_extend > 1)
-                        {
-                            extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend);
-                        }
-                        extract_astring_cat(alloc, content, ">");
-                        
-                        extract_astring_t text = {NULL, 0};
-                        //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-                        if (paragraphs_to_html_content(alloc, &state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
-                        if (text.chars)
-                        {
-                            extract_astring_cat(alloc, content, text.chars);
-                        }
-                        extract_astring_cat(alloc, content, "</td>");
-
-                        extract_astring_free(alloc, &text);
-                    }
-                    extract_astring_cat(alloc, content, "\n    </tr>\n");
-                }
-                extract_astring_cat(alloc, content, "</table>\n\n");
+                if (append_table(alloc, &state, table, content)) goto end;
             }
         }
     }
