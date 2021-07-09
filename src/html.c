@@ -19,6 +19,7 @@ docx_paragraph_finish(). */
 
 #include <assert.h>
 #include <errno.h>
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -295,6 +296,29 @@ int extract_document_to_html_content(
         content_state_t state;
         content_state_init(&state);
         
+        /* Output paragraphs and tables in order of increasing <y> coordinate. */
+        int p = 0;
+        int t = 0;
+        for(;;)
+        {
+            paragraph_t* paragraph = (p == page->paragraphs_num) ? NULL : page->paragraphs[p];
+            table_t* table = (t == page->tables_num) ? NULL : page->tables[t];
+            if (!paragraph && !table) break;
+            double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
+            double y_table = (table) ? table->pos.y : DBL_MAX;
+            if (y_paragraph < y_table)
+            {
+                if (paragraph_to_html_content(alloc, &state, paragraph, 0 /*single_line*/, content)) goto end;
+                if (content_state_reset(alloc, &state, content)) goto end;
+                p += 1;
+            }
+            else
+            {
+                if (append_table(alloc, &state, table, content)) goto end;
+                t += 1;
+            }
+        }
+        #if 0
         if (paragraphs_to_html_content(alloc, &state, page->paragraphs, page->paragraphs_num, 0 /*single_line*/, content)) goto end;
         
         {
@@ -306,6 +330,7 @@ int extract_document_to_html_content(
                 if (append_table(alloc, &state, table, content)) goto end;
             }
         }
+        #endif
     }
     extract_astring_cat(alloc, content, "</body>\n");
     extract_astring_cat(alloc, content, "</html>\n");

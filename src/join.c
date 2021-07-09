@@ -1112,7 +1112,8 @@ static int make_paragraphs(
     qsort(
             paragraphs,
             paragraphs_num,
-            sizeof(paragraph_t*), paragraphs_cmp
+            sizeof(paragraph_t*),
+            paragraphs_cmp
             );
 
     *o_paragraphs = paragraphs;
@@ -1473,9 +1474,9 @@ y_min..y_max. */
         }
     }
     
-    /* Remove cols and rows where no cells have .above and .left - these will
-    not appear. */
-    //int xx = 0;
+    /* Remove cols and rows where no cells have .above and .left - these
+    will not appear. It also avoids spurious empty columns when table uses
+    closely-spaced double lines as separators. */
     for (x=0; x<cells_num_x; ++x)
     {
         int has_cells = 0;
@@ -1509,6 +1510,12 @@ y_min..y_max. */
         }
     }
     
+    if (cells_num == 0)
+    {
+        e = 0;
+        goto end;
+    }
+    
     /* Find text within each cell. We don't attempt to handle images within
     cells. */
     for (i=0; i<cells_num; ++i)
@@ -1530,8 +1537,8 @@ y_min..y_max. */
     /* Append the table we have found to page->tables[]. */
     if (extract_realloc(alloc, &page->tables, sizeof(*page->tables) * (page->tables_num + 1))) goto end;
     if (extract_malloc(alloc, &page->tables[page->tables_num], sizeof(*page->tables[page->tables_num]))) goto end;
-    page->tables[page->tables_num]->pos.x = 0;
-    page->tables[page->tables_num]->pos.y = 0;
+    page->tables[page->tables_num]->pos.x = cells[0]->rect.min.x;
+    page->tables[page->tables_num]->pos.y = cells[0]->rect.min.y;
     page->tables[page->tables_num]->cells = cells;
     page->tables[page->tables_num]->cells_num_x = cells_num_x;
     page->tables[page->tables_num]->cells_num_y = cells_num_y;
