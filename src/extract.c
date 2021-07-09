@@ -374,7 +374,7 @@ int matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
 }
 
 
-static point_t multiply_matrix_point(matrix_t m, point_t p)
+point_t multiply_matrix_point(matrix_t m, point_t p)
 {
     double x = p.x;
     p.x = m.a * x + m.c * p.y;
@@ -382,7 +382,7 @@ static point_t multiply_matrix_point(matrix_t m, point_t p)
     return p;
 }
 
-static matrix_t multiply_matrix_matrix(matrix_t m1, matrix_t m2)
+matrix_t multiply_matrix_matrix(matrix_t m1, matrix_t m2)
 {
     matrix_t ret;
     ret.a = m1.a * m2.a + m1.b * m2.c;

@@ -71,7 +71,9 @@ def run_tests():
             make_textfile(csv_ref, f'{csv_ref}.txt')
             make_textfile(csv_generated, f'{csv_generated}.txt')
             if pdf.leaf == 'column_span_2.pdf':
-                # Special case - modify reference cvs to match our (better) output.
+                # Special case - modify reference cvs to match our (better)
+                # output - we rmove a '-' in 'Preva-lence'.
+                #
                 with open(f'{csv_ref}.txt') as f:
                     t = f.read()
                 t2 = t
@@ -83,6 +85,9 @@ def run_tests():
                 assert t2 != t, f'lines are: {nl.join(t.split(nl))}'
                 with open(f'{csv_ref}.txt', 'w') as f:
                     f.write(t2)
+            # We use 'diff -w' because camelot output seems to be missing
+            # spaces where it joins lines.
+            #
             command_diff = f'diff -uw {csv_ref}.txt {csv_generated}.txt'
             print(f'Running command: {command_diff}')
             sys.stdout.flush()

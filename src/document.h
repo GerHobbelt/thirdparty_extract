@@ -29,7 +29,9 @@ typedef struct
     double  f;
 } matrix_t;
 
-double matrix_expansion(matrix_t m);
+double      matrix_expansion(matrix_t m);
+point_t     multiply_matrix_point(matrix_t m, point_t p);
+matrix_t    multiply_matrix_matrix(matrix_t m1, matrix_t m2);
 
 int matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
 ;

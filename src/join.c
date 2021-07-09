@@ -81,6 +81,16 @@ static double spans_adv(
 
 static double span_angle(span_t* span)
 {
+    if (0)
+    {
+        matrix_t m = multiply_matrix_matrix(span->trm, span->ctm);
+        point_t dir;
+        dir.x = span->wmode ? 0 : 1;
+        dir.y = span->wmode ? 1 : 0;
+        dir = multiply_matrix_point(m, dir);
+        double ret = atan2(dir.y, dir.x);
+        return ret;
+    }
     /* Assume ctm is a rotation matix. */
     double ret = atan2(-span->ctm.c, span->ctm.a);
     outfx("ctm.a=%f ctm.b=%f ret=%f", span->ctm.a, span->ctm.b, ret);
@@ -1477,7 +1487,7 @@ y_min..y_max. */
         if (!has_cells)
         {
             /* Remove column <x>. */
-            outf0("Removing column %i. cells_num=%i cells_num_x=%i cells_num_y=%i", x, cells_num, cells_num_x, cells_num_y);
+            outf("Removing column %i. cells_num=%i cells_num_x=%i cells_num_y=%i", x, cells_num, cells_num_x, cells_num_y);
             int j = 0;
             for (i=0; i<cells_num; ++i)
             {
