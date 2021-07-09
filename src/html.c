@@ -48,6 +48,25 @@ static void content_state_init(content_state_t* state)
     state->ctm_prev = NULL;
 }
 
+int content_state_reset(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
+{
+    int e = -1;
+    if (state->font_bold)
+    {
+        if (extract_astring_cat(alloc, content, "</b>")) goto end;
+        state->font_bold = 0;
+    }
+    if (state->font_italic)
+    {
+        if (extract_astring_cat(alloc, content, "</i>")) goto end;
+        state->font_italic = 0;
+    }
+    e = 0;
+    
+    end:
+    return e;
+}
+
 static int paragraph_to_html_content(
         extract_alloc_t*    alloc,
         content_state_t*    state,
@@ -140,17 +159,7 @@ etc. */
         if (paragraph_to_html_content(alloc, state, paragraph, single_line, content)) goto end;
     }
     
-    if (state->font_bold)
-    {
-        if (extract_astring_cat(alloc, content, "</b>")) goto end;
-        state->font_bold = 0;
-    }
-    if (state->font_italic)
-    {
-        if (extract_astring_cat(alloc, content, "</i>")) goto end;
-        state->font_italic = 0;
-    }
-    
+    if (content_state_reset(alloc, state, content)) goto end;
     e = 0;
     
     end:
@@ -216,6 +225,7 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
             extract_astring_cat(alloc, content, "</td>");
 
             extract_astring_free(alloc, &text);
+            if (content_state_reset(alloc, state, content)) goto end;
         }
         extract_astring_cat(alloc, content, "\n    </tr>\n");
     }
@@ -292,7 +302,6 @@ int extract_document_to_html_content(
             outf("page->tables_num=%i", page->tables_num);
             for (t=0; t<page->tables_num; ++t)
             {
-                int y;
                 table_t* table = page->tables[t];
                 if (append_table(alloc, &state, table, content)) goto end;
             }
