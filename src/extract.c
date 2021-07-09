@@ -382,6 +382,18 @@ static point_t multiply_matrix_point(matrix_t m, point_t p)
     return p;
 }
 
+static matrix_t multiply_matrix_matrix(matrix_t m1, matrix_t m2)
+{
+    matrix_t ret;
+    ret.a = m1.a * m2.a + m1.b * m2.c;
+    ret.b = m1.a * m2.b + m1.b * m2.d;
+    ret.c = m1.c * m2.a + m1.d * m2.c;
+    ret.d = m1.c * m2.b + m1.d * m2.d;
+    ret.e = m1.e + m2.e;
+    ret.f = m1.f + m2.f;
+    return ret;
+}
+
 static int s_matrix_read(const char* text, matrix_t* matrix)
 {
     int n;
@@ -993,7 +1005,8 @@ int extract_add_char(
             dir.x = 1;
             dir.y = 0;
         }
-        dir = multiply_matrix_point(span->ctm, dir);
+        matrix_t m = multiply_matrix_matrix(span->trm, span->ctm);
+        dir = multiply_matrix_point(m, dir);
 
         char_t* char_prev = &span->chars[span->chars_num - 1];
         
