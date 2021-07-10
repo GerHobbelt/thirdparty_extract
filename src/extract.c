@@ -911,7 +911,7 @@ int extract_add_char(
         int         autosplit
         )
 {
-    int e = -1;
+    int ev = -1;
     char_t* char_;
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     span_t* span = page->spans[page->spans_num - 1];
@@ -972,10 +972,10 @@ int extract_add_char(
             extract->num_spans_split += 1;
         }
     }
-    e = 0;
+    ev = 0;
     
     end:
-    return e;
+    return ev;
 }
 
 

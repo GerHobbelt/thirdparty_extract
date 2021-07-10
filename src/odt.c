@@ -439,12 +439,12 @@ int extract_document_to_odt_content(
 {
     int ret = -1;
     int text_box_id = 0;
-    int p;
+    int pp;
 
     /* Write paragraphs into <content>. */
-    for (p=0; p<document->pages_num; ++p)
+    for (pp=0; pp<document->pages_num; ++pp)
     {
-        page_t* page = document->pages[p];
+        page_t* page = document->pages[pp];
         int p;
         content_state_t state;
         state.font_name = NULL;
@@ -691,7 +691,7 @@ int extract_odt_content_item(
     else if (!strcmp(name, "META-INF/manifest.xml"))
     {
         /* Add images. */
-        int e = 0;
+        e = 0;
         int i;
         for (i=0; i<images->images_num; ++i)
         {
