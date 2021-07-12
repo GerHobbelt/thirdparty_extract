@@ -272,6 +272,25 @@ static int get_paragraphs_text(
 }
 #endif
 
+
+static char_t* paragraph_first_char(const paragraph_t* paragraph)
+{
+    line_t* line = paragraph->lines[paragraph->lines_num - 1];
+    span_t* span = line->spans[line->spans_num - 1];
+    return &span->chars[0];
+}
+
+static int compare_paragraph_y(const void* a, const void* b)
+{
+    const paragraph_t* const* a_paragraph = a;
+    const paragraph_t* const* b_paragraph = b;
+    double a_y = paragraph_first_char(*a_paragraph)->y;
+    double b_y = paragraph_first_char(*b_paragraph)->y;
+    if (a_y > b_y)  return +1;
+    if (a_y < b_y)  return -1;
+    return 0;
+}
+
 int extract_document_to_html_content(
         extract_alloc_t*    alloc,
         document_t*         document,
@@ -293,15 +312,43 @@ int extract_document_to_html_content(
     for (p=0; p<document->pages_num; ++p)
     {
         page_t* page = document->pages[p];
+        paragraph_t** paragraphs = NULL;
+        int p;
         content_state_t state;
         content_state_init(&state);
         
-        /* Output paragraphs and tables in order of increasing <y> coordinate. */
-        int p = 0;
+        /* Output paragraphs and tables in order of increasing <y> coordinate.
+
+        Unfortunately the paragraph ordering we do in page->paragraphs[]
+        isn't quite right and results in bad ordering if ctm/trm matrices are
+        inconsistent. So we create our own list of paragraphs sorted strictly
+        by y coordinate of the first char of each paragraph. */
+        if (extract_malloc(alloc, &paragraphs, sizeof(*paragraphs) * page->paragraphs_num)) goto end;
+        for (p = 0; p < page->paragraphs_num; ++p)
+        {
+            paragraphs[p] = page->paragraphs[p];
+        }
+        qsort(paragraphs, page->paragraphs_num, sizeof(*paragraphs), compare_paragraph_y);
+        
+        if (0)
+        {
+            int p;
+            outf0("paragraphs are:");
+            for (p=0; p<page->paragraphs_num; ++p)
+            {
+                paragraph_t* paragraph = page->paragraphs[p];
+                line_t* line = paragraph->lines[0];
+                span_t* span = line->spans[0];
+                outf0("    p=%i: %s", p, span_string(NULL, span));
+            }
+        }
+
+        p = 0;
         int t = 0;
+        
         for(;;)
         {
-            paragraph_t* paragraph = (p == page->paragraphs_num) ? NULL : page->paragraphs[p];
+            paragraph_t* paragraph = (p == page->paragraphs_num) ? NULL : paragraphs[p];
             table_t* table = (t == page->tables_num) ? NULL : page->tables[t];
             if (!paragraph && !table) break;
             double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
@@ -310,14 +357,14 @@ int extract_document_to_html_content(
             outf0("t=%i y_table=%f", y_paragraph);
             if (y_paragraph < y_table)
             {
-                extract_astring_catf(alloc, content, "<p>@@@ paragraph %i y=%f @@@)</p>\n", p, y_paragraph);
+                //extract_astring_catf(alloc, content, "<p>@@@ paragraph %i y=%f @@@)</p>\n", p, y_paragraph);
                 if (paragraph_to_html_content(alloc, &state, paragraph, 0 /*single_line*/, content)) goto end;
                 if (content_state_reset(alloc, &state, content)) goto end;
                 p += 1;
             }
             else
             {
-                extract_astring_catf(alloc, content, "<p>@@@ table %t y=%f @@@)</p>\n", p, y_table);
+                //extract_astring_catf(alloc, content, "<p>@@@ table %t y=%f @@@)</p>\n", p, y_table);
                 if (append_table(alloc, &state, table, content)) goto end;
                 t += 1;
             }

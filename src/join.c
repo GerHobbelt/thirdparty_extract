@@ -859,9 +859,9 @@ static int paragraphs_cmp(const void* a, const void* b)
         int d = matrix_cmp4(&a_span->ctm, &b_span->ctm);
         if (d)
         {
-            outf0("matrix_cmp4() returned non-zero.");
-            outf0("a_span->ctm=%s trm=%s: %s", matrix_string(&a_span->ctm), matrix_string(&a_span->trm), span_string(NULL, a_span));
-            outf0("b_span->ctm=%s trm=%s: %s", matrix_string(&b_span->ctm), matrix_string(&a_span->trm), span_string(NULL, b_span));
+            outf("matrix_cmp4() returned non-zero.");
+            outf("a_span->ctm=%s trm=%s: %s", matrix_string(&a_span->ctm), matrix_string(&a_span->trm), span_string(NULL, a_span));
+            outf("b_span->ctm=%s trm=%s: %s", matrix_string(&b_span->ctm), matrix_string(&a_span->trm), span_string(NULL, b_span));
             return d;
         }
     }
