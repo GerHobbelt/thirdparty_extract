@@ -126,21 +126,13 @@ if __name__ == '__main__':
             with open('extract-table.html', 'w') as f:
                 print(f'<html>', file=f)
                 print(f'<body>', file=f)
-                print(f'<h1>Currently successful extract table examples</h1>', file=f)
+                print(f'<h1>Extract table output</h1>', file=f)
                 print(f'<ul>', file=f)
-                for n in (
-                        'table',
-                        'agstat',
-                        'row_span',
-                        'background_lines_1',
-                        'column_span_1',
-                        'column_span_2',
-                        'row_span',
-                        ):
-                    print(f'    <li>{n}', file=f)
+                for pdf in get_pdfs():
+                    print(f'    <li>{pdf.leaf}', file=f)
                     print(f'    <ul>', file=f)
-                    print(f'        <li><a href="https://ghostscript.com/~julian/extract/{n}.pdf">{n}.pdf</a> => <a href="https://ghostscript.com/~julian/extract/{n}.pdf.mutool.html">{n}.pdf.mutool.html</a>', file=f)
-                    print(f'        <li><iframe width=40% src="https://ghostscript.com/~julian/extract/{n}.pdf"></iframe> <iframe width=40% src="https://ghostscript.com/~julian/extract/{n}.pdf.mutool.html"></iframe>', file=f)
+                    print(f'        <li><a href="https://ghostscript.com/~julian/extract/{pdf.leaf}">{pdf.leaf}</a> => <a href="https://ghostscript.com/~julian/extract/{pdf.leaf}.mutool.html">{pdf.leaf}.mutool.html</a>', file=f)
+                    print(f'        <li><iframe width=40% src="https://ghostscript.com/~julian/extract/{pdf.leaf}"></iframe> <iframe width=40% src="https://ghostscript.com/~julian/extract/{pdf.leaf}.mutool.html"></iframe>', file=f)
                     print(f'    </ul>', file=f)
                 print(f'</ul>', file=f)
                 print(f'</body>', file=f)

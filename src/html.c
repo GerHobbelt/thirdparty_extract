@@ -306,31 +306,22 @@ int extract_document_to_html_content(
             if (!paragraph && !table) break;
             double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
             double y_table = (table) ? table->pos.y : DBL_MAX;
+            outf0("p=%i y_paragraph=%f", y_paragraph);
+            outf0("t=%i y_table=%f", y_paragraph);
             if (y_paragraph < y_table)
             {
+                extract_astring_catf(alloc, content, "<p>@@@ paragraph %i y=%f @@@)</p>\n", p, y_paragraph);
                 if (paragraph_to_html_content(alloc, &state, paragraph, 0 /*single_line*/, content)) goto end;
                 if (content_state_reset(alloc, &state, content)) goto end;
                 p += 1;
             }
             else
             {
+                extract_astring_catf(alloc, content, "<p>@@@ table %t y=%f @@@)</p>\n", p, y_table);
                 if (append_table(alloc, &state, table, content)) goto end;
                 t += 1;
             }
         }
-        #if 0
-        if (paragraphs_to_html_content(alloc, &state, page->paragraphs, page->paragraphs_num, 0 /*single_line*/, content)) goto end;
-        
-        {
-            int t;
-            outf("page->tables_num=%i", page->tables_num);
-            for (t=0; t<page->tables_num; ++t)
-            {
-                table_t* table = page->tables[t];
-                if (append_table(alloc, &state, table, content)) goto end;
-            }
-        }
-        #endif
     }
     extract_astring_cat(alloc, content, "</body>\n");
     extract_astring_cat(alloc, content, "</html>\n");

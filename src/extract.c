@@ -63,8 +63,10 @@ const char* span_string(extract_alloc_t* alloc, span_t* span)
     static extract_astring_t ret = {0};
     double x0 = 0;
     double y0 = 0;
+    point_t pre0 = {0, 0};
     double x1 = 0;
     double y1 = 0;
+    point_t pre1 = {0, 0};
     int c0 = 0;
     int c1 = 0;
     int i;
@@ -78,17 +80,23 @@ const char* span_string(extract_alloc_t* alloc, span_t* span)
         c0 = span->chars[0].ucs;
         x0 = span->chars[0].x;
         y0 = span->chars[0].y;
+        pre0.x = span->chars[0].pre_x;
+        pre0.y = span->chars[0].pre_y;
         c1 = span->chars[span->chars_num-1].ucs;
         x1 = span->chars[span->chars_num-1].x;
         y1 = span->chars[span->chars_num-1].y;
+        pre1.x = span->chars[span->chars_num-1].pre_x;
+        pre1.y = span->chars[span->chars_num-1].pre_y;
     }
     {
-        char buffer[200];
+        char buffer[400];
         snprintf(buffer, sizeof(buffer),
-                "span chars_num=%i (%c:%f,%f)..(%c:%f,%f) font=%s:(%f,%f) wmode=%i chars_num=%i: ",
+                "span ctm=%s trm=%s chars_num=%i (%c:%f,%f pre(%f %f))..(%c:%f,%f pre(%f %f)) font=%s:(%f,%f) wmode=%i chars_num=%i: ",
+                matrix_string(&span->ctm),
+                matrix_string(&span->trm),
                 span->chars_num,
-                c0, x0, y0,
-                c1, x1, y1,
+                c0, x0, y0, pre0.x, pre0.y,
+                c1, x1, y1, pre1.x, pre1.y,
                 span->font_name,
                 span->trm.a,
                 span->trm.d,
@@ -100,9 +108,11 @@ const char* span_string(extract_alloc_t* alloc, span_t* span)
             snprintf(
                     buffer,
                     sizeof(buffer),
-                    " i=%i {x=%f adv=%f}",
+                    " i=%i {x=%f y=%f ucs=%i adv=%f}",
                     i,
                     span->chars[i].x,
+                    span->chars[i].y,
+                    span->chars[i].ucs,
                     span->chars[i].adv
                     );
             extract_astring_cat(alloc, &ret, buffer);
@@ -910,7 +920,7 @@ int extract_span_begin(
     span_t* span;
     assert(extract->document.pages_num > 0);
     page = extract->document.pages[extract->document.pages_num-1];
-    outf("extract_span_begin(): ctm=(%f %f %f %f %f %f) trm=(%f %f %f %f %f %f) font_name=%s, wmode=%i",
+    outf0("extract_span_begin(): ctm=(%f %f %f %f %f %f) trm=(%f %f %f %f %f %f) font_name=%s, wmode=%i",
             ctm_a,
             ctm_b,
             ctm_c,
@@ -942,22 +952,6 @@ int extract_span_begin(
     span->trm.e = trm_e;
     span->trm.f = trm_f;
     
-    /*
-    span->ctm.a = trm_a * ctm_a + trm_b + ctm_c;
-    span->ctm.b = trm_a * ctm_b + trm_b * ctm_d;
-    span->ctm.c = trm_c * ctm_a + trm_d * ctm_c;
-    span->ctm.d = trm_c * ctm_b + trm_d * ctm_d;
-    span->ctm.e = trm_e + ctm_e;
-    span->ctm.f = trm_f + ctm_f;
-    
-    span->trm.a = 1;
-    span->trm.b = 0;
-    span->trm.c = 0;
-    span->trm.d = 1;
-    span->trm.e = 0;
-    span->trm.f = 0;
-    */
-    
     {
         const char* ff = strchr(font_name, '+');
         const char* f = (ff) ? ff+1 : font_name;
@@ -988,7 +982,7 @@ int extract_add_char(
     page_t* page = extract->document.pages[extract->document.pages_num-1];
     span_t* span = page->spans[page->spans_num - 1];
     
-    outf("extract_add_char() (%f %f) ucs=%i=%c adv=%f", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : ' ', adv);
+    outf0("extract_add_char() (%f %f) ucs=% 5i=%c adv=%f", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : ' ', adv);
     /* Ignore the specified <autosplit> - there seems no advantage to not
     splitting spans on multiple lines, and not doing so causes problems with
     missing spaces in the output. */

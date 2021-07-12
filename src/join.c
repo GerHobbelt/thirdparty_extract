@@ -39,10 +39,12 @@ static point_t char_to_point(const char_t* char_)
     return ret;
 }
 
-static const char* matrix_string(const matrix_t* matrix)
+const char* matrix_string(const matrix_t* matrix)
 {
-    static char ret[64];
-    snprintf(ret, sizeof(ret), "{%f %f %f %f %f %f}",
+    static char ret[5][64];
+    static int i = 0;
+    i = (i + 1) % 5;
+    snprintf(ret[i], sizeof(ret[i]), "{%f %f %f %f %f %f}",
             matrix->a,
             matrix->b,
             matrix->c,
@@ -50,7 +52,7 @@ static const char* matrix_string(const matrix_t* matrix)
             matrix->e,
             matrix->f
             );
-    return ret;
+    return ret[i];
 }
 
 /* Returns total width of span. */
@@ -109,6 +111,22 @@ static double span_angle(span_t* span)
     else {
         return atan2(span->trm.d, span->trm.c);
     }*/
+}
+
+static double span_angle2(span_t* span)
+{
+    if (span->chars_num > 1)
+    {
+        double dx = span->chars[span->chars_num-1].x - span->chars[0].x;
+        double dy = span->chars[span->chars_num-1].y - span->chars[0].y;
+        double ret1 = span_angle(span);
+        double ret2 = atan2(-dy, dx);
+        if (fabs(ret2 - ret1) > 0.01)
+        {
+            outf0("### ret1=%f ret2=%f: %s", ret1, ret2, span_string(NULL, span));
+        }
+    }
+    return span_angle(span);
 }
 
 /* Returns static string containing brief info about span_t. */
@@ -614,6 +632,13 @@ static int make_lines(
                     extract_bzero(item, sizeof(*item));
                     item->ucs = ' ';
                     item->adv = nearest_adv;
+                    /* This is a hack to give our extra space a vaguely useful
+                    (x,y) coordinate - this can be used later on when ordering
+                    paragraphs. We could try to be more accurate by adding
+                    item[-1]'s .adv suitably transformed by .wmode, .ctm and
+                    .trm. */
+                    item->x = item[-1].x;
+                    item->y = item[-1].y;
                 }
 
                 if (verbose) {
@@ -810,11 +835,36 @@ static int paragraphs_cmp(const void* a, const void* b)
     span_t* a_span = line_span_first(a_line);
     span_t* b_span = line_span_first(b_line);
 
-    /* If ctm matrices differ, always return this diff first. Note that we
-    ignore .e and .f because if data is from ghostscript then .e and .f vary
-    for each span, and we don't care about these differences. */
-    int d = matrix_cmp4(&a_span->ctm, &b_span->ctm);
-    if (d)  return d;
+    if (0)
+    {
+        double a_angle = span_angle2(a_span);
+        double b_angle = span_angle2(b_span);
+        if (fabs(a_angle - b_angle) > 0.01)
+        {
+            outf0("angles differ: a_angle=%f b_angle=%f", a_angle, b_angle);
+            outf0("a_span: %s", span_string(NULL, a_span));
+            outf0("b_span: %s", span_string(NULL, b_span));
+            if (a_angle - b_angle > 3.14/2) {
+                /* Give up if more than 90 deg. */
+                return 0;
+            }
+            return a_angle - b_angle;
+        }
+    }
+    if (1)
+    {
+        /* If ctm matrices differ, always return this diff first. Note that we
+        ignore .e and .f because if data is from ghostscript then .e and .f
+        vary for each span, and we don't care about these differences. */
+        int d = matrix_cmp4(&a_span->ctm, &b_span->ctm);
+        if (d)
+        {
+            outf0("matrix_cmp4() returned non-zero.");
+            outf0("a_span->ctm=%s trm=%s: %s", matrix_string(&a_span->ctm), matrix_string(&a_span->trm), span_string(NULL, a_span));
+            outf0("b_span->ctm=%s trm=%s: %s", matrix_string(&b_span->ctm), matrix_string(&a_span->trm), span_string(NULL, b_span));
+            return d;
+        }
+    }
 
     {
         double a_angle = line_angle(a_line);

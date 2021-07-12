@@ -434,6 +434,13 @@ test/generated/%.pdf.mutool.odt: test/%.pdf $(mutool)
 	@mkdir -p test/generated
 	$(mutool) convert -O mediabox-clip=no -o $@ $<
 
+# Converts .pdf directly to .odt using mutool 
+test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+	@echo
+	@echo == Converting .pdf directly to .html using mutool.
+	@mkdir -p test/generated
+	$(mutool) convert -F docx -O html -o $@ $<
+
 #test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
 #	@echo
 #	@echo == Converting .pdf directly to .html using mutool.
