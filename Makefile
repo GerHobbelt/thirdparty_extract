@@ -341,7 +341,7 @@ test/generated/%.diff: test/generated/%.dir/ test/%.dir.ref/
 	@echo
 	@echo == Checking $<
 	diff -ru $^
-	#if diff -ruq $^; then true; else echo "@@@ failure... fix with: rsync -ai" $^; false; fi
+#if diff -ruq $^; then true; else echo "@@@ failure... fix with: rsync -ai" $^; false; fi
 
 test/generated/%.html.diff: test/generated/%.html test/%.html.ref
 	@echo
