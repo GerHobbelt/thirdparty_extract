@@ -123,7 +123,7 @@ static double span_angle2(span_t* span)
         double ret2 = atan2(-dy, dx);
         if (fabs(ret2 - ret1) > 0.01)
         {
-            outf0("### ret1=%f ret2=%f: %s", ret1, ret2, span_string(NULL, span));
+            outf("### ret1=%f ret2=%f: %s", ret1, ret2, span_string(NULL, span));
         }
     }
     return span_angle(span);
@@ -1008,7 +1008,7 @@ static int make_paragraphs(
 
                             if (!lines_overlap(a_left, a_right, b_left, b_right, angle_a))
                             {
-                                outf0("Not joining lines because not overlapping.");
+                                outf("Not joining lines because not overlapping.");
                                 ok = 0;
                             }
                         }
@@ -1356,6 +1356,8 @@ y_min..y_max. */
     int e = -1;
     int i;
     
+    outf("y=(%f %f)", y_min, y_max);
+    
     /* Find subset of vertical and horizontal lines that are within range
     y_min..y_max, and sort by y coordinate. */
     tablelines_t    tl_h = {NULL, 0};
@@ -1613,6 +1615,8 @@ page->spans[]. */
     double maxy;
     int i;
     double margin = 1;
+    outf("page->tablelines_horizontal.tablelines_num=%i", page->tablelines_horizontal.tablelines_num);
+    outf("page->tablelines_vertical.tablelines_num=%i", page->tablelines_vertical.tablelines_num);
     qsort(
             page->tablelines_horizontal.tablelines,
             page->tablelines_horizontal.tablelines_num,
