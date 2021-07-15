@@ -126,7 +126,9 @@ if __name__ == '__main__':
             run_tests()
         
         elif arg == 'html':
-            with open('extract-table.html', 'w') as f:
+            path_out = 'extract-table.html'
+            print(f'Creating: {path_out}')
+            with open(path_out, 'w') as f:
                 print(f'<html>', file=f)
                 print(f'<body>', file=f)
                 print(f'<h1>Extract table output ({time.strftime("%F %T")})</h1>', file=f)
@@ -134,6 +136,8 @@ if __name__ == '__main__':
                 print(f'<ul>', file=f)
                 for path in glob.glob('test/*.pdf'):
                     leaf = os.path.basename(path)
+                    if leaf in ('Python2.pdf', 'Python2clipped.pdf', 'zlib.3.pdf', 'text_graphic_image.pdf'):
+                        continue
                     print(f'    <li>{leaf} ', file=f)
                     print(f'    <ul>', file=f)
                     print(f'        <li>', file=f)
