@@ -3,91 +3,99 @@
 
 
 <p><b>Table 6 : DISTRIBUTION (%) OF HOUSEHOLDS BY LITERACY STATUS OF  MALE HEAD OF THE HOUSEHOLD 
-</p>
-
-<p>Literacy Status State n Read &amp; Illiterate 1-4 std. 5-8 std. 9-12 std. College Write
-</p>
-
-<p></b>Kerala 7.2 0.5 25.3 20.1 41.5 5.5
-</p>
-
-<p>2400
-</p>
-
-<p>Tamil Nadu 2400 21.4 2.3 8.8 35.5 25.8 6.2
-</p>
-
-<p>Karnataka 2399 37.4 2.8 12.5 18.3 23.1 5.8
-</p>
-
-<p>Andhra Pradesh 2400 54.0 1.7 8.4 13.2 18.8 3.9
-</p>
-
-<p>Maharashtra 2400 22.0 0.9 17.3 20.3 32.6 7.0
-</p>
-
-<p>Gujarat 2390 28.6 0.1 14.4 23.1 26.9 6.8
-</p>
-
-<p>Madhya Pradesh 2402 29.1 3.4 8.5 35.1 13.3 10.6
-</p>
-
-<p>Orissa 2405 33.2 1.0 10.4 25.7 21.2 8.5
-</p>
-
-<p>West Bengal 2293 41.7 4.4 13.2 17.1 21.2 2.4
-</p>
-
-<p>Uttar Pradesh 2400 35.3 2.1 4.5 23.3 27.1 7.6
-</p>
-
-<p><b>Pooled 23889 30.9 1.9 12.3 23.2 25.2 6.4
-</p>
-
-<p>Table 7 : DISTRIBUTION (%) OF HOUSEHOLDS BY LITERACY STATUS OF  ADULT WOMEN 
-</p>
-
-<p>Literacy Status State n Read &amp; Illiterate 1-4 std. 5-8 std. 9-12 std. College Write
-</p>
-
-<p></b>Kerala 2400 8.8 0.3 20.1 17.0 45.6 8.2
-</p>
-
-<p>Tamil Nadu 2400 29.9 1.5 8.5 33.1 22.3 4.8
-</p>
-
-<p>Karnataka 2399 47.9 2.5 10.2 18.8 18.4 2.3
-</p>
-
-<p>Andhra Pradesh 2400 66.4 0.7 6.8 12.9 11.4 1.8
-</p>
-
-<p>Maharashtra 2400 41.3 0.6 14.1 20.1 21.6 2.2
-</p>
-
-<p>Gujarat 2390 57.6 0.1 10.3 16.5 12.9 2.7
-</p>
-
-<p>Madhya Pradesh 2402 58.7 2.2 6.6 24.1 5.3 3.0
-</p>
-
-<p>Orissa 2405 50.0 0.9 8.1 21.9 15.1 4.0
-</p>
-
-<p>West Bengal 2293 49.1 4.8 11.2 16.8 17.1 1.1
-</p>
-
-<p>Uttar Pradesh 2400 67.3 2.0 3.1 17.2 7.7 2.7
-</p>
-
-<p><b>Pooled 23889 47.7 1.5 9.9 19.9 17.8 3.3
-</p>
-
-<p></b>NNMB                                                                       75                                 Rural-Third Repeat Survey 2011-12 
-</p>
+</p></b>
 
 <table border="1" style="border-collapse:collapse">
+    <tr>
+        <td></td><td rowspan="2"><p><b>n </p></b></td><td colspan="6"><p><b>Literacy Status </p></b></td>
+    </tr>
+    <tr>
+        <td><p><b>State</p></b></td><td><p><b>Illiterate</p></b></td><td><p><b>Read &amp; Write</p></b></td><td><p><b>1-4 std.</p></b></td><td><p><b>5-8 std.</p></b></td><td><p><b>9-12 std.</p></b></td><td><p><b>College</p></b></td>
+    </tr>
+    <tr>
+        <td><p>Kerala</p></td><td><p>2400</p></td><td><p>7.2</p></td><td><p>0.5</p></td><td><p>25.3</p></td><td><p>20.1</p></td><td><p>41.5</p></td><td><p>5.5</p></td>
+    </tr>
+    <tr>
+        <td><p>Tamil Nadu</p></td><td><p>2400</p></td><td><p>21.4</p></td><td><p>2.3</p></td><td><p>8.8</p></td><td><p>35.5</p></td><td><p>25.8</p></td><td><p>6.2</p></td>
+    </tr>
+    <tr>
+        <td><p>Karnataka</p></td><td><p>2399</p></td><td><p>37.4</p></td><td><p>2.8</p></td><td><p>12.5</p></td><td><p>18.3</p></td><td><p>23.1</p></td><td><p>5.8</p></td>
+    </tr>
+    <tr>
+        <td><p>Andhra Pradesh</p></td><td><p>2400</p></td><td><p>54.0</p></td><td><p>1.7</p></td><td><p>8.4</p></td><td><p>13.2</p></td><td><p>18.8</p></td><td><p>3.9</p></td>
+    </tr>
+    <tr>
+        <td><p>Maharashtra</p></td><td><p>2400</p></td><td><p>22.0</p></td><td><p>0.9</p></td><td><p>17.3</p></td><td><p>20.3</p></td><td><p>32.6</p></td><td><p>7.0</p></td>
+    </tr>
+    <tr>
+        <td><p>Gujarat</p></td><td><p>2390</p></td><td><p>28.6</p></td><td><p>0.1</p></td><td><p>14.4</p></td><td><p>23.1</p></td><td><p>26.9</p></td><td><p>6.8</p></td>
+    </tr>
+    <tr>
+        <td><p>Madhya Pradesh</p></td><td><p>2402</p></td><td><p>29.1</p></td><td><p>3.4</p></td><td><p>8.5</p></td><td><p>35.1</p></td><td><p>13.3</p></td><td><p>10.6</p></td>
+    </tr>
+    <tr>
+        <td><p>Orissa</p></td><td><p>2405</p></td><td><p>33.2</p></td><td><p>1.0</p></td><td><p>10.4</p></td><td><p>25.7</p></td><td><p>21.2</p></td><td><p>8.5</p></td>
+    </tr>
+    <tr>
+        <td><p>West Bengal</p></td><td><p>2293</p></td><td><p>41.7</p></td><td><p>4.4</p></td><td><p>13.2</p></td><td><p>17.1</p></td><td><p>21.2</p></td><td><p>2.4</p></td>
+    </tr>
+    <tr>
+        <td><p>Uttar Pradesh</p></td><td><p>2400</p></td><td><p>35.3</p></td><td><p>2.1</p></td><td><p>4.5</p></td><td><p>23.3</p></td><td><p>27.1</p></td><td><p>7.6</p></td>
+    </tr>
+    <tr>
+        <td><p><b>Pooled</p></b></td><td><p><b>23889</p></b></td><td><p><b>30.9</p></b></td><td><p><b>1.9</p></b></td><td><p><b>12.3</p></b></td><td><p><b>23.2</p></b></td><td><p><b>25.2</p></b></td><td><p><b>6.4</p></b></td>
+    </tr>
 </table>
 
-</body>
+
+
+<p><b>Table 7 : DISTRIBUTION (%) OF HOUSEHOLDS BY LITERACY STATUS OF  ADULT WOMEN 
+</p></b>
+
+<table border="1" style="border-collapse:collapse">
+    <tr>
+        <td></td><td rowspan="2"><p><b>n</p></b></td><td colspan="6"><p><b>Literacy Status</p></b></td>
+    </tr>
+    <tr>
+        <td><p><b>State</p></b></td><td><p><b>Illiterate</p></b></td><td><p><b>Read &amp; Write</p></b></td><td><p><b>1-4 std.</p></b></td><td><p><b>5-8 std.</p></b></td><td><p><b>9-12 std.</p></b></td><td><p><b>College</p></b></td>
+    </tr>
+    <tr>
+        <td><p>Kerala</p></td><td><p>2400</p></td><td><p>8.8</p></td><td><p>0.3</p></td><td><p>20.1</p></td><td><p>17.0</p></td><td><p>45.6</p></td><td><p>8.2</p></td>
+    </tr>
+    <tr>
+        <td><p>Tamil Nadu</p></td><td><p>2400</p></td><td><p>29.9</p></td><td><p>1.5</p></td><td><p>8.5</p></td><td><p>33.1</p></td><td><p>22.3</p></td><td><p>4.8</p></td>
+    </tr>
+    <tr>
+        <td><p>Karnataka</p></td><td><p>2399</p></td><td><p>47.9</p></td><td><p>2.5</p></td><td><p>10.2</p></td><td><p>18.8</p></td><td><p>18.4</p></td><td><p>2.3</p></td>
+    </tr>
+    <tr>
+        <td><p>Andhra Pradesh</p></td><td><p>2400</p></td><td><p>66.4</p></td><td><p>0.7</p></td><td><p>6.8</p></td><td><p>12.9</p></td><td><p>11.4</p></td><td><p>1.8</p></td>
+    </tr>
+    <tr>
+        <td><p>Maharashtra</p></td><td><p>2400</p></td><td><p>41.3</p></td><td><p>0.6</p></td><td><p>14.1</p></td><td><p>20.1</p></td><td><p>21.6</p></td><td><p>2.2</p></td>
+    </tr>
+    <tr>
+        <td><p>Gujarat</p></td><td><p>2390</p></td><td><p>57.6</p></td><td><p>0.1</p></td><td><p>10.3</p></td><td><p>16.5</p></td><td><p>12.9</p></td><td><p>2.7</p></td>
+    </tr>
+    <tr>
+        <td><p>Madhya Pradesh</p></td><td><p>2402</p></td><td><p>58.7</p></td><td><p>2.2</p></td><td><p>6.6</p></td><td><p>24.1</p></td><td><p>5.3</p></td><td><p>3.0</p></td>
+    </tr>
+    <tr>
+        <td><p>Orissa</p></td><td><p>2405</p></td><td><p>50.0</p></td><td><p>0.9</p></td><td><p>8.1</p></td><td><p>21.9</p></td><td><p>15.1</p></td><td><p>4.0</p></td>
+    </tr>
+    <tr>
+        <td><p>West Bengal</p></td><td><p>2293</p></td><td><p>49.1</p></td><td><p>4.8</p></td><td><p>11.2</p></td><td><p>16.8</p></td><td><p>17.1</p></td><td><p>1.1</p></td>
+    </tr>
+    <tr>
+        <td><p>Uttar Pradesh</p></td><td><p>2400</p></td><td><p>67.3</p></td><td><p>2.0</p></td><td><p>3.1</p></td><td><p>17.2</p></td><td><p>7.7</p></td><td><p>2.7</p></td>
+    </tr>
+    <tr>
+        <td><p><b>Pooled</p></b></td><td><p><b>23889</p></b></td><td><p><b>47.7</p></b></td><td><p><b>1.5</p></b></td><td><p><b>9.9</p></b></td><td><p><b>19.9</p></b></td><td><p><b>17.8</p></b></td><td><p><b>3.3</p></b></td>
+    </tr>
+</table>
+
+
+
+<p>NNMB                                                                       75                                 Rural-Third Repeat Survey 2011-12 
+</p></body>
 </html>

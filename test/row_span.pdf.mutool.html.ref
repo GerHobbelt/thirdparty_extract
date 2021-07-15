@@ -2,9 +2,6 @@
 <body>
 
 
-<p>. 
-</p>
-
 <table border="1" style="border-collapse:collapse">
     <tr>
         <td><p><b>Plan Type </p></b></td><td><p><b>County </p></b></td><td><p><b>Plan Name </p></b></td><td><p><b>Totals </p></b></td>
@@ -128,5 +125,8 @@
     </tr>
 </table>
 
-</body>
+
+
+<p>. 
+</p></body>
 </html>

@@ -2,15 +2,6 @@
 <body>
 
 
-<p><b> 
-</p>
-
-<p></b>5
-</p>
-
-<p>  
-</p>
-
 <table border="1" style="border-collapse:collapse">
     <tr>
         <td rowspan="3"><p><b>Sl. No. </p></b></td><td><p><b>Name of </p></b></td><td rowspan="3"><p><b>Name of District </p></b></td><td rowspan="3"><p><b>Disease/ Illness </p></b></td><td rowspan="3"><p><b>No. of Cases </p></b></td><td rowspan="3"><p><b>No. of Deaths </p></b></td><td rowspan="3"><p><b>Date of start of outbreak </p></b></td><td rowspan="3"><p><b>Date of reporting </p></b></td><td rowspan="3"><p><b>Current Status </p></b></td><td><p><b>Comments/ Action taken </p></b></td>
@@ -36,6 +27,9 @@
 </table>
 
 
+
+<p><b> 
+</p></b>
 
 <table border="1" style="border-collapse:collapse">
     <tr>
@@ -79,5 +73,11 @@
     </tr>
 </table>
 
-</body>
+
+
+<p>5
+</p>
+
+<p>  
+</p></body>
 </html>
