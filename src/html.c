@@ -353,8 +353,8 @@ int extract_document_to_html_content(
             if (!paragraph && !table) break;
             double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
             double y_table = (table) ? table->pos.y : DBL_MAX;
-            outf0("p=%i y_paragraph=%f", y_paragraph);
-            outf0("t=%i y_table=%f", y_paragraph);
+            outf("p=%i y_paragraph=%f", y_paragraph);
+            outf("t=%i y_table=%f", y_paragraph);
             if (y_paragraph < y_table)
             {
                 //extract_astring_catf(alloc, content, "<p>@@@ paragraph %i y=%f @@@)</p>\n", p, y_paragraph);
