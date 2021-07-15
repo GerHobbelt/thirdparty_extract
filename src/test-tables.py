@@ -3,6 +3,7 @@
 import glob
 import subprocess
 import sys
+import time
 import os
 
 dir_mupdf = os.path.relpath(f'{__file__}/../../../..')
@@ -120,34 +121,51 @@ if __name__ == '__main__':
         elif arg == 'build':
             command = f'../../../julian-tools/jtest.py -b ../../build/debug-extract/ .'
             subprocess.check_call(command, shell=1)
+        
         elif arg == 'test':
             run_tests()
+        
         elif arg == 'html':
             with open('extract-table.html', 'w') as f:
                 print(f'<html>', file=f)
                 print(f'<body>', file=f)
-                print(f'<h1>Extract table output</h1>', file=f)
+                print(f'<h1>Extract table output ({time.strftime("%F %T")})</h1>', file=f)
+                print(f'<p>&lt;source&gt; &lt;generated&gt; &lt;reference&gt;', file=f)
                 print(f'<ul>', file=f)
-                for pdf in get_pdfs():
-                    print(f'    <li>{pdf.leaf}', file=f)
+                for path in glob.glob('test/*.pdf'):
+                    leaf = os.path.basename(path)
+                    print(f'    <li>{leaf} ', file=f)
                     print(f'    <ul>', file=f)
-                    print(f'        <li><a href="https://ghostscript.com/~julian/extract/{pdf.leaf}">{pdf.leaf}</a> => <a href="https://ghostscript.com/~julian/extract/{pdf.leaf}.mutool.html">{pdf.leaf}.mutool.html</a>', file=f)
-                    print(f'        <li><iframe width=40% src="https://ghostscript.com/~julian/extract/{pdf.leaf}"></iframe> <iframe width=40% src="https://ghostscript.com/~julian/extract/{pdf.leaf}.mutool.html"></iframe>', file=f)
+                    print(f'        <li>', file=f)
+                    print(f'            <a href="{path}">{path}</a>', file=f)
+                    print(f'             => <a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a>', file=f)
+                    print(f'             <a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a>', file=f)
+                    print(f'        <li>', file=f)
+                    print(f'            <iframe width=30% height=300 src="{path}"></iframe>', file=f)
+                    print(f'            <iframe width=30% height=300 src="test/generated/{leaf}.mutool.html"></iframe>', file=f)
+                    print(f'            <iframe width=30% height=300 src="test/{leaf}.mutool.html.ref"></iframe>', file=f)
                     print(f'    </ul>', file=f)
                 print(f'</ul>', file=f)
                 print(f'</body>', file=f)
                 print(f'</html>', file=f)
+        
         elif arg == 'upload':
             #destination = next(args)
             destination = 'julian@casper.ghostscript.com:public_html/extract/'
-            command = f'rsync -ai \\\n'
+            command = f'rsync -aiR \\\n'
             command += f' extract-table.html'
-            for pdf in get_pdfs():
-                command += f' {pdf.pdf} {pdf.out_html} \\\n'
-                for csv_ref, csv_generated in pdf.csvs():
-                    command += f' {csv_ref} \\\n'
-                for csv_ref, csv_generated in pdf.csvs():
-                    command += f' {csv_generated} \\\n'
+            for path in glob.glob('test/*.pdf'):
+                leaf = os.path.basename(path)
+                command += f' {path} \\\n'
+                command += f' test/generated/{leaf}.mutool.html \\\n'
+                command += f' test/{leaf}.mutool.html.ref \\\n'
+                #for csv_ref, csv_generated in pdf.csvs():
+                #    command += f' {csv_ref} \\\n'
+                #for csv_ref, csv_generated in pdf.csvs():
+                #    command += f' {csv_generated} \\\n'
             command += f' {destination}'
             print(f'Running: {command}')
             subprocess.check_call(command, shell=1)
+
+        else:
+            raise Exception(f'Unrecognised arg: {arg!r}')
