@@ -1315,7 +1315,7 @@ zero. */
     int ret1 = overlap > 0.8;
     if (ret0 != ret1)
     {
-        outf0("warning, unclear overlap=%f: a=%f..%f b=%f..%f", overlap, a_min, a_max, b_min, b_max);
+        if (0) outf0("warning, unclear overlap=%f: a=%f..%f b=%f..%f", overlap, a_min, a_max, b_min, b_max);
     }
     //assert(ret0 == ret1);
     return overlap > 0.8;
@@ -1433,8 +1433,8 @@ y_min..y_max. */
             cell->rect.min.y = tl_h.tablelines[i].rect.min.y;
             cell->rect.max.x = (j_next < tl_v.tablelines_num) ? tl_v.tablelines[j_next].rect.min.x : cell->rect.min.x;
             cell->rect.max.y = (i_next < tl_h.tablelines_num) ? tl_h.tablelines[i_next].rect.min.y : cell->rect.min.y;
-            cell->above = 0;
-            cell->left = 0;
+            cell->above = (i==0);
+            cell->left = (j==0);
             cell->ix_extend = 1;
             cell->iy_extend = 1;
             cell->lines = NULL;
@@ -1483,48 +1483,8 @@ y_min..y_max. */
     
     assert(cells_num == cells_num_x * cells_num_y);
     
-    /* Find cell extensions to right and down - for example for adjacent cells ABC..., we extend
-    A to include cells BC.. until we reach a cell with .left set to one.
-    
-    ABCDE
-    FGHIJ
-    KLMNO
-    
-    When looking to extend cell A, we only look at BCDE and FK, we ignore cells
-    GHIJ and LMNO. So if BCDE have no left lines and FK have no above lines,
-    we ignore any lines in GHIJ and LMNO and make A extend to the entire 3x4
-    matrix.
-    */
-    
     int x;
     int y;
-    for (x=0; x<cells_num_x; ++x)
-    {
-        for (y=0; y<cells_num_y; ++y)
-        {
-            cell_t* cell = cells[y * cells_num_x + x];
-            if (cell->left)
-            {
-                int xx;
-                for (xx=x+1; xx<cells_num_x; ++xx)
-                {
-                    if (cells[y * cells_num_x + xx]->left)  break;
-                }
-                cell->ix_extend = xx - x;
-                cell->rect.max.x = cells[y * cells_num_x + xx-1]->rect.max.x;
-            }
-            if (cell->above)
-            {
-                int yy;
-                for (yy=y+1; yy<cells_num_y; ++yy)
-                {
-                    if (cells[yy * cells_num_x + x]->above) break;
-                }
-                cell->iy_extend = yy - y;
-                cell->rect.max.y = cells[(yy-1) * cells_num_x + x]->rect.max.y;
-            }
-        }
-    }
     
     /* Remove cols and rows where no cells have .above and .left - these
     will not appear. It also avoids spurious empty columns when table uses
@@ -1568,6 +1528,68 @@ y_min..y_max. */
         goto end;
     }
     
+    /* Find cell extensions to right and down - for example for adjacent cells ABC..., we extend
+    A to include cells BC.. until we reach a cell with .left set to one.
+    
+    ABCDE
+    FGHIJ
+    KLMNO
+    
+    When looking to extend cell A, we only look at BCDE and FK, we ignore cells
+    GHIJ and LMNO. So if BCDE have no left lines and FK have no above lines,
+    we ignore any lines in GHIJ and LMNO and make A extend to the entire 3x4
+    matrix.
+    */
+    
+    for (y=0; y<cells_num_y; ++y)
+    {
+        for (x=0; x<cells_num_x; ++x)
+        {
+            cell_t* cell = cells[y * cells_num_x + x];
+            outf0("xy=(%i %i) above=%i left=%i", x, y, cell->above, cell->left);
+            if (cell->left && cell->above)
+            {
+                int xx;
+                for (xx=x+1; xx<cells_num_x; ++xx)
+                {
+                    if (cells[y * cells_num_x + xx]->left)  break;
+                }
+                cell->ix_extend = xx - x;
+                cell->rect.max.x = cells[y * cells_num_x + xx-1]->rect.max.x;
+            //}
+            //if (cell->above)
+            //{
+                int yy;
+                for (yy=y+1; yy<cells_num_y; ++yy)
+                {
+                    if (cells[yy * cells_num_x + x]->above) break;
+                }
+                cell->iy_extend = yy - y;
+                cell->rect.max.y = cells[(yy-1) * cells_num_x + x]->rect.max.y;
+            //}
+            //{
+                //int xx;
+                for (xx = x; xx < x + cell->ix_extend; ++xx)
+                {
+                    int yy;
+                    for (yy = y; yy < y + cell->iy_extend; ++yy)
+                    {
+                        cell_t* cell2 = cells[cells_num_x * yy  + xx];
+                        if ( xx==x && yy==y) {}
+                        else
+                        {
+                            cell2->above = 0;
+                            cell2->left = (xx == x);
+                            outf0("xy=(%i %i) xxyy=(%i %i) have set cell2->above=%i left=%i",
+                                    x, y, xx, yy, cell2->above, cell2->left
+                                    );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     /* Find text within each cell. We don't attempt to handle images within
     cells. */
     for (i=0; i<cells_num; ++i)
@@ -1595,6 +1617,31 @@ y_min..y_max. */
     page->tables[page->tables_num]->cells_num_x = cells_num_x;
     page->tables[page->tables_num]->cells_num_y = cells_num_y;
     page->tables_num += 1;
+    
+    outf0("table:\n");
+    {
+        int y;
+        for (y=0; y<cells_num_y; ++y)
+        {
+            int x;
+            for (x=0; x<cells_num_x; ++x)
+            {
+                cell_t* cell = cells[cells_num_x * y + x];
+                fprintf(stderr, "    %c%c x=%i y=%i ix=%i iy=%i w=%i h=%i",
+                        cell->left ? '|' : ' ',
+                        cell->above ? '-' : ' ',
+                        x,
+                        y,
+                        cell->ix,
+                        cell->iy,
+                        cell->ix_extend,
+                        cell->iy_extend
+                        );
+            }
+            fprintf(stderr, "\n");
+        }
+        
+    }
     
     e = 0;
     end:

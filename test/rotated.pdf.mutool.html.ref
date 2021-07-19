@@ -4,7 +4,7 @@
 
 <table border="1" style="border-collapse:collapse">
     <tr>
-        <td rowspan="2"><p><b>2011-12)</p><p>(No.ofadults:</p><p>FastingBloodSugar </p></b></td><td><p><b>Women</p></b></td><td><p>2391</p></td><td><p>1739</p></td><td><p>2028</p></td><td><p>1529</p></td><td><p>1599</p></td><td><p>2503</p></td><td><p>1709</p></td><td><p>1628</p></td><td><p>2027</p></td><td><p>1366</p></td><td><p><b>18519</p></b></td><td></td>
+        <td rowspan="2"><p><b>2011-12)</p><p>(No.ofadults:</p><p>FastingBloodSugar </p></b></td><td><p><b>Women</p></b></td><td><p>2391</p></td><td><p>1739</p></td><td><p>2028</p></td><td><p>1529</p></td><td><p>1599</p></td><td><p>2503</p></td><td><p>1709</p></td><td><p>1628</p></td><td><p>2027</p></td><td><p>1366</p></td><td><p><b>18519</p></b></td><td></td><td rowspan="10"></td><td rowspan="10"><p>*Datanotavailable </p></td>
     </tr>
     <tr>
         <td><p><b>Men</p></b></td><td><p>1645</p></td><td><p>1119</p></td><td><p>1628</p></td><td><p>1111</p></td><td><p>1417</p></td><td><p>2122</p></td><td><p>1579</p></td><td><p>1093</p></td><td><p>1413</p></td><td><p>1185</p></td><td><p><b>14312</p></b></td><td></td>
@@ -42,9 +42,6 @@
 
 <p><b>Table1:STATEWISECOVERAGEPARTICULARSBYPERIODOFSURVEY 
 </p></b>
-
-<p>*Datanotavailable 
-</p>
 
 <p>NNMB72Rural-ThirdRepeatSurvey2011-12 
 </p></body>

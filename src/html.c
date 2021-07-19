@@ -199,12 +199,16 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
     outf("table->cells_num_y=%i", table->cells_num_y);
     for (y=0; y<table->cells_num_y; ++y)
     {
+        /* If 1, we put each <td>...</td> on a separate line. */
+        int multiline = 0;
         int x;
-        extract_astring_cat(alloc, content, "    <tr>\n        ");
+        extract_astring_cat(alloc, content, "    <tr>\n");
+        if (!multiline) extract_astring_cat(alloc, content, "        ");
         for (x=0; x<table->cells_num_x; ++x)
         {
             cell_t* cell = table->cells[y*table->cells_num_x + x];
             if (!cell->above || !cell->left) continue;
+            if (multiline) extract_astring_cat(alloc, content, "        ");
             extract_astring_cat(alloc, content, "<td");
             if (cell->ix_extend > 1)
             {
@@ -217,6 +221,7 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
             extract_astring_cat(alloc, content, ">");
 
             extract_astring_t text = {NULL, 0};
+            //extract_astring_catf(alloc, content, "pos=(%i %i) w=%i h=%i", x, y, cell->ix_extend, cell->iy_extend);
             //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
             if (paragraphs_to_html_content(alloc, state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
             if (text.chars)
@@ -224,11 +229,13 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
                 extract_astring_cat(alloc, content, text.chars);
             }
             extract_astring_cat(alloc, content, "</td>");
+            if (multiline) extract_astring_cat(alloc, content, "\n");
 
             extract_astring_free(alloc, &text);
             if (content_state_reset(alloc, state, content)) goto end;
         }
-        extract_astring_cat(alloc, content, "\n    </tr>\n");
+        if (!multiline) extract_astring_cat(alloc, content, "\n");
+        extract_astring_cat(alloc, content, "    </tr>\n");
     }
     extract_astring_cat(alloc, content, "</table>\n\n");
     e = 0;

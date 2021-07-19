@@ -7,7 +7,7 @@
 
 <table border="1" style="border-collapse:collapse">
     <tr>
-        <td rowspan="2"><p><b>Sl. No. </p></b></td><td rowspan="2"><p><b>Year </p></b></td><td rowspan="2"><p><b>Population (in Lakh) </p></b></td><td colspan="2"><p><b>Accidental Deaths </p></b></td><td colspan="2"><p><b>Suicides </p></b></td><td rowspan="2"><p><b>Percentage Population growth </p></b></td>
+        <td rowspan="50"></td><td rowspan="2"><p><b>Sl. No. </p></b></td><td rowspan="2"><p><b>Year </p></b></td><td rowspan="2"><p><b>Population (in Lakh) </p></b></td><td colspan="2"><p><b>Accidental Deaths </p></b></td><td colspan="2"><p><b>Suicides </p></b></td><td rowspan="2"><p><b>Percentage Population growth </p></b></td><td rowspan="50"></td>
     </tr>
     <tr>
         <td><p><b>Incidence </p></b></td><td><p><b>Rate </p></b></td><td><p><b>Incidence </p></b></td><td><p><b>Rate </p></b></td>

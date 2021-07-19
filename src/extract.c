@@ -1219,9 +1219,14 @@ int extract_add_path4(
         double x2,
         double y2,
         double x3,
-        double y3
+        double y3,
+        double color
         )
 {
+    if (0 && color == 1)
+    {
+        return 0;
+    }
     outf("cmt=(%f %f %f %f %f %f) points=[(%f %f) (%f %f) (%f %f) (%f %f)]",
             ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f,
             x0, y0, x1, y1, x2, y2, x3, y3
@@ -1288,7 +1293,8 @@ int extract_add_line(
         double x0,
         double y0,
         double x1,
-        double y1
+        double y1,
+        double color
         )
 {
     page_t* page = extract->document.pages[extract->document.pages_num-1];
