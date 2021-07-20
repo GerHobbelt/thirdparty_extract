@@ -128,6 +128,7 @@ file. */
 
 typedef struct
 {
+    float   color;
     rect_t  rect;
 } tableline_t;
 

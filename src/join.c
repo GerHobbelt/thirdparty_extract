@@ -7,6 +7,7 @@
 #include "outf.h"
 
 #include <assert.h>
+#include <float.h>
 #include <math.h>
 #include <stdio.h>
 
@@ -1540,7 +1541,8 @@ y_min..y_max. */
     When looking to extend cell A, we only look at BCDE and FK, we ignore cells
     GHIJ and LMNO. So if BCDE have no left lines and FK have no above lines,
     we ignore any lines in GHIJ and LMNO and make A extend to the entire 3x4
-    matrix.
+    box. Having found this box, we set .above=0 and .left to 0 in all enclosed
+    cells, which simplifies html table generation code.
     */
     
     for (y=0; y<cells_num_y; ++y)
@@ -1548,41 +1550,43 @@ y_min..y_max. */
         for (x=0; x<cells_num_x; ++x)
         {
             cell_t* cell = cells[y * cells_num_x + x];
-            outf0("xy=(%i %i) above=%i left=%i", x, y, cell->above, cell->left);
+            outf("xy=(%i %i) above=%i left=%i", x, y, cell->above, cell->left);
             if (cell->left && cell->above)
             {
+                /* See how far this cell extends to right and down. */
                 int xx;
+                int yy;
                 for (xx=x+1; xx<cells_num_x; ++xx)
                 {
                     if (cells[y * cells_num_x + xx]->left)  break;
                 }
                 cell->ix_extend = xx - x;
                 cell->rect.max.x = cells[y * cells_num_x + xx-1]->rect.max.x;
-            //}
-            //if (cell->above)
-            //{
-                int yy;
                 for (yy=y+1; yy<cells_num_y; ++yy)
                 {
                     if (cells[yy * cells_num_x + x]->above) break;
                 }
                 cell->iy_extend = yy - y;
                 cell->rect.max.y = cells[(yy-1) * cells_num_x + x]->rect.max.y;
-            //}
-            //{
-                //int xx;
+                
+                /* Clear .above and .left in enclosed cells. */
                 for (xx = x; xx < x + cell->ix_extend; ++xx)
                 {
                     int yy;
                     for (yy = y; yy < y + cell->iy_extend; ++yy)
                     {
                         cell_t* cell2 = cells[cells_num_x * yy  + xx];
-                        if ( xx==x && yy==y) {}
+                        if ( xx==x && yy==y)
+                        {}
                         else
                         {
                             cell2->above = 0;
+                            /* We set .left to 1 for left-most cells - e.g. F
+                            and K in the above diagram; this allows us to
+                            generate correct html without lots of recursing
+                            looking for iy_extend in earlier cells. */
                             cell2->left = (xx == x);
-                            outf0("xy=(%i %i) xxyy=(%i %i) have set cell2->above=%i left=%i",
+                            outf("xy=(%i %i) xxyy=(%i %i) have set cell2->above=%i left=%i",
                                     x, y, xx, yy, cell2->above, cell2->left
                                     );
                         }
@@ -1620,9 +1624,10 @@ y_min..y_max. */
     page->tables[page->tables_num]->cells_num_y = cells_num_y;
     page->tables_num += 1;
     
-    outf0("table:\n");
+    if (0)
     {
         int y;
+        outf0("table:\n");
         for (y=0; y<cells_num_y; ++y)
         {
             int x;
@@ -1662,10 +1667,11 @@ page->spans[]. */
 {
     double miny;
     double maxy;
-    int i;
     double margin = 1;
     outf("page->tablelines_horizontal.tablelines_num=%i", page->tablelines_horizontal.tablelines_num);
     outf("page->tablelines_vertical.tablelines_num=%i", page->tablelines_vertical.tablelines_num);
+    
+    /* Sort all lines by y coordinate. */
     qsort(
             page->tablelines_horizontal.tablelines,
             page->tablelines_horizontal.tablelines_num,
@@ -1678,17 +1684,74 @@ page->spans[]. */
             sizeof(*page->tablelines_vertical.tablelines),
             tablelines_compare_y
             );
-    /* Look for completely separate regions that define different
-    tables. */
-    maxy = -9999999999;
-    miny = maxy;
-    for (i=0; i<page->tablelines_vertical.tablelines_num; ++i)
+    
+    if (0)
     {
-        tableline_t* tl = &page->tablelines_vertical.tablelines[i];
+        /* Show info about lines. */
+        int i;
+        outf0("tablelines_horizontal:");
+        for (i=0; i<page->tablelines_horizontal.tablelines_num; ++i)
+        {
+            outf0("    color=%f: %s",
+                    page->tablelines_horizontal.tablelines[i].color,
+                    rect_string(&page->tablelines_horizontal.tablelines[i].rect)
+                    );
+        }
+        outf0("tablelines_vertical:");
+        for (i=0; i<page->tablelines_vertical.tablelines_num; ++i)
+        {
+            outf0("    color=%f: %s",
+                    page->tablelines_vertical.tablelines[i].color,
+                    rect_string(&page->tablelines_vertical.tablelines[i].rect)
+                    );
+        }
+    }
+    
+    /* Look for completely separate vertical regions that define different
+    tables, by looking for vertical gaps between the rects of each horizontal/vertical
+    line. */
+    maxy = -DBL_MAX;
+    miny = -DBL_MAX;
+    int iv = 0;
+    int ih = 0;
+    for(;;)
+    {
+        tableline_t* tlv = NULL;
+        tableline_t* tlh = NULL;
+        tableline_t* tl;
+        if (iv < page->tablelines_vertical.tablelines_num)
+        {
+            tlv = &page->tablelines_vertical.tablelines[iv];
+        }
+        /* We only consider horizontal lines that are not white. This is a bit
+        of a cheat to get the right behaviour with twotables_2.pdf. */
+        while (ih < page->tablelines_horizontal.tablelines_num)
+        {
+            if (page->tablelines_horizontal.tablelines[ih].color == 1)
+            {
+                /* Ignore white horizontal lines. */
+                ++ih;
+            }
+            else
+            {
+                tlh = &page->tablelines_horizontal.tablelines[ih];
+                break;
+            }
+        }
+        if (tlv && tlh)
+        {
+            tl = (tlv->rect.min.y < tlh->rect.min.y) ? tlv : tlh;
+        }
+        else if (tlv) tl = tlv;
+        else if (tlh) tl = tlh;
+        else break;
+        if (tl == tlv)  iv += 1;
+        else ih += 1;
         if (tl->rect.min.y > maxy + margin)
         {
-            if (i)
+            if (maxy > miny)
             {
+                outf("New table. maxy=%f miny=%f", maxy, miny);
                 table_find(
                         alloc,
                         page,

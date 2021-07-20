@@ -1167,7 +1167,7 @@ int extract_add_image(
 }
 
 
-static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, rect_t* rect)
+static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, rect_t* rect, double color)
 {
     if (extract_realloc(
             alloc,
@@ -1175,6 +1175,7 @@ static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, r
             sizeof(*tablelines->tablelines) * (tablelines->tablelines_num + 1)
             )) return -1;
     tablelines->tablelines[ tablelines->tablelines_num].rect = *rect;
+    tablelines->tablelines[ tablelines->tablelines_num].color = color;
     tablelines->tablelines_num += 1;
     return 0;
 }
@@ -1269,13 +1270,13 @@ int extract_add_path4(
     {
         /* Horizontal line. */
         outf("have found horizontal line: %s", rect_string(&rect));
-        if (tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect)) return -1;
+        if (tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect, color)) return -1;
     }
     else if (dy / dx > 5)
     {
         /* Vertical line. */
         outf("have found vertical line: %s", rect_string(&rect));
-        if (tablelines_append(extract->alloc, &page->tablelines_vertical, &rect)) return -1;
+        if (tablelines_append(extract->alloc, &page->tablelines_vertical, &rect, color)) return -1;
     }
     return 0;
 }
@@ -1321,13 +1322,13 @@ int extract_add_line(
     {
         rect.min.x -= width2 / 2;
         rect.max.x += width2 / 2;
-        return tablelines_append(extract->alloc, &page->tablelines_vertical, &rect);
+        return tablelines_append(extract->alloc, &page->tablelines_vertical, &rect, color);
     }
     else if (rect.min.y == rect.max.y)
     {
         rect.min.y -= width2 / 2;
         rect.max.y += width2 / 2;
-        return tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect);
+        return tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect, color);
     }
     return 0;
 }
