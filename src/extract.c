@@ -1302,6 +1302,7 @@ int extract_add_line(
     point_t p1 = transform(x1, y1, ctm_a, ctm_b, ctm_c, ctm_d, ctm_e, ctm_f);
     double width2 = width * sqrt( fabs( ctm_a * ctm_d - ctm_b * ctm_c));
     rect_t  rect;
+    (void) color;
     rect.min.x = min(p0.x, p1.x);
     rect.min.y = min(p0.y, p1.y);
     rect.max.x = max(p0.x, p1.x);

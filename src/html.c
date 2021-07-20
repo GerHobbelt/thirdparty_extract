@@ -49,7 +49,7 @@ static void content_state_init(content_state_t* state)
     state->ctm_prev = NULL;
 }
 
-int content_state_reset(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
+static int content_state_reset(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
 {
     int e = -1;
     if (state->font_bold)

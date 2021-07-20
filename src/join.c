@@ -848,7 +848,9 @@ static int paragraphs_cmp(const void* a, const void* b)
                 /* Give up if more than 90 deg. */
                 return 0;
             }
-            return a_angle - b_angle;
+            if (a_angle > b_angle)  return 1;
+            if (a_angle < b_angle)  return -1;
+            return 0;
         }
     }
     if (1)
