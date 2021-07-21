@@ -132,7 +132,7 @@ if __name__ == '__main__':
                 print(f'<html>', file=f)
                 print(f'<body>', file=f)
                 print(f'<h1>Extract table output ({time.strftime("%F %T")})</h1>', file=f)
-                print(f'<p>&lt;source&gt; &lt;generated&gt; &lt;reference&gt;', file=f)
+                print(f'<p>&lt;source&gt; &lt;generated html&gt; &lt;reference html&gt; [&lt;generated docx&gt;]', file=f)
                 print(f'<ul>', file=f)
                 for path in glob.glob('test/*.pdf'):
                     leaf = os.path.basename(path)
@@ -142,11 +142,14 @@ if __name__ == '__main__':
                     print(f'    <ul>', file=f)
                     print(f'        <li>', file=f)
                     print(f'            <a href="{path}">{path}</a>', file=f)
-                    print(f'             => <a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a>', file=f)
+                    print(f'             => ', file=f)
+                    print(f'             <a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a>', file=f)
                     print(f'             <a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a>', file=f)
+                    print(f'             [<a href="test/generated/{leaf}.mutool.docx">test/generated/{leaf}.mutool.docx</a>]', file=f)
                     print(f'        <li>', file=f)
                     print(f'            <iframe width=30% height=300 src="{path}"></iframe>', file=f)
                     print(f'            <iframe width=30% height=300 src="test/generated/{leaf}.mutool.html"></iframe>', file=f)
+                    #print(f'            <iframe width=25% height=300 src="test/generated/{leaf}.mutool.docx"></iframe>', file=f)
                     print(f'            <iframe width=30% height=300 src="test/{leaf}.mutool.html.ref"></iframe>', file=f)
                     print(f'    </ul>', file=f)
                 print(f'</ul>', file=f)
@@ -162,6 +165,7 @@ if __name__ == '__main__':
                 leaf = os.path.basename(path)
                 command += f' {path} \\\n'
                 command += f' test/generated/{leaf}.mutool.html \\\n'
+                command += f' test/generated/{leaf}.mutool.docx \\\n'
                 command += f' test/{leaf}.mutool.html.ref \\\n'
                 #for csv_ref, csv_generated in pdf.csvs():
                 #    command += f' {csv_ref} \\\n'
