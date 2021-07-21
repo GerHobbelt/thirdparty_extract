@@ -444,16 +444,19 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
     outf("table->cells_num_y=%i", table->cells_num_y);
     for (y=0; y<table->cells_num_y; ++y)
     {
+        //if (y >= 2) break;
         int x;
         extract_astring_cat(alloc, content, "        <w:tr>\n");
         extract_astring_cat(alloc, content, "            <w:trPr/>\n");
         
         for (x=0; x<table->cells_num_x; ++x)
         {
+            //if (x >= 4) break;
             cell_t* cell = table->cells[y*table->cells_num_x + x];
             if (!cell->left) continue;
             extract_astring_cat(alloc, content, "            <w:tc>\n");
             extract_astring_cat(alloc, content, "                <w:tcPr>\n");
+            
             extract_astring_cat(alloc, content, "                    <w:tcBorders>\n");
             extract_astring_cat(alloc, content, "                        <w:top w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n");
             extract_astring_cat(alloc, content, "                        <w:start w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n");
@@ -474,11 +477,11 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
             }
             else
             {
-                extract_astring_catf(alloc, content, "                    <w:vMerge/>\n");
+                extract_astring_catf(alloc, content, "                    <w:vMerge w:val=\"continue\"/>\n");
             }
             extract_astring_cat(alloc, content, "                </w:tcPr>\n");
             
-            if (cell->above)
+            if (1 || cell->above)
             {
                 extract_astring_t text = {NULL, 0};
                 content_state_t state;
@@ -487,25 +490,35 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
                 
                 //extract_astring_catf(alloc, content, "pos=(%i %i) w=%i h=%i</w:r></w:p>\n", x, y, cell->ix_extend, cell->iy_extend);
                 if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"> DISTRICT WISE ESTIMATES OF MARKETABLE SURPLUS / DEFICIT OF RICE DURING 2012-13</w:t></w:r></w:p>\n");
-                if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\">(%i %i)</w:t></w:r></w:p>\n", x, y);
+                
+                if (0) extract_astring_catf(alloc, content, "                <w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\">(%i %i)</w:t></w:r></w:p>\n", x, y);
+                
                 if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r></w:p>\n");
-                int chars_num_old = content->chars_num;
-                int p;
-                for (p=0; p<cell->paragraphs_num; ++p)
+                
+                if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/>%i %i</w:rPr></w:r></w:p>", x, y);
+                
+                if (1)
                 {
-                    paragraph_t* paragraph = cell->paragraphs[p];
-                    if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
-                }
-                if (state.font_name)
-                {
-                    if (extract_docx_run_finish(alloc, content)) goto end;
-                    state.font_name = NULL;
-                }
-                /* Need to write out at least an empty paragraph in each cell,
-                otherwise libreoffice fails to show table at all. */
-                if (content->chars_num == chars_num_old)
-                {
-                    extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r></w:p>\n");
+                    size_t chars_num_old = content->chars_num;
+                    int p;
+                    for (p=0; p<cell->paragraphs_num; ++p)
+                    {
+                        paragraph_t* paragraph = cell->paragraphs[p];
+                        if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
+                    }
+                    if (state.font_name)
+                    {
+                        if (extract_docx_run_finish(alloc, content)) goto end;
+                        state.font_name = NULL;
+                    }
+                    /* Need to write out at least an empty paragraph in each cell,
+                    otherwise libreoffice fails to show table at all - "If a table
+                    cell does not include at least one block-level element, then
+                    this document shall be considered corrupt." */
+                    if (content->chars_num == chars_num_old)
+                    {
+                        extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r></w:p>\n");
+                    }
                 }
                 //extract_astring_catf(alloc, content, "</w:t></w:r></w:p>\n");
                 
@@ -517,7 +530,7 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
                 }
                 extract_astring_free(alloc, &text);
             }
-            extract_astring_cat(alloc, content, "\n");
+            //extract_astring_cat(alloc, content, "\n");
             extract_astring_cat(alloc, content, "            </w:tc>\n");
 
             //if (content_state_reset(alloc, state, content)) goto end;
