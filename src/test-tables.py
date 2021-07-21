@@ -133,26 +133,51 @@ if __name__ == '__main__':
                 print(f'<body>', file=f)
                 print(f'<h1>Extract table output ({time.strftime("%F %T")})</h1>', file=f)
                 print(f'<p>&lt;source&gt; &lt;generated html&gt; &lt;reference html&gt; [&lt;generated docx&gt;]', file=f)
-                print(f'<ul>', file=f)
-                for path in glob.glob('test/*.pdf'):
-                    leaf = os.path.basename(path)
-                    if leaf in ('Python2.pdf', 'Python2clipped.pdf', 'zlib.3.pdf', 'text_graphic_image.pdf'):
-                        continue
-                    print(f'    <li>{leaf} ', file=f)
-                    print(f'    <ul>', file=f)
-                    print(f'        <li>', file=f)
-                    print(f'            <a href="{path}">{path}</a>', file=f)
-                    print(f'             => ', file=f)
-                    print(f'             <a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a>', file=f)
-                    print(f'             <a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a>', file=f)
-                    print(f'             [<a href="test/generated/{leaf}.mutool.docx">test/generated/{leaf}.mutool.docx</a>]', file=f)
-                    print(f'        <li>', file=f)
-                    print(f'            <iframe width=30% height=300 src="{path}"></iframe>', file=f)
-                    print(f'            <iframe width=30% height=300 src="test/generated/{leaf}.mutool.html"></iframe>', file=f)
-                    #print(f'            <iframe width=25% height=300 src="test/generated/{leaf}.mutool.docx"></iframe>', file=f)
-                    print(f'            <iframe width=30% height=300 src="test/{leaf}.mutool.html.ref"></iframe>', file=f)
-                    print(f'    </ul>', file=f)
-                print(f'</ul>', file=f)
+                
+                if 1:
+                    print(f'<ul>', file=f)
+                    for path in glob.glob('test/*.pdf'):
+                        leaf = os.path.basename(path)
+                        if leaf in ('Python2.pdf', 'Python2clipped.pdf', 'zlib.3.pdf', 'text_graphic_image.pdf'):
+                            continue
+                        print(f'    <li>{leaf} ', file=f)
+                        print(f'    <ul>', file=f)
+                        print(f'        <li>', file=f)
+                        print(f'            <a href="{path}">{path}</a>', file=f)
+                        print(f'             => ', file=f)
+                        print(f'             <a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a>', file=f)
+                        print(f'             <a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a>', file=f)
+                        print(f'             [<a href="test/generated/{leaf}.mutool.docx">test/generated/{leaf}.mutool.docx</a>]', file=f)
+                        print(f'        <li>', file=f)
+                        print(f'            <iframe width=30% height=300 src="{path}"></iframe>', file=f)
+                        print(f'            <iframe width=30% height=300 src="test/generated/{leaf}.mutool.html"></iframe>', file=f)
+                        #print(f'            <iframe width=25% height=300 src="test/generated/{leaf}.mutool.docx"></iframe>', file=f)
+                        print(f'            <iframe width=30% height=300 src="test/{leaf}.mutool.html.ref"></iframe>', file=f)
+                        print(f'    </ul>', file=f)
+                    print(f'</ul>', file=f)
+                
+                else:
+                    def p(text):
+                        print(text, file=f)
+                    p(f'<table border=\"1\" style=\"border-collapse:collapse\" width="100%">')
+                    for path in glob.glob('test/*.pdf'):
+                        leaf = os.path.basename(path)
+                        if leaf in ('Python2.pdf', 'Python2clipped.pdf', 'zlib.3.pdf', 'text_graphic_image.pdf'):
+                            continue
+                        p(f'    <tr>')
+                        p(f'        <td><a href="test/{leaf}">{leaf}</a></td>')
+                        p(f'        <td><a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a></td>')
+                        p(f'        <td><a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a></td>')
+                        p(f'        <td><a href="test/generated/{leaf}.mutool.docx">test/generated/{leaf}.mutool.docx</a></td>')
+                        p(f'    </tr>')
+                        p(f'    <tr>')
+                        p(f'        <td><iframe width=100% height=300 src="{path}"></iframe></td>')
+                        p(f'        <td><iframe width=100% height=300 src="test/generated/{leaf}.mutool.html"></iframe></td>')
+                        p(f'        <td><iframe width=100% height=300 src="test/{leaf}.mutool.html.ref"></iframe></td>')
+                        p(f'        <td></td>')
+                        p(f'    </tr>')
+                    p(f'</table>')
+                
                 print(f'</body>', file=f)
                 print(f'</html>', file=f)
         
