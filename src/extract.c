@@ -1175,7 +1175,7 @@ static int tablelines_append(extract_alloc_t* alloc, tablelines_t* tablelines, r
             sizeof(*tablelines->tablelines) * (tablelines->tablelines_num + 1)
             )) return -1;
     tablelines->tablelines[ tablelines->tablelines_num].rect = *rect;
-    tablelines->tablelines[ tablelines->tablelines_num].color = color;
+    tablelines->tablelines[ tablelines->tablelines_num].color = (float) color;
     tablelines->tablelines_num += 1;
     return 0;
 }
