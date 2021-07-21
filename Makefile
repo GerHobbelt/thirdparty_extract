@@ -215,7 +215,12 @@ test_tables_pdfs = \
 
 test_tables_generated = $(patsubst test/%, test/generated/%, $(test_tables_pdfs))
 
-test_tables = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.html.diff, $(test_tables_pdfs))
+test_tables_html = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.html.diff, $(test_tables_pdfs))
+test_tables_docx = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.docx.diff, $(test_tables_pdfs))
+
+test_tables = $(test_tables_html) $(test_tables_docx)
+test-tables-html: $(test_tables_html)
+test-tables-docx: $(test_tables_docx)
 test-tables: $(test_tables)
 
 test/generated/%.pdf.mutool.html.diff: test/generated/%.pdf.mutool.html test/%.pdf.mutool.html.ref
@@ -278,10 +283,12 @@ exe_tables_src = src/tables.c++
 $(exe_tables): $(exe_tables_src)
 	c++ -W -Wall -Werror -g -I /usr/local/include/opencv4 -L /usr/local/lib -l opencv_core -l opencv_imgproc -l opencv_imgcodecs -o $@ $^
 
-ifeq ($(create_ref),yes)
-# Special rule for populating .ref directories with current output. Useful to
+ifeq (0,1)
+# Special rules for populating .ref directories with current output. Useful to
 # initialise references outputs for new output type.
 #
+test/%.docx.dir.ref/: test/generated/%.docx.dir/
+	rsync -ai $< $@
 test/%.odt.dir.ref/: test/generated/%.odt.dir/
 	rsync -ai $< $@
 endif
