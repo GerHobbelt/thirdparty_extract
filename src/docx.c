@@ -486,7 +486,10 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
                 state.ctm_prev = NULL;
                 
                 //extract_astring_catf(alloc, content, "pos=(%i %i) w=%i h=%i</w:r></w:p>\n", x, y, cell->ix_extend, cell->iy_extend);
-                if (1) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"> DISTRICT WISE ESTIMATES OF MARKETABLE SURPLUS / DEFICIT OF RICE DURING 2012-13</w:t></w:r></w:p>\n");
+                if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"> DISTRICT WISE ESTIMATES OF MARKETABLE SURPLUS / DEFICIT OF RICE DURING 2012-13</w:t></w:r></w:p>\n");
+                if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\">(%i %i)</w:t></w:r></w:p>\n", x, y);
+                if (0) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r></w:p>\n");
+                int chars_num_old = content->chars_num;
                 int p;
                 for (p=0; p<cell->paragraphs_num; ++p)
                 {
@@ -497,6 +500,12 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
                 {
                     if (extract_docx_run_finish(alloc, content)) goto end;
                     state.font_name = NULL;
+                }
+                /* Need to write out at least an empty paragraph in each cell,
+                otherwise libreoffice fails to show table at all. */
+                if (content->chars_num == chars_num_old)
+                {
+                    extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r></w:p>\n");
                 }
                 //extract_astring_catf(alloc, content, "</w:t></w:r></w:p>\n");
                 
