@@ -406,6 +406,123 @@ static int extract_document_output_rotated_paragraphs(
 }
 
 
+static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t* table, extract_astring_t* content)
+{
+    (void) state;
+    int e = -1;
+    
+    extract_astring_cat(alloc, content,
+            "\n"
+            "    <w:tbl>\n"
+            "        <w:tblLayout w:type=\"autofit\"/>\n"
+            );
+    int y;
+    int i;
+
+    if (0)
+    {
+        /* Show raw cells info. */
+        for (y=0; y<table->cells_num_y; ++y)
+        {
+            int x;
+            for (x=0; x<table->cells_num_x; ++x)
+            {
+                cell_t* cell = table->cells[y*table->cells_num_x + x];
+                fprintf(stderr,
+                        " [i=% 4i (% 3i % 3i) l=%i a=%i ix_extend=%i iy_extend=% 3i]",
+                        i, cell->ix, cell->iy, cell->left, cell->above, cell->ix_extend, cell->iy_extend
+                        );
+                /*fprintf(stderr, cell->left ? "|" : " ");
+                fprintf(stderr, cell->above ? "-" : " ");
+                fprintf(stderr,   " ");*/                      
+            }
+            fprintf(stderr, "\n");
+        }
+    }
+
+    outf("table->cells_num_x=%i", table->cells_num_x);
+    outf("table->cells_num_y=%i", table->cells_num_y);
+    for (y=0; y<table->cells_num_y; ++y)
+    {
+        int x;
+        extract_astring_cat(alloc, content, "        <w:tr>\n");
+        extract_astring_cat(alloc, content, "            <w:trPr/>\n");
+        
+        for (x=0; x<table->cells_num_x; ++x)
+        {
+            cell_t* cell = table->cells[y*table->cells_num_x + x];
+            if (!cell->left) continue;
+            extract_astring_cat(alloc, content, "            <w:tc>\n");
+            extract_astring_cat(alloc, content, "                <w:tcPr>\n");
+            extract_astring_cat(alloc, content, "                    <w:tcBorders>\n");
+            extract_astring_cat(alloc, content, "                        <w:top w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n");
+            extract_astring_cat(alloc, content, "                        <w:start w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n");
+            extract_astring_cat(alloc, content, "                        <w:bottom w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n");
+            extract_astring_cat(alloc, content, "                        <w:end w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n");
+            extract_astring_cat(alloc, content, "                    </w:tcBorders>\n");
+            
+            if (cell->ix_extend > 1)
+            {
+                extract_astring_catf(alloc, content, "                    <w:gridSpan w:val=\"%i\"/>\n", cell->ix_extend);
+            }
+            if (cell->above)
+            {
+                if (cell->iy_extend > 1)
+                {
+                    extract_astring_catf(alloc, content, "                    <w:vMerge w:val=\"restart\"/>\n", cell->iy_extend);
+                }
+            }
+            else
+            {
+                extract_astring_catf(alloc, content, "                    <w:vMerge/>\n");
+            }
+            extract_astring_cat(alloc, content, "                </w:tcPr>\n");
+            
+            if (cell->above)
+            {
+                extract_astring_t text = {NULL, 0};
+                content_state_t state;
+                state.font_name = NULL;
+                state.ctm_prev = NULL;
+                
+                //extract_astring_catf(alloc, content, "pos=(%i %i) w=%i h=%i</w:r></w:p>\n", x, y, cell->ix_extend, cell->iy_extend);
+                if (1) extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"> DISTRICT WISE ESTIMATES OF MARKETABLE SURPLUS / DEFICIT OF RICE DURING 2012-13</w:t></w:r></w:p>\n");
+                int p;
+                for (p=0; p<cell->paragraphs_num; ++p)
+                {
+                    paragraph_t* paragraph = cell->paragraphs[p];
+                    if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
+                }
+                if (state.font_name)
+                {
+                    if (extract_docx_run_finish(alloc, content)) goto end;
+                    state.font_name = NULL;
+                }
+                //extract_astring_catf(alloc, content, "</w:t></w:r></w:p>\n");
+                
+                //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
+                //if (paragraphs_to_html_content(alloc, state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
+                if (text.chars)
+                {
+                    extract_astring_cat(alloc, content, text.chars);
+                }
+                extract_astring_free(alloc, &text);
+            }
+            extract_astring_cat(alloc, content, "\n");
+            extract_astring_cat(alloc, content, "            </w:tc>\n");
+
+            //if (content_state_reset(alloc, state, content)) goto end;
+        }
+        
+        extract_astring_cat(alloc, content, "        </w:tr>\n");
+    }
+    extract_astring_cat(alloc, content, "    </w:tbl>\n");
+    e = 0;
+    end:
+    return e;
+}
+
+
 int extract_document_to_docx_content(
         extract_alloc_t*    alloc,
         document_t*         document,
@@ -600,6 +717,15 @@ int extract_document_to_docx_content(
             int i;
             for (i=0; i<page->images_num; ++i) {
                 extract_document_append_image(alloc, content, &page->images[i]);
+            }
+        }
+        
+        {
+            int i;
+            for (i=0; i<page->tables_num; ++i)
+            {
+                table_t* table = page->tables[i];
+                if (append_table(alloc, &state, table, content)) goto end;
             }
         }
     }
