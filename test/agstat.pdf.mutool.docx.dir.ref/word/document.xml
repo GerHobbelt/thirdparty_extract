@@ -185,7 +185,7 @@
                     </w:tcBorders>
                     <w:vMerge w:val="continue"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
             <w:tc>
                 <w:tcPr>
@@ -197,7 +197,7 @@
                     </w:tcBorders>
                     <w:vMerge w:val="continue"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
             <w:tc>
                 <w:tcPr>
@@ -209,7 +209,7 @@
                     </w:tcBorders>
                     <w:vMerge w:val="continue"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
             <w:tc>
                 <w:tcPr>
@@ -221,7 +221,7 @@
                     </w:tcBorders>
                     <w:vMerge w:val="continue"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
             <w:tc>
                 <w:tcPr>
@@ -233,7 +233,7 @@
                     </w:tcBorders>
                     <w:vMerge w:val="continue"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
             <w:tc>
                 <w:tcPr>
@@ -245,7 +245,7 @@
                     </w:tcBorders>
                     <w:vMerge w:val="continue"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
             <w:tc>
                 <w:tcPr>
@@ -5192,7 +5192,7 @@
                     </w:tcBorders>
                     <w:gridSpan w:val="2"/>
                 </w:tcPr>
-<w:p><w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve"></w:t></w:r></w:p>
+<w:p/>
             </w:tc>
         </w:tr>
         <w:tr>
