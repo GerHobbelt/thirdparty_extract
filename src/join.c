@@ -1580,6 +1580,10 @@ y_min..y_max. */
                         {}
                         else
                         {
+                            if (xx==x)
+                            {
+                                cell2->ix_extend = cell->ix_extend;
+                            }
                             cell2->above = 0;
                             /* We set .left to 1 for left-most cells - e.g. F
                             and K in the above diagram; this allows us to
@@ -1634,7 +1638,7 @@ y_min..y_max. */
             for (x=0; x<cells_num_x; ++x)
             {
                 cell_t* cell = cells[cells_num_x * y + x];
-                fprintf(stderr, "    %c%c x=%i y=%i ix=%i iy=%i w=%i h=%i",
+                fprintf(stderr, "    %c%c x=%i y=% 3i ix=%i iy=% 3i w=%i h=%i",
                         cell->left ? '|' : ' ',
                         cell->above ? '-' : ' ',
                         x,
