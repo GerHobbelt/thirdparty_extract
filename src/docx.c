@@ -420,8 +420,10 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
     for (y=0; y<table->cells_num_y; ++y)
     {
         int x;
-        if (extract_astring_cat(alloc, content, "        <w:tr>\n")) goto end;
-        if (extract_astring_cat(alloc, content, "            <w:trPr/>\n")) goto end;
+        if (extract_astring_cat(alloc, content,
+                "        <w:tr>\n"
+                "            <w:trPr/>\n"
+                )) goto end;
         
         for (x=0; x<table->cells_num_x; ++x)
         {
@@ -432,13 +434,15 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
             
             /* Write cell properties. */
             {
-                if (extract_astring_cat(alloc, content, "                <w:tcPr>\n")) goto end;
-                if (extract_astring_cat(alloc, content, "                    <w:tcBorders>\n")) goto end;
-                if (extract_astring_cat(alloc, content, "                        <w:top w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n")) goto end;
-                if (extract_astring_cat(alloc, content, "                        <w:start w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n")) goto end;
-                if (extract_astring_cat(alloc, content, "                        <w:bottom w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n")) goto end;
-                if (extract_astring_cat(alloc, content, "                        <w:end w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n")) goto end;
-                if (extract_astring_cat(alloc, content, "                    </w:tcBorders>\n")) goto end;
+                if (extract_astring_cat(alloc, content,
+                        "                <w:tcPr>\n"
+                        "                    <w:tcBorders>\n"
+                        "                        <w:top w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n"
+                        "                        <w:start w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n"
+                        "                        <w:bottom w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n"
+                        "                        <w:end w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n"
+                        "                    </w:tcBorders>\n"
+                        )) goto end;
                 if (cell->ix_extend > 1)
                 {
                     if (extract_astring_catf(alloc, content, "                    <w:gridSpan w:val=\"%i\"/>\n", cell->ix_extend)) goto end;
@@ -459,11 +463,11 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
             
             /* Write contents of this cell. */
             {
+                size_t chars_num_old = content->chars_num;
+                int p;
                 content_state_t state;
                 state.font_name = NULL;
                 state.ctm_prev = NULL;
-                size_t chars_num_old = content->chars_num;
-                int p;
                 for (p=0; p<cell->paragraphs_num; ++p)
                 {
                     paragraph_t* paragraph = cell->paragraphs[p];
@@ -476,18 +480,17 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
                 }
 
                 /* Need to write out at least an empty paragraph in each cell,
-                otherwise Word/Libreoffice fail to show table at all - "If a
-                table cell does not include at least one block-level element,
-                then this document shall be considered corrupt." */
+                otherwise Word/Libreoffice fail to show table at all; the
+                OOXML spec says "If a table cell does not include at least one
+                block-level element, then this document shall be considered
+                corrupt." */
                 if (content->chars_num == chars_num_old)
                 {
-                    //if (extract_astring_catf(alloc, content, "<w:p><w:r><w:rPr><w:rFonts w:ascii=\"Arial-BoldMT\" w:hAnsi=\"Arial-BoldMT\"/><w:b/><w:sz w:val=\"24.000000\"/><w:szCs w:val=\"18.000000\"/></w:rPr><w:t xml:space=\"preserve\"></w:t></w:r></w:p>\n")) goto end;
                     if (extract_astring_catf(alloc, content, "<w:p/>\n")) goto end;
                 }
             }
             if (extract_astring_cat(alloc, content, "            </w:tc>\n")) goto end;
         }
-        
         if (extract_astring_cat(alloc, content, "        </w:tr>\n")) goto end;
     }
     if (extract_astring_cat(alloc, content, "    </w:tbl>\n")) goto end;

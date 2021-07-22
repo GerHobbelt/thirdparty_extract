@@ -170,75 +170,64 @@ etc. */
 static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t* table, extract_astring_t* content)
 {
     int e = -1;
-    extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n");
     int y;
-    int i;
-
-    if (0)
-    {
-        /* Show raw cells info. */
-        for (y=0; y<table->cells_num_y; ++y)
-        {
-            int x;
-            for (x=0; x<table->cells_num_x; ++x)
-            {
-                cell_t* cell = table->cells[y*table->cells_num_x + x];
-                fprintf(stderr,
-                        " [i=% 4i (% 3i % 3i) l=%i a=%i ix_extend=%i iy_extend=% 3i]",
-                        i, cell->ix, cell->iy, cell->left, cell->above, cell->ix_extend, cell->iy_extend
-                        );
-                /*fprintf(stderr, cell->left ? "|" : " ");
-                fprintf(stderr, cell->above ? "-" : " ");
-                fprintf(stderr,   " ");*/                      
-            }
-            fprintf(stderr, "\n");
-        }
-    }
-
-    outf("table->cells_num_x=%i", table->cells_num_x);
-    outf("table->cells_num_y=%i", table->cells_num_y);
+    
+    if (extract_astring_cat(alloc, content, "\n\n<table border=\"1\" style=\"border-collapse:collapse\">\n")) goto end;
+    
     for (y=0; y<table->cells_num_y; ++y)
     {
         /* If 1, we put each <td>...</td> on a separate line. */
         int multiline = 0;
         int x;
-        extract_astring_cat(alloc, content, "    <tr>\n");
-        if (!multiline) extract_astring_cat(alloc, content, "        ");
+        if (extract_astring_cat(alloc, content, "    <tr>\n")) goto end;
+        if (!multiline)
+        {
+            if (extract_astring_cat(alloc, content, "        ")) goto end;
+        }
         for (x=0; x<table->cells_num_x; ++x)
         {
             cell_t* cell = table->cells[y*table->cells_num_x + x];
-            if (!cell->above || !cell->left) continue;
-            if (multiline) extract_astring_cat(alloc, content, "        ");
-            extract_astring_cat(alloc, content, "<td");
+            if (!cell->above || !cell->left)
+            {
+                /* HTML does not require anything for cells that are subsumed
+                by other cells that extend horizontally and vertically. */
+                continue;
+            }
+            if (multiline)
+            {
+                if (extract_astring_cat(alloc, content, "        ")) goto end;
+            }
+            if (extract_astring_cat(alloc, content, "<td")) goto end;
+            
             if (cell->ix_extend > 1)
             {
-                extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend);
+                if (extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend)) goto end;
             }
             if (cell->iy_extend > 1)
             {
-                extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend);
+                if (extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend)) goto end;
             }
-            extract_astring_cat(alloc, content, ">");
+            
+            if (extract_astring_cat(alloc, content, ">")) goto end;
 
-            extract_astring_t text = {NULL, 0};
-            //extract_astring_catf(alloc, content, "pos=(%i %i) w=%i h=%i", x, y, cell->ix_extend, cell->iy_extend);
-            //if (get_paragraphs_text(alloc, cell->paragraphs, cell->paragraphs_num, &text)) goto end;
-            if (paragraphs_to_html_content(alloc, state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, &text)) goto end;
-            if (text.chars)
+            if (paragraphs_to_html_content(alloc, state, cell->paragraphs, cell->paragraphs_num, 1 /* single_line*/, content)) goto end;
+            if (extract_astring_cat(alloc, content, "</td>")) goto end;
+            if (multiline)
             {
-                extract_astring_cat(alloc, content, text.chars);
+                if (extract_astring_cat(alloc, content, "\n")) goto end;
             }
-            extract_astring_cat(alloc, content, "</td>");
-            if (multiline) extract_astring_cat(alloc, content, "\n");
 
-            extract_astring_free(alloc, &text);
             if (content_state_reset(alloc, state, content)) goto end;
         }
-        if (!multiline) extract_astring_cat(alloc, content, "\n");
-        extract_astring_cat(alloc, content, "    </tr>\n");
+        if (!multiline)
+        {
+            if (extract_astring_cat(alloc, content, "\n")) goto end;
+        }
+        if (extract_astring_cat(alloc, content, "    </tr>\n")) goto end;
     }
-    extract_astring_cat(alloc, content, "</table>\n\n");
+    if (extract_astring_cat(alloc, content, "</table>\n\n")) goto end;
     e = 0;
+    
     end:
     return e;
 }
