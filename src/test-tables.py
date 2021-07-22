@@ -136,7 +136,7 @@ if __name__ == '__main__':
                 
                 if 1:
                     print(f'<ul>', file=f)
-                    for path in glob.glob('test/*.pdf'):
+                    for path in sorted(glob.glob('test/*.pdf')):
                         leaf = os.path.basename(path)
                         if leaf in ('Python2.pdf', 'Python2clipped.pdf', 'zlib.3.pdf', 'text_graphic_image.pdf'):
                             continue
@@ -160,7 +160,7 @@ if __name__ == '__main__':
                     def p(text):
                         print(text, file=f)
                     p(f'<table border=\"1\" style=\"border-collapse:collapse\" width="100%">')
-                    for path in glob.glob('test/*.pdf'):
+                    for path in sorted(glob.glob('test/*.pdf')):
                         leaf = os.path.basename(path)
                         if leaf in ('Python2.pdf', 'Python2clipped.pdf', 'zlib.3.pdf', 'text_graphic_image.pdf'):
                             continue
