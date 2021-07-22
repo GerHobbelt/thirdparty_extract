@@ -84,25 +84,17 @@ int extract_zip_open(extract_buffer_t* buffer, extract_zip_t** o_zip)
         if (gmtime_r(&t, &tm))
         {
             /* mdate and mtime are in MS DOS format:
-                mdate:
-                    bits 0-4: day of month (1-31).
-                    bits 5-8: month (1=jan, 2=feb, etc).
-                    bits 9-15: year - 1980.
                 mtime:
                     bits 0-4: seconds / 2.
                     bits 5-10: minute (0-59).
                     bits 11-15: hour (0-23).
+                mdate:
+                    bits 0-4: day of month (1-31).
+                    bits 5-8: month (1=jan, 2=feb, etc).
+                    bits 9-15: year - 1980.
             */
-            zip->mtime = 0
-                    | (tm.tm_hour << 11)
-                    | (tm.tm_min << 5)
-                    | (tm.tm_sec / 2)
-                    ;
-            zip->mdate = 0
-                    | ((1900 + tm.tm_year - 1980) << 9)
-                    | ((tm.tm_mon + 1) << 5)
-                    | tm.tm_mday
-                    ;
+            zip->mtime = (uint16_t) ((tm.tm_hour << 11) | (tm.tm_min << 5) | (tm.tm_sec / 2));
+            zip->mdate = (uint16_t) (((1900 + tm.tm_year - 1980) << 9) | ((tm.tm_mon + 1) << 5) | tm.tm_mday);
         }
         else
         {
