@@ -217,11 +217,13 @@ test_tables_generated = $(patsubst test/%, test/generated/%, $(test_tables_pdfs)
 
 test_tables_html = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.html.diff, $(test_tables_pdfs))
 test_tables_docx = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.docx.diff, $(test_tables_pdfs))
+test_tables_odt  = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.odt.diff,  $(test_tables_pdfs))
 
-test_tables = $(test_tables_html) $(test_tables_docx)
+test_tables = $(test_tables_html) $(test_tables_docx) $(test_tables_odt)
 test-tables-html: $(test_tables_html)
 test-tables-docx: $(test_tables_docx)
-test-tables: $(test_tables)
+test-tables-odt:  $(test_tables_odt)
+test-tables: $(test_tables) 
 
 test/generated/%.pdf.mutool.html.diff: test/generated/%.pdf.mutool.html test/%.pdf.mutool.html.ref
 	@echo
@@ -294,9 +296,11 @@ test/%.odt.dir.ref/: test/generated/%.odt.dir/
 
 # Update all table docx reference outputs.
 #
-_update_docx_tables_leafs = $(patsubst test/%, %, $(test_tables_pdfs))
+_update_tables_leafs = $(patsubst test/%, %, $(test_tables_pdfs))
 _update-docx-tables:
-	for i in $(_update_docx_tables_leafs); do rsync -ai test/generated/$$i.mutool.docx.dir/ test/$$i.mutool.docx.dir.ref/; done
+	for i in $(_update_tables_leafs); do rsync -ai test/generated/$$i.mutool.docx.dir/ test/$$i.mutool.docx.dir.ref/; done
+_update-odt-tables:
+	for i in $(_update_tables_leafs); do rsync -ai test/generated/$$i.mutool.odt.dir/ test/$$i.mutool.odt.dir.ref/; done
 endif
 
 # Rules that make the various intermediate targets required by $(tests).
