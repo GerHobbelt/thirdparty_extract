@@ -436,11 +436,21 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
     table_number += 1;
     if (extract_astring_catf(alloc, content,
             "\n"
-            "    <table:table table:name=\"extract.table.%i\">\n"
+            "    <table:table text:style-name=\"Table37\" table:name=\"extract.table.%i\">\n"
+            "        <table:table-columns>\n"
             ,
             table_number
             )) goto end;
 
+    for (y=0; y<table->cells_num_y; ++y)
+    {
+        if (extract_astring_cat(alloc, content,
+                "            <table:table-column table:style-name=\"TableColumn40\"/>\n"
+                )) goto end;
+    }
+    if (extract_astring_cat(alloc, content,
+            "        </table:table-columns>\n"
+            )) goto end;
     for (y=0; y<table->cells_num_y; ++y)
     {
         int x;
@@ -739,26 +749,39 @@ int extract_odt_content_item(
         char* text_intermediate = NULL;
         extract_astring_t   styles_definitions = {0};
 
+        /* Insert content before '</office:text>'. */
         if (extract_content_insert(
                 alloc,
                 text,
                 NULL /*single*/,
-                NULL,
-                "</office:text>",
+                NULL /*mid_begin_name*/,
+                "</office:text>" /*mid_end_name*/,
                 contentss,
                 contentss_num,
                 &text_intermediate
                 )) goto end;
         outf("text_intermediate: %s", text_intermediate);
         
+        /* Convert <styles> to text. */
         if (extract_odt_styles_definitions(alloc, styles, &styles_definitions)) goto end;
+        if (extract_astring_cat(alloc, &styles_definitions,
+                "\n"
+                "<style:style style:name=\"Table37\" style:family=\"table\">\n"
+                "    <style:table-properties style:width=\"6.2569in\" fo:margin-left=\"0in\" table:align=\"left\"/>\n"
+                "</style:style>\n"
+                "<style:style style:name=\"TableColumn40\" style:family=\"table-column\">\n"
+                "    <style:table-column-properties style:column-width=\"1.8666in\"/>\n"
+                "</style:style>\n"
+                )) goto end;
         
+        /* Replace '<office:automatic-styles/>' with text from
+        <styles_definitions>. */
         e = extract_content_insert(
                 alloc,
                 text_intermediate,
                 "<office:automatic-styles/>" /*single*/,
-                NULL,
-                NULL, //"</office:automatic-styles>",
+                NULL /*mid_begin_name*/,
+                NULL /*mid_end_name*/,
                 &styles_definitions,
                 1,
                 text2
