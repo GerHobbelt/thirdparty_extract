@@ -464,21 +464,21 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
         for (x=0; x<table->cells_num_x; ++x)
         {
             cell_t* cell = table->cells[y*table->cells_num_x + x];
-            /*if (!cell->above || !cell->left)
+            if (!cell->above || !cell->left)
             {
                 if (extract_astring_cat(alloc, content, "            <table:covered-table-cell/>\n")) goto end;
                 continue;
-            }*/
+            }
             
             if (extract_astring_cat(alloc, content, "            <table:table-cell")) goto end;
-            /*if (cell->ix_extend > 1)
+            if (cell->ix_extend > 1)
             {
                 if (extract_astring_catf(alloc, content, " table:number-columns-spanned=\"%i\"", cell->ix_extend)) goto end;
             }
             if (cell->iy_extend > 1)
             {
                 if (extract_astring_catf(alloc, content, " table:number-rows-spanned=\"%i\"", cell->iy_extend)) goto end;
-            }*/
+            }
             if (extract_astring_catf(alloc, content, ">\n")) goto end;
             
             /* Write contents of this cell. */
