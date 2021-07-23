@@ -432,26 +432,29 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
     int e = -1;
     int y;
     
-    static int table_number = 0;
-    table_number += 1;
-    if (extract_astring_catf(alloc, content,
-            "\n"
-            "    <table:table text:style-name=\"Table37\" table:name=\"extract.table.%i\">\n"
-            "        <table:table-columns>\n"
-            ,
-            table_number
-            )) goto end;
-
-    for (y=0; y<table->cells_num_y; ++y)
     {
-        if (extract_astring_cat(alloc, content,
-                "            <table:table-column table:style-name=\"TableColumn40\"/>\n"
+        int x;
+        static int table_number = 0;
+        table_number += 1;
+        if (extract_astring_catf(alloc, content,
+                "\n"
+                "    <table:table text:style-name=\"extract.table\" table:name=\"extract.table.%i\">\n"
+                "        <table:table-columns>\n"
+                ,
+                table_number
                 )) goto end;
-    }
-    if (extract_astring_cat(alloc, content,
-            "        </table:table-columns>\n"
-            )) goto end;
-    for (y=0; y<table->cells_num_y; ++y)
+
+        for (x=0; x<table->cells_num_x; ++x)
+        {
+            if (extract_astring_cat(alloc, content,
+                    "            <table:table-column table:style-name=\"extract.table.column\"/>\n"
+                    )) goto end;
+        }
+        if (extract_astring_cat(alloc, content,
+                "        </table:table-columns>\n"
+                )) goto end;
+  }
+  for (y=0; y<table->cells_num_y; ++y)
     {
         int x;
         if (extract_astring_cat(alloc, content,
@@ -764,14 +767,14 @@ int extract_odt_content_item(
         
         /* Convert <styles> to text. */
         if (extract_odt_styles_definitions(alloc, styles, &styles_definitions)) goto end;
+        
+        /* To make tables work, we seem to need to specify table and column
+        styles, and these can be empty. todo: maybe specify exact sizes based
+        on the pdf table and cell dimensions. */
         if (extract_astring_cat(alloc, &styles_definitions,
                 "\n"
-                "<style:style style:name=\"Table37\" style:family=\"table\">\n"
-                "    <style:table-properties style:width=\"6.2569in\" fo:margin-left=\"0in\" table:align=\"left\"/>\n"
-                "</style:style>\n"
-                "<style:style style:name=\"TableColumn40\" style:family=\"table-column\">\n"
-                "    <style:table-column-properties style:column-width=\"1.8666in\"/>\n"
-                "</style:style>\n"
+                "<style:style style:name=\"extract.table\" style:family=\"table\"/>\n"
+                "<style:style style:name=\"extract.table.column\" style:family=\"table-column\"/>\n"
                 )) goto end;
         
         /* Replace '<office:automatic-styles/>' with text from
