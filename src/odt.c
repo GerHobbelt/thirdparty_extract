@@ -427,6 +427,77 @@ static int extract_document_output_rotated_paragraphs(
 }
 
 
+static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content, extract_odt_styles_t* styles)
+{
+    int e = -1;
+    int y;
+    
+    static int table_number = 0;
+    table_number += 1;
+    if (extract_astring_catf(alloc, content,
+            "\n"
+            "    <table:table table:name=\"extract.table.%i\">\n"
+            ,
+            table_number
+            )) goto end;
+
+    for (y=0; y<table->cells_num_y; ++y)
+    {
+        int x;
+        if (extract_astring_cat(alloc, content,
+                "        <table:table-row>\n"
+                )) goto end;
+        
+        for (x=0; x<table->cells_num_x; ++x)
+        {
+            cell_t* cell = table->cells[y*table->cells_num_x + x];
+            /*if (!cell->above || !cell->left)
+            {
+                if (extract_astring_cat(alloc, content, "            <table:covered-table-cell/>\n")) goto end;
+                continue;
+            }*/
+            
+            if (extract_astring_cat(alloc, content, "            <table:table-cell")) goto end;
+            /*if (cell->ix_extend > 1)
+            {
+                if (extract_astring_catf(alloc, content, " table:number-columns-spanned=\"%i\"", cell->ix_extend)) goto end;
+            }
+            if (cell->iy_extend > 1)
+            {
+                if (extract_astring_catf(alloc, content, " table:number-rows-spanned=\"%i\"", cell->iy_extend)) goto end;
+            }*/
+            if (extract_astring_catf(alloc, content, ">\n")) goto end;
+            
+            /* Write contents of this cell. */
+            {
+                int p;
+                content_state_t state;
+                state.font_name = NULL;
+                state.ctm_prev = NULL;
+                for (p=0; p<cell->paragraphs_num; ++p)
+                {
+                    paragraph_t* paragraph = cell->paragraphs[p];
+                    if (extract_document_to_odt_content_paragraph(alloc, &state, paragraph, content, styles)) goto end;
+                }
+                if (state.font_name)
+                {
+                    if (extract_odt_run_finish(alloc, content)) goto end;
+                    state.font_name = NULL;
+                }
+                if (extract_astring_cat(alloc, content, "\n")) goto end;
+            }
+            if (extract_astring_cat(alloc, content, "            </table:table-cell>\n")) goto end;
+        }
+        if (extract_astring_cat(alloc, content, "        </table:table-row>\n")) goto end;
+    }
+    if (extract_astring_cat(alloc, content, "    </table:table>\n")) goto end;
+    e = 0;
+    
+    end:
+    return e;
+}
+
+
 int extract_document_to_odt_content(
         extract_alloc_t*    alloc,
         document_t*         document,
@@ -605,6 +676,16 @@ int extract_document_to_odt_content(
             for (i=0; i<page->images_num; ++i)
             {
                 extract_document_append_image(alloc, content, &page->images[i]);
+            }
+        }
+        
+        /* Output tables. todo: interleave these with paragraphs using y coordinate. */
+        {
+            int i;
+            for (i=0; i<page->tables_num; ++i)
+            {
+                table_t* table = page->tables[i];
+                if (append_table(alloc, table, content, styles)) goto end;
             }
         }
     }

@@ -698,6 +698,7 @@ int extract_document_to_docx_content(
             }
         }
         
+        /* Output tables. todo: interleave these with paragraphs using y coordinate. */
         {
             int i;
             for (i=0; i<page->tables_num; ++i)
