@@ -132,7 +132,7 @@ if __name__ == '__main__':
                 print(f'<html>', file=f)
                 print(f'<body>', file=f)
                 print(f'<h1>Extract table output ({time.strftime("%F %T")})</h1>', file=f)
-                print(f'<p>&lt;source&gt; &lt;generated html&gt; &lt;reference html&gt; [&lt;generated docx&gt;]', file=f)
+                print(f'<p>&lt;source&gt; &lt;generated html&gt; &lt;reference html&gt; [&lt;generated docx&gt;] [&lt;generated odt&gt;]', file=f)
                 
                 if 1:
                     print(f'<ul>', file=f)
@@ -148,6 +148,7 @@ if __name__ == '__main__':
                         print(f'             <a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a>', file=f)
                         print(f'             <a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a>', file=f)
                         print(f'             [<a href="test/generated/{leaf}.mutool.docx">test/generated/{leaf}.mutool.docx</a>]', file=f)
+                        print(f'             [<a href="test/generated/{leaf}.mutool.odt">test/generated/{leaf}.mutool.odt</a>]', file=f)
                         print(f'        <li>', file=f)
                         print(f'            <iframe width=30% height=300 src="{path}"></iframe>', file=f)
                         print(f'            <iframe width=30% height=300 src="test/generated/{leaf}.mutool.html"></iframe>', file=f)
@@ -169,6 +170,7 @@ if __name__ == '__main__':
                         p(f'        <td><a href="test/generated/{leaf}.mutool.html">test/generated/{leaf}.mutool.html</a></td>')
                         p(f'        <td><a href="test/{leaf}.mutool.html.ref">test/{leaf}.mutool.html.ref</a></td>')
                         p(f'        <td><a href="test/generated/{leaf}.mutool.docx">test/generated/{leaf}.mutool.docx</a></td>')
+                        p(f'        <td><a href="test/generated/{leaf}.mutool.odt">test/generated/{leaf}.mutool.odt</a></td>')
                         p(f'    </tr>')
                         p(f'    <tr>')
                         p(f'        <td><iframe width=100% height=300 src="{path}"></iframe></td>')
@@ -191,6 +193,7 @@ if __name__ == '__main__':
                 command += f' {path} \\\n'
                 command += f' test/generated/{leaf}.mutool.html \\\n'
                 command += f' test/generated/{leaf}.mutool.docx \\\n'
+                command += f' test/generated/{leaf}.mutool.odt \\\n'
                 command += f' test/{leaf}.mutool.html.ref \\\n'
                 #for csv_ref, csv_generated in pdf.csvs():
                 #    command += f' {csv_ref} \\\n'
