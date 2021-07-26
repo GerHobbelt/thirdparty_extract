@@ -323,7 +323,7 @@ int extract_document_to_html_content(
                 paragraph_t* paragraph = page->paragraphs[p];
                 line_t* line = paragraph->lines[0];
                 span_t* span = line->spans[0];
-                outf0("    p=%i: %s", p, span_string(NULL, span));
+                outf0("    p=%i: %s", p, extract_span_string(NULL, span));
             }
         }
 

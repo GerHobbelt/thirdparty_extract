@@ -547,9 +547,9 @@ and updates *p. */
                 int l;
                 for (l=0; l<paragraph->lines_num; ++l) {
                     line_t* line = paragraph->lines[l];
-                    span_t* span = line_span_last(line);
-                    char_t* char_ = span_char_last(span);
-                    double adv = char_->adv * matrix_expansion(span->trm);
+                    span_t* span = extract_line_span_last(line);
+                    char_t* char_ = extract_span_char_last(span);
+                    double adv = char_->adv * extract_matrix_expansion(span->trm);
                     double x = char_->x + adv * cos(rotate);
                     double y = char_->y + adv * sin(rotate);
 
@@ -563,7 +563,7 @@ and updates *p. */
                     if (xx > extent.x) extent.x = xx;
                     if (yy > extent.y) extent.y = yy;
                     if (0) outf("rotate=%f *p=%i: origin=(%f %f) xy=(%f %f) dxy=(%f %f) xxyy=(%f %f) span: %s",
-                            rotate, *p, origin.x, origin.y, x, y, dx, dy, xx, yy, span_string(alloc, span));
+                            rotate, *p, origin.x, origin.y, x, y, dx, dy, xx, yy, extract_span_string(alloc, span));
                 }
             }
         }
@@ -679,7 +679,7 @@ int extract_document_to_docx_content(
                         && content_state.ctm_prev
                         && paragraph->lines_num
                         && paragraph->lines[0]->spans_num
-                        && matrix_cmp4(
+                        && extract_matrix_cmp4(
                                 content_state.ctm_prev,
                                 &paragraph->lines[0]->spans[0]->ctm
                                 )

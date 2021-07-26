@@ -18,18 +18,23 @@ static char_t* span_char_first(span_t* span)
     return &span->chars[0];
 }
 
+static span_t* s_line_span_first(line_t* line)
+{
+    return extract_line_span_first(line);
+}
+
 /* Returns first char_t in a line. */
 static char_t* line_item_first(line_t* line)
 {
-    span_t* span = line_span_first(line);
+    span_t* span = s_line_span_first(line);
     return span_char_first(span);
 }
 
 /* Returns last char_t in a line. */
 static char_t* line_item_last(line_t* line)
 {
-    span_t* span = line_span_last(line);
-    return span_char_last(span);
+    span_t* span = extract_line_span_last(line);
+    return extract_span_char_last(span);
 }
 
 static point_t char_to_point(const char_t* char_)
@@ -40,7 +45,7 @@ static point_t char_to_point(const char_t* char_)
     return ret;
 }
 
-const char* matrix_string(const matrix_t* matrix)
+const char* extract_matrix_string(const matrix_t* matrix)
 {
     static char ret[5][64];
     static int i = 0;
@@ -59,11 +64,11 @@ const char* matrix_string(const matrix_t* matrix)
 /* Returns total width of span. */
 static double span_adv_total(span_t* span)
 {
-    double dx = span_char_last(span)->x - span_char_first(span)->x;
-    double dy = span_char_last(span)->y - span_char_first(span)->y;
+    double dx = extract_span_char_last(span)->x - span_char_first(span)->x;
+    double dy = extract_span_char_last(span)->y - span_char_first(span)->y;
     /* We add on the advance of the last item; this avoids us returning zero if
     there's only one item. */
-    double adv = span_char_last(span)->adv * matrix_expansion(span->trm);
+    double adv = extract_span_char_last(span)->adv * extract_matrix_expansion(span->trm);
     return sqrt(dx*dx + dy*dy) + adv;
 }
 
@@ -77,7 +82,7 @@ static double spans_adv(
     double delta_x = b->x - a->x;
     double delta_y = b->y - a->y;
     double s = sqrt( delta_x*delta_x + delta_y*delta_y);
-    double a_size = a->adv * matrix_expansion(a_span->trm);
+    double a_size = a->adv * extract_matrix_expansion(a_span->trm);
     s -= a_size;
     return s;
 }
@@ -90,11 +95,11 @@ static double span_angle(span_t* span)
         at spans, because for agstat.pdf vertical text seems to be achieved
         by making trm rotate by 90 degrees. But it messes up the ordering of
         rotated paragraphs in Python2.pdf so is disabled for now. */
-        matrix_t m = multiply_matrix_matrix(span->trm, span->ctm);
+        matrix_t m = extract_multiply_matrix_matrix(span->trm, span->ctm);
         point_t dir;
         dir.x = span->wmode ? 0 : 1;
         dir.y = span->wmode ? 1 : 0;
-        dir = multiply_matrix_point(m, dir);
+        dir = extract_multiply_matrix_point(m, dir);
         double ret = atan2(dir.y, dir.x);
         return ret;
     }
@@ -124,7 +129,7 @@ static double span_angle2(span_t* span)
         double ret2 = atan2(-dy, dx);
         if (fabs(ret2 - ret1) > 0.01)
         {
-            outf("### ret1=%f ret2=%f: %s", ret1, ret2, span_string(NULL, span));
+            outf("### ret1=%f ret2=%f: %s", ret1, ret2, extract_span_string(NULL, span));
         }
     }
     return span_angle(span);
@@ -223,36 +228,36 @@ static int lines_are_compatible(
 {
     if (a == b) return 0;
     if (!a->spans || !b->spans) return 0;
-    if (line_span_first(a)->wmode != line_span_first(b)->wmode) {
+    if (s_line_span_first(a)->wmode != s_line_span_first(b)->wmode) {
         return 0;
     }
-    if (matrix_cmp4(
-            &line_span_first(a)->ctm,
-            &line_span_first(b)->ctm
+    if (extract_matrix_cmp4(
+            &s_line_span_first(a)->ctm,
+            &s_line_span_first(b)->ctm
             )) {
         if (verbose) {
             outf("ctm's differ:");
             outf("    %f %f %f %f %f %f",
-                    line_span_first(a)->ctm.a,
-                    line_span_first(a)->ctm.b,
-                    line_span_first(a)->ctm.c,
-                    line_span_first(a)->ctm.d,
-                    line_span_first(a)->ctm.e,
-                    line_span_first(a)->ctm.f
+                    s_line_span_first(a)->ctm.a,
+                    s_line_span_first(a)->ctm.b,
+                    s_line_span_first(a)->ctm.c,
+                    s_line_span_first(a)->ctm.d,
+                    s_line_span_first(a)->ctm.e,
+                    s_line_span_first(a)->ctm.f
                     );
             outf("    %f %f %f %f %f %f",
-                    line_span_first(b)->ctm.a,
-                    line_span_first(b)->ctm.b,
-                    line_span_first(b)->ctm.c,
-                    line_span_first(b)->ctm.d,
-                    line_span_first(b)->ctm.e,
-                    line_span_first(b)->ctm.f
+                    s_line_span_first(b)->ctm.a,
+                    s_line_span_first(b)->ctm.b,
+                    s_line_span_first(b)->ctm.c,
+                    s_line_span_first(b)->ctm.d,
+                    s_line_span_first(b)->ctm.e,
+                    s_line_span_first(b)->ctm.f
                     );
         }
         return 0;
     }
     {
-        double angle_b = span_angle(line_span_first(b));
+        double angle_b = span_angle(s_line_span_first(b));
         if (angle_b != angle_a) {
             outfx("%s:%i: angles differ");
             return 0;
@@ -283,8 +288,8 @@ static int s_span_inside_rects(extract_alloc_t* alloc, span_t* span, rect_t* rec
                     span->ctm.f,
                     span->trm.e,
                     span->trm.f,
-                    point_string(&p),
-                    rect_string(rect)
+                    extract_point_string(&p),
+                    extract_rect_string(rect)
                     );
             return 0;
         }
@@ -294,9 +299,9 @@ static int s_span_inside_rects(extract_alloc_t* alloc, span_t* span, rect_t* rec
             span->ctm.f,
             span->trm.e,
             span->trm.f,
-            point_string(&p),
-            rect_string(&rects[0]),
-            span_string(alloc, span)
+            extract_point_string(&p),
+            extract_rect_string(&rects[0]),
+            extract_span_string(alloc, span)
             );
     return 1;
 }
@@ -338,8 +343,8 @@ span, because lots of code assumes that there are no empty spans. */
                     && char_->y < rect->max.y
                     )
             {
-                if (span_append_c(alloc, o_span, char_->ucs))   return -1;
-                *span_char_last(o_span) = *char_;
+                if (extract_span_append_c(alloc, o_span, char_->ucs))   return -1;
+                *extract_span_char_last(o_span) = *char_;
                 char_->ucs = ucs_NONE; /* Mark for removal below, so it is not used again. */
                 break;
             }
@@ -366,8 +371,8 @@ span, because lots of code assumes that there are no empty spans. */
 
     if (o_span->chars_num)
     {
-        //outf0("  span: %s", span_string(alloc, span));
-        outf("o_span: %s", span_string(alloc, o_span));
+        //outf0("  span: %s", extract_span_string(alloc, span));
+        outf("o_span: %s", extract_span_string(alloc, o_span));
     }
     return 0;
 }
@@ -492,12 +497,12 @@ static int make_lines(
         if (0 && a < 1) verbose = 1;
         outfx("looking at line_a=%s", line_string2(alloc, line_a));
 
-        span_a = line_span_last(line_a);
+        span_a = extract_line_span_last(line_a);
         angle_a = span_angle(span_a);
         if (verbose) outf("a=%i angle_a=%f ctm=%s: %s",
                 a,
                 angle_a * 180/pi,
-                matrix_string(&span_a->ctm),
+                extract_matrix_string(&span_a->ctm),
                 line_string2(alloc, line_a)
                 );
 
@@ -530,17 +535,17 @@ static int make_lines(
                 /* Find angle between last glyph of span_a and first glyph of
                 span_b. This detects whether the lines are lined up with each other
                 (as opposed to being at the same angle but in different lines). */
-                span_t* span_b = line_span_first(line_b);
-                double dx = span_char_first(span_b)->x - span_char_last(span_a)->x;
-                double dy = span_char_first(span_b)->y - span_char_last(span_a)->y;
+                span_t* span_b = s_line_span_first(line_b);
+                double dx = span_char_first(span_b)->x - extract_span_char_last(span_a)->x;
+                double dy = span_char_first(span_b)->y - extract_span_char_last(span_a)->y;
                 double angle_a_b = atan2(-dy, dx);
                 const double angle_tolerance_deg = 1;
                 if (verbose) {
                     outf("delta=(%f %f) alast=(%f %f) bfirst=(%f %f): angle_a=%f angle_a_b=%f",
                             dx,
                             dy,
-                            span_char_last(span_a)->x,
-                            span_char_last(span_a)->y,
+                            extract_span_char_last(span_a)->x,
+                            extract_span_char_last(span_a)->y,
                             span_char_first(span_b)->x,
                             span_char_first(span_b)->y,
                             angle_a * 180 / pi,
@@ -553,7 +558,7 @@ static int make_lines(
                     /* Find distance between end of line_a and beginning of line_b. */
                     double adv = spans_adv(
                             span_a,
-                            span_char_last(span_a),
+                            extract_span_char_last(span_a),
                             span_char_first(span_b)
                             );
                     if (verbose) outf("nearest_adv=%f. angle_a_b=%f adv=%f",
@@ -570,8 +575,8 @@ static int make_lines(
                 else {
                     if (verbose) outf(
                             "angle beyond tolerance: span_a last=(%f,%f) span_b first=(%f,%f) angle_a_b=%g angle_a=%g span_a.trm{a=%f b=%f}",
-                            span_char_last(span_a)->x,
-                            span_char_last(span_a)->y,
+                            extract_span_char_last(span_a)->x,
+                            extract_span_char_last(span_a)->y,
                             span_char_first(span_b)->x,
                             span_char_first(span_b)->y,
                             angle_a_b * 180 / pi,
@@ -587,7 +592,7 @@ static int make_lines(
             /* line_a and nearest_line are aligned so we can move line_b's
             spans on to the end of line_a. */
             double average_adv;
-            span_t* span_b = line_span_first(nearest_line);
+            span_t* span_b = s_line_span_first(nearest_line);
             b = nearest_line_b;
             if (verbose) outf("found nearest line. a=%i b=%i", a, b);
 
@@ -607,7 +612,7 @@ static int make_lines(
             }
             
             if (1
-                    && span_char_last(span_a)->ucs != ' '
+                    && extract_span_char_last(span_a)->ucs != ' '
                     && span_char_first(span_b)->ucs != ' '
                     ) {
                 int insert_space = (nearest_adv > 0.25 * average_adv);
@@ -619,8 +624,8 @@ static int make_lines(
                                 nearest_adv,
                                 average_adv
                                 );
-                        outf("    a: %s", span_string(alloc, span_a));
-                        outf("    b: %s", span_string(alloc, span_b));
+                        outf("    a: %s", extract_span_string(alloc, span_a));
+                        outf("    b: %s", extract_span_string(alloc, span_b));
                     }
                     if (extract_realloc2(
                             alloc,
@@ -653,14 +658,14 @@ static int make_lines(
                             "joining line insert_space=%i a=%i (y=%f) to line b=%i (y=%f). nearest_adv=%f average_adv=%f",
                             insert_space,
                             a,
-                            span_char_last(span_a)->y,
+                            extract_span_char_last(span_a)->y,
                             b,
                             span_char_first(span_b)->y,
                             nearest_adv,
                             average_adv
                             );
-                    outf("a: %s", span_string(alloc, span_a));
-                    outf("b: %s", span_string(alloc, span_b));
+                    outf("a: %s", extract_span_string(alloc, span_a));
+                    outf("b: %s", extract_span_string(alloc, span_b));
                 }
             }
 
@@ -765,7 +770,7 @@ static double line_font_size_max(line_t* line)
     for (i=0; i<line->spans_num; ++i) {
         span_t* span = line->spans[i];
         /* fixme: <size> should be double, which changes some output. */
-        double size = matrix_expansion(span->trm);
+        double size = extract_matrix_expansion(span->trm);
         if (size > size_max) {
             size_max = size;
         }
@@ -833,8 +838,8 @@ static int paragraphs_cmp(const void* a, const void* b)
     line_t* a_line = paragraph_line_first(*a_paragraph);
     line_t* b_line = paragraph_line_first(*b_paragraph);
 
-    span_t* a_span = line_span_first(a_line);
-    span_t* b_span = line_span_first(b_line);
+    span_t* a_span = s_line_span_first(a_line);
+    span_t* b_span = s_line_span_first(b_line);
 
     if (0)
     {
@@ -843,8 +848,8 @@ static int paragraphs_cmp(const void* a, const void* b)
         if (fabs(a_angle - b_angle) > 0.01)
         {
             outf0("angles differ: a_angle=%f b_angle=%f", a_angle, b_angle);
-            outf0("a_span: %s", span_string(NULL, a_span));
-            outf0("b_span: %s", span_string(NULL, b_span));
+            outf0("a_span: %s", extract_span_string(NULL, a_span));
+            outf0("b_span: %s", extract_span_string(NULL, b_span));
             if (a_angle - b_angle > 3.14/2) {
                 /* Give up if more than 90 deg. */
                 return 0;
@@ -859,12 +864,12 @@ static int paragraphs_cmp(const void* a, const void* b)
         /* If ctm matrices differ, always return this diff first. Note that we
         ignore .e and .f because if data is from ghostscript then .e and .f
         vary for each span, and we don't care about these differences. */
-        int d = matrix_cmp4(&a_span->ctm, &b_span->ctm);
+        int d = extract_matrix_cmp4(&a_span->ctm, &b_span->ctm);
         if (d)
         {
-            outf("matrix_cmp4() returned non-zero.");
-            outf("a_span->ctm=%s trm=%s: %s", matrix_string(&a_span->ctm), matrix_string(&a_span->trm), span_string(NULL, a_span));
-            outf("b_span->ctm=%s trm=%s: %s", matrix_string(&b_span->ctm), matrix_string(&a_span->trm), span_string(NULL, b_span));
+            outf("extract_matrix_cmp4() returned non-zero.");
+            outf("a_span->ctm=%s trm=%s: %s", extract_matrix_string(&a_span->ctm), extract_matrix_string(&a_span->trm), extract_span_string(NULL, a_span));
+            outf("b_span->ctm=%s trm=%s: %s", extract_matrix_string(&b_span->ctm), extract_matrix_string(&a_span->trm), extract_span_string(NULL, b_span));
             return d;
         }
     }
@@ -1058,23 +1063,23 @@ static int make_paragraphs(
                     outf("    %s", paragraph_string(alloc, paragraph_a));
                     outf("    %s", paragraph_string(alloc, nearest_paragraph));
                     outf("paragraph_a ctm=%s",
-                            matrix_string(&paragraph_a->lines[0]->spans[0]->ctm)
+                            extract_matrix_string(&paragraph_a->lines[0]->spans[0]->ctm)
                             );
                     outf("paragraph_a trm=%s",
-                            matrix_string(&paragraph_a->lines[0]->spans[0]->trm)
+                            extract_matrix_string(&paragraph_a->lines[0]->spans[0]->trm)
                             );
                 }
                 /* Join these two paragraph_t's. */
-                a_span = line_span_last(line_a);
-                if (span_char_last(a_span)->ucs == '-') {
+                a_span = extract_line_span_last(line_a);
+                if (extract_span_char_last(a_span)->ucs == '-') {
                     /* remove trailing '-' at end of prev line. char_t doesn't
                     contain any malloc-heap pointers so this doesn't leak. */
                     a_span->chars_num -= 1;
                 }
-                else if (span_char_last(a_span)->ucs == ' ')
+                else if (extract_span_char_last(a_span)->ucs == ' ')
                 {
                 }
-                else if (span_char_last(a_span)->ucs == '/')
+                else if (extract_span_char_last(a_span)->ucs == '/')
                 {
                 }
                 else
@@ -1082,7 +1087,7 @@ static int make_paragraphs(
                     /* Insert space before joining adjacent lines. */
                     char_t* c_prev;
                     char_t* c;
-                    if (span_append_c(alloc, line_span_last(line_a), ' ')) goto end;
+                    if (extract_span_append_c(alloc, extract_line_span_last(line_a), ' ')) goto end;
                     c_prev = &a_span->chars[ a_span->chars_num-2];
                     c = &a_span->chars[ a_span->chars_num-1];
                     c->x = c_prev->x + c_prev->adv * a_span->ctm.a;
@@ -1262,7 +1267,7 @@ y_min..y_max. */
         }
         else
         {
-            outf("Excluding line because outside y=%f..%f: %s", y_min, y_max, rect_string(&all->tablelines[i].rect));
+            outf("Excluding line because outside y=%f..%f: %s", y_min, y_max, extract_rect_string(&all->tablelines[i].rect));
         }
     }
     return 0;
@@ -1324,7 +1329,7 @@ zero. */
     return overlap > 0.8;
 }
 
-void cell_init(cell_t* cell)
+void extract_cell_init(cell_t* cell)
 {
     cell->rect.min.x = 0;
     cell->rect.min.y = 0;
@@ -1340,7 +1345,7 @@ void cell_init(cell_t* cell)
     cell->paragraphs_num = 0;
 }
 
-void cell_free(extract_alloc_t* alloc, cell_t* cell)
+void extract_cell_free(extract_alloc_t* alloc, cell_t* cell)
 {
     /* Do shallow free - lines and paragraphs are owned by the page_t. */
     extract_free(alloc, &cell->lines);
@@ -1373,13 +1378,13 @@ y_min..y_max. */
         outf0("all_h->tablelines_num=%i tl_h.tablelines_num=%i", all_h->tablelines_num, tl_h.tablelines_num);
         for (i=0; i<tl_h.tablelines_num; ++i)
         {
-            outf0("    %i: %s", i, rect_string(&tl_h.tablelines[i].rect));
+            outf0("    %i: %s", i, extract_rect_string(&tl_h.tablelines[i].rect));
         }
 
         outf0("all_v->tablelines_num=%i tl_v.tablelines_num=%i", all_v->tablelines_num, tl_v.tablelines_num);
         for (i=0; i<tl_v.tablelines_num; ++i)
         {
-            outf0("    %i: %s", i, rect_string(&tl_v.tablelines[i].rect));
+            outf0("    %i: %s", i, extract_rect_string(&tl_v.tablelines[i].rect));
         }
     }
     /* Find the cells defined by the vertical and horizontal lines.
@@ -1418,7 +1423,7 @@ y_min..y_max. */
             {
                 if (tl_v.tablelines[j_next].rect.min.x - tl_v.tablelines[j].rect.min.x > 0.5) break;
             }
-            outf("i=%i j=%i tl_v.tablelines[j].rect=%s", i, j, rect_string(&tl_v.tablelines[j].rect));
+            outf("i=%i j=%i tl_v.tablelines[j].rect=%s", i, j, extract_rect_string(&tl_v.tablelines[j].rect));
             
             if (j_next == tl_v.tablelines_num) break;
                         
@@ -1442,7 +1447,7 @@ y_min..y_max. */
             cell->paragraphs_num = 0;
             
             /* Set cell->above if there is a horizontal line above the cell. */
-            outf("Looking to set above for i=%i j=%i rect=%s", i, j, rect_string(&cell->rect));
+            outf("Looking to set above for i=%i j=%i rect=%s", i, j, extract_rect_string(&cell->rect));
             for (ii = i; ii < i_next; ++ii)
             {
                 tableline_t* h = &tl_h.tablelines[ii];
@@ -1509,7 +1514,7 @@ y_min..y_max. */
             {
                 if (i % cells_num_x == x)
                 {
-                    cell_free(alloc, cells[i]);
+                    extract_cell_free(alloc, cells[i]);
                     extract_free(alloc, &cells[i]);
                     continue;
                 }
@@ -1692,7 +1697,7 @@ page->spans[]. */
         {
             outf0("    color=%f: %s",
                     page->tablelines_horizontal.tablelines[i].color,
-                    rect_string(&page->tablelines_horizontal.tablelines[i].rect)
+                    extract_rect_string(&page->tablelines_horizontal.tablelines[i].rect)
                     );
         }
         outf0("tablelines_vertical:");
@@ -1700,7 +1705,7 @@ page->spans[]. */
         {
             outf0("    color=%f: %s",
                     page->tablelines_vertical.tablelines[i].color,
-                    rect_string(&page->tablelines_vertical.tablelines[i].rect)
+                    extract_rect_string(&page->tablelines_vertical.tablelines[i].rect)
                     );
         }
     }

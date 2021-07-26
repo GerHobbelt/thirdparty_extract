@@ -7,12 +7,12 @@
 
 int extract_outf_verbose = 0;
 
-void outf_verbose_set(int verbose)
+void extract_outf_verbose_set(int verbose)
 {
     extract_outf_verbose = verbose;
 }
 
-void (outf)(
+void (extract_outf)(
         int         level,
         const char* file,
         int         line,
