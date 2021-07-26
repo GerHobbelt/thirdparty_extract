@@ -244,5 +244,25 @@ int extract_document_join(extract_alloc_t* alloc, document_t* document);
 
 double extract_matrices_to_font_size(matrix_t* ctm, matrix_t* trm);
 
+/* Things below here are used when generating output. */
+
+typedef struct
+{
+    char*   name;
+    double  size;
+    int     bold;
+    int     italic;
+} font_t;
+/* Basic information about current font. */
+
+typedef struct
+{
+    font_t      font;
+    matrix_t*   ctm_prev;
+} content_state_t;
+/* Used to keep track of font information when writing paragraphs of odt
+content, e.g. so we know whether a font has changed so need to start a new odt
+span. */
+
 
 #endif

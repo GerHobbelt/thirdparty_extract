@@ -43,33 +43,29 @@ static int extract_docx_paragraph_finish(extract_alloc_t* alloc, extract_astring
 static int extract_docx_run_start(
         extract_alloc_t* alloc,
         extract_astring_t* content,
-        const char* font_name,
-        double font_size,
-        int bold,
-        int italic
+        content_state_t* content_state
         )
 /* Starts a new run. Caller must ensure that extract_docx_run_finish() was
 called to terminate any previous run. */
 {
     int e = 0;
     if (!e) e = extract_astring_cat(alloc, content, "\n<w:r><w:rPr><w:rFonts w:ascii=\"");
-    if (!e) e = extract_astring_cat(alloc, content, font_name);
+    if (!e) e = extract_astring_cat(alloc, content, content_state->font.name);
     if (!e) e = extract_astring_cat(alloc, content, "\" w:hAnsi=\"");
-    if (!e) e = extract_astring_cat(alloc, content, font_name);
+    if (!e) e = extract_astring_cat(alloc, content, content_state->font.name);
     if (!e) e = extract_astring_cat(alloc, content, "\"/>");
-    if (!e && bold) e = extract_astring_cat(alloc, content, "<w:b/>");
-    if (!e && italic) e = extract_astring_cat(alloc, content, "<w:i/>");
+    if (!e && content_state->font.bold) e = extract_astring_cat(alloc, content, "<w:b/>");
+    if (!e && content_state->font.italic) e = extract_astring_cat(alloc, content, "<w:i/>");
     {
         char   font_size_text[32];
-        if (0) font_size = 10;
 
         if (!e) e = extract_astring_cat(alloc, content, "<w:sz w:val=\"");
-        snprintf(font_size_text, sizeof(font_size_text), "%f", font_size * 2);
+        snprintf(font_size_text, sizeof(font_size_text), "%f", content_state->font.size * 2);
         extract_astring_cat(alloc, content, font_size_text);
         extract_astring_cat(alloc, content, "\"/>");
 
         if (!e) e = extract_astring_cat(alloc, content, "<w:szCs w:val=\"");
-        snprintf(font_size_text, sizeof(font_size_text), "%f", font_size * 1.5);
+        snprintf(font_size_text, sizeof(font_size_text), "%f", content_state->font.size * 1.5);
         extract_astring_cat(alloc, content, font_size_text);
         extract_astring_cat(alloc, content, "\"/>");
     }
@@ -78,8 +74,9 @@ called to terminate any previous run. */
 
 }
 
-static int extract_docx_run_finish(extract_alloc_t* alloc, extract_astring_t* content)
+static int extract_docx_run_finish(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
 {
+    if (state) state->font.name = NULL;
     return extract_astring_cat(alloc, content, "</w:t></w:r>");
 }
 
@@ -92,16 +89,15 @@ static int extract_docx_paragraph_empty(extract_alloc_t* alloc, extract_astring_
     to the ammount of vertical space, unless we include a non-space
     character. Presumably something to do with the styles in the template
     document. */
-    if (extract_docx_run_start(
-            alloc,
-            content,
-            "OpenSans",
-            10 /*font_size*/,
-            0 /*font_bold*/,
-            0 /*font_italic*/
-            )) goto end;
+    content_state_t content_state = {0};
+    content_state.font.name = "OpenSans";
+    content_state.font.size = 10;
+    content_state.font.bold = 0;
+    content_state.font.italic = 0;
+    
+    if (extract_docx_run_start(alloc, content, &content_state)) goto end;
     //docx_char_append_string(content, "&#160;");   /* &#160; is non-break space. */
-    if (extract_docx_run_finish(alloc, content)) goto end;
+    if (extract_docx_run_finish(alloc, NULL /*state*/, content)) goto end;
     if (extract_docx_paragraph_finish(alloc, content)) goto end;
     e = 0;
     end:
@@ -119,22 +115,9 @@ static int extract_docx_char_truncate_if(extract_astring_t* content, char c)
 }
 
 
-typedef struct
-{
-    const char* font_name;
-    double      font_size;
-    int         font_bold;
-    int         font_italic;
-    matrix_t*   ctm_prev;
-} content_state_t;
-/* Used to keep track of font information when writing paragraphs of docx
-content, e.g. so we know whether a font has changed so need to start a new docx
-span. */
-
-
 static int extract_document_to_docx_content_paragraph(
         extract_alloc_t*    alloc,
-        content_state_t*    state,
+        content_state_t*    content_state,
         paragraph_t*        paragraph,
         extract_astring_t*  content
         )
@@ -152,29 +135,22 @@ font. */
             int si;
             span_t* span = line->spans[s];
             double font_size_new;
-            state->ctm_prev = &span->ctm;
+            content_state->ctm_prev = &span->ctm;
             font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
-            if (!state->font_name
-                    || strcmp(span->font_name, state->font_name)
-                    || span->font_bold != state->font_bold
-                    || span->font_italic != state->font_italic
-                    || font_size_new != state->font_size
+            if (!content_state->font.name
+                    || strcmp(span->font_name, content_state->font.name)
+                    || span->font_bold != content_state->font.bold
+                    || span->font_italic != content_state->font.italic
+                    || font_size_new != content_state->font.size
                     ) {
-                if (state->font_name) {
-                    if (extract_docx_run_finish(alloc, content)) goto end;
+                if (content_state->font.name) {
+                    if (extract_docx_run_finish(alloc, content_state, content)) goto end;
                 }
-                state->font_name = span->font_name;
-                state->font_bold = span->font_bold;
-                state->font_italic = span->font_italic;
-                state->font_size = font_size_new;
-                if (extract_docx_run_start(
-                        alloc,
-                        content,
-                        state->font_name,
-                        state->font_size,
-                        state->font_bold,
-                        state->font_italic
-                        )) goto end;
+                content_state->font.name = span->font_name;
+                content_state->font.bold = span->font_bold;
+                content_state->font.italic = span->font_italic;
+                content_state->font.size = font_size_new;
+                if (extract_docx_run_start(alloc, content, content_state)) goto end;
             }
 
             for (si=0; si<span->chars_num; ++si) {
@@ -186,9 +162,9 @@ font. */
             if (extract_docx_char_truncate_if(content, '-')) goto end;
         }
     }
-    if (state->font_name) {
-        if (extract_docx_run_finish(alloc, content)) goto end;
-        state->font_name = NULL;
+    if (content_state->font.name)
+    {
+        if (extract_docx_run_finish(alloc, content_state, content)) goto end;
     }
     if (extract_docx_paragraph_finish(alloc, content)) goto end;
     
@@ -470,18 +446,17 @@ to the application. */
             {
                 size_t chars_num_old = content->chars_num;
                 int p;
-                content_state_t state;
-                state.font_name = NULL;
-                state.ctm_prev = NULL;
+                content_state_t content_state = {0};
+                content_state.font.name = NULL;
+                content_state.ctm_prev = NULL;
                 for (p=0; p<cell->paragraphs_num; ++p)
                 {
                     paragraph_t* paragraph = cell->paragraphs[p];
-                    if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
+                    if (extract_document_to_docx_content_paragraph(alloc, &content_state, paragraph, content)) goto end;
                 }
-                if (state.font_name)
+                if (content_state.font.name)
                 {
-                    if (extract_docx_run_finish(alloc, content)) goto end;
-                    state.font_name = NULL;
+                    if (extract_docx_run_finish(alloc, &content_state, content)) goto end;
                 }
 
                 /* Need to write out at least an empty paragraph in each cell,
@@ -679,12 +654,12 @@ int extract_document_to_docx_content(
         int p = 0;
         int t = 0;
         
-        content_state_t state;
-        state.font_name = NULL;
-        state.font_size = 0;
-        state.font_bold = 0;
-        state.font_italic = 0;
-        state.ctm_prev = NULL;
+        content_state_t content_state;
+        content_state.font.name = NULL;
+        content_state.font.size = 0;
+        content_state.font.bold = 0;
+        content_state.font.italic = 0;
+        content_state.ctm_prev = NULL;
         
         /* Output paragraphs and tables in order of y coordinate. */
         for(;;)
@@ -701,11 +676,11 @@ int extract_document_to_docx_content(
                 double rotate = atan2(ctm->b, ctm->a);
 
                 if (spacing
-                        && state.ctm_prev
+                        && content_state.ctm_prev
                         && paragraph->lines_num
                         && paragraph->lines[0]->spans_num
                         && matrix_cmp4(
-                                state.ctm_prev,
+                                content_state.ctm_prev,
                                 &paragraph->lines[0]->spans[0]->ctm
                                 )
                         ) {
@@ -721,11 +696,11 @@ int extract_document_to_docx_content(
 
                 if (rotation && rotate != 0)
                 {
-                    if (append_rotated_paragraphs(alloc, page, &state, &p, &text_box_id, ctm, rotate, content)) goto end;
+                    if (append_rotated_paragraphs(alloc, page, &content_state, &p, &text_box_id, ctm, rotate, content)) goto end;
                 }
                 else
                 {
-                    if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
+                    if (extract_document_to_docx_content_paragraph(alloc, &content_state, paragraph, content)) goto end;
                 }
                 p += 1;
             }
