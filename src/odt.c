@@ -21,6 +21,7 @@ odt_paragraph_finish(). */
 
 #include <assert.h>
 #include <errno.h>
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -659,7 +660,8 @@ int extract_document_to_odt_content(
     for (p=0; p<document->pages_num; ++p)
     {
         page_t* page = document->pages[p];
-        int p;
+        int p = 0;
+        int t = 0;
         content_state_t state;
         state.font_name = NULL;
         state.font_size = 0;
@@ -667,42 +669,55 @@ int extract_document_to_odt_content(
         state.font_italic = 0;
         state.ctm_prev = NULL;
         
-        for (p=0; p<page->paragraphs_num; ++p)
+        for(;;)
         {
-            paragraph_t* paragraph = page->paragraphs[p];
-            const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
-            double rotate = atan2(ctm->b, ctm->a);
+            paragraph_t* paragraph = (p == page->paragraphs_num) ? NULL : page->paragraphs[p];
+            table_t* table = (t == page->tables_num) ? NULL : page->tables[t];
+            if (!paragraph && !table)   break;
+            double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
+            double y_table = (table) ? table->pos.y : DBL_MAX;
             
-            if (spacing
-                    && state.ctm_prev
-                    && paragraph->lines_num
-                    && paragraph->lines[0]->spans_num
-                    && matrix_cmp4(
-                            state.ctm_prev,
-                            &paragraph->lines[0]->spans[0]->ctm
-                            )
-                    )
+            if (y_paragraph < y_table)
             {
-                /* Extra vertical space between paragraphs that were at
-                different angles in the original document. */
-                if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
-            }
+                const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
+                double rotate = atan2(ctm->b, ctm->a);
 
-            if (spacing)
-            {
-                /* Extra vertical space between paragraphs. */
-                if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
-            }
-            
-            if (rotation && rotate != 0)
-            {
-                if (append_rotated_paragraphs(alloc, page, &state, &p, &text_box_id, ctm, rotate, content, styles)) goto end;
+                if (spacing
+                        && state.ctm_prev
+                        && paragraph->lines_num
+                        && paragraph->lines[0]->spans_num
+                        && matrix_cmp4(
+                                state.ctm_prev,
+                                &paragraph->lines[0]->spans[0]->ctm
+                                )
+                        )
+                {
+                    /* Extra vertical space between paragraphs that were at
+                    different angles in the original document. */
+                    if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
+                }
+
+                if (spacing)
+                {
+                    /* Extra vertical space between paragraphs. */
+                    if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
+                }
+
+                if (rotation && rotate != 0)
+                {
+                    if (append_rotated_paragraphs(alloc, page, &state, &p, &text_box_id, ctm, rotate, content, styles)) goto end;
+                }
+                else
+                {
+                    if (extract_document_to_odt_content_paragraph(alloc, &state, paragraph, content, styles)) goto end;
+                }
+                p += 1;
             }
             else
             {
-                if (extract_document_to_odt_content_paragraph(alloc, &state, paragraph, content, styles)) goto end;
+                if (append_table(alloc, table, content, styles)) goto end;
+                t += 1;
             }
-        
         }
         
         outf("images=%i", images);
@@ -713,16 +728,6 @@ int extract_document_to_odt_content(
             for (i=0; i<page->images_num; ++i)
             {
                 extract_document_append_image(alloc, content, &page->images[i]);
-            }
-        }
-        
-        /* Output tables. todo: interleave these with paragraphs using y coordinate. */
-        {
-            int i;
-            for (i=0; i<page->tables_num; ++i)
-            {
-                table_t* table = page->tables[i];
-                if (append_table(alloc, table, content, styles)) goto end;
             }
         }
     }
