@@ -26,7 +26,7 @@
 
 
 
-double matrix_expansion(matrix_t m)
+double extract_matrix_expansion(matrix_t m)
 {
     return sqrt(fabs(m.a * m.d - m.b * m.c));
 }
@@ -42,14 +42,14 @@ static void char_init(char_t* item)
     item->adv = 0;
 }
 
-const char* point_string(const point_t* point)
+const char* extract_point_string(const point_t* point)
 {
     static char buffer[128];
     snprintf(buffer, sizeof(buffer), "(%f %f)", point->x, point->y);
     return buffer;
 }
 
-const char* rect_string(const rect_t* rect)
+const char* extract_rect_string(const rect_t* rect)
 {
     static char buffer[2][256];
     static int i = 0;
@@ -58,7 +58,7 @@ const char* rect_string(const rect_t* rect)
     return buffer[i];
 }
 
-const char* span_string(extract_alloc_t* alloc, span_t* span)
+const char* extract_span_string(extract_alloc_t* alloc, span_t* span)
 {
     static extract_astring_t ret = {0};
     double x0 = 0;
@@ -92,8 +92,8 @@ const char* span_string(extract_alloc_t* alloc, span_t* span)
         char buffer[400];
         snprintf(buffer, sizeof(buffer),
                 "span ctm=%s trm=%s chars_num=%i (%c:%f,%f pre(%f %f))..(%c:%f,%f pre(%f %f)) font=%s:(%f,%f) wmode=%i chars_num=%i: ",
-                matrix_string(&span->ctm),
-                matrix_string(&span->trm),
+                extract_matrix_string(&span->ctm),
+                extract_matrix_string(&span->trm),
                 span->chars_num,
                 c0, x0, y0, pre0.x, pre0.y,
                 c1, x1, y1, pre1.x, pre1.y,
@@ -127,7 +127,7 @@ const char* span_string(extract_alloc_t* alloc, span_t* span)
     return ret.chars;
 }
 
-int span_append_c(extract_alloc_t* alloc, span_t* span, int c)
+int extract_span_append_c(extract_alloc_t* alloc, span_t* span, int c)
 {
     char_t* item;
     if (extract_realloc2(
@@ -145,7 +145,7 @@ int span_append_c(extract_alloc_t* alloc, span_t* span, int c)
     return 0;
 }
 
-char_t* span_char_last(span_t* span)
+char_t* extract_span_char_last(span_t* span)
 {
     assert(span->chars_num > 0);
     return &span->chars[span->chars_num-1];
@@ -164,20 +164,20 @@ static const char* line_string(line_t* line)
     int i;
     for (i=0; i<line->spans_num; ++i) {
         extract_astring_cat(&ret, " ");
-        extract_astring_cat(&ret, span_string(line->spans[i]));
+        extract_astring_cat(&ret, extract_span_string(line->spans[i]));
     }
     return ret.chars;
 }
 #endif
 
 /* Returns first span in a line. */
-span_t* line_span_last(line_t* line)
+span_t* extract_line_span_last(line_t* line)
 {
     assert(line->spans_num > 0);
     return line->spans[line->spans_num - 1];
 }
 
-span_t* line_span_first(line_t* line)
+span_t* extract_line_span_first(line_t* line)
 {
     assert(line->spans_num > 0);
     return line->spans[0];
@@ -373,7 +373,7 @@ static int s_sign(double x)
     return 0;
 }
 
-int matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
+int extract_matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
 {
     int ret;
     ret = s_sign(lhs->a - rhs->a);  if (ret) return ret;
@@ -384,7 +384,7 @@ int matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
 }
 
 
-point_t multiply_matrix_point(matrix_t m, point_t p)
+point_t extract_multiply_matrix_point(matrix_t m, point_t p)
 {
     double x = p.x;
     p.x = m.a * x + m.c * p.y;
@@ -392,7 +392,7 @@ point_t multiply_matrix_point(matrix_t m, point_t p)
     return p;
 }
 
-matrix_t multiply_matrix_matrix(matrix_t m1, matrix_t m2)
+matrix_t extract_multiply_matrix_matrix(matrix_t m1, matrix_t m2)
 {
     matrix_t ret;
     ret.a = m1.a * m2.a + m1.b * m2.c;
@@ -465,8 +465,8 @@ char_t into a new span_t. */
         return 0;
     }
 
-    font_size = matrix_expansion(span->trm)
-            * matrix_expansion(span->ctm);
+    font_size = extract_matrix_expansion(span->trm)
+            * extract_matrix_expansion(span->ctm);
 
     if (span->wmode) {
         dir.x = 0;
@@ -476,7 +476,7 @@ char_t into a new span_t. */
         dir.x = 1;
         dir.y = 0;
     }
-    dir = multiply_matrix_point(span->trm, dir);
+    dir = extract_multiply_matrix_point(span->trm, dir);
 
     x = char_[-2].pre_x + char_[-2].adv * dir.x;
     y = char_[-2].pre_y + char_[-2].adv * dir.y;
@@ -508,10 +508,10 @@ char_t into a new span_t. */
             sometimes seem to appear in the middle of words for some
             reason. */
             outfx("removing space before final char in: %s",
-                    span_string(span));
+                    extract_span_string(span));
             span->chars[span->chars_num-2] = span->chars[span->chars_num-1];
             span->chars_num -= 1;
-            outfx("span is now:                         %s", span_string(span));
+            outfx("span is now:                         %s", extract_span_string(span));
             return 0;
         }
     }
@@ -999,8 +999,8 @@ int extract_add_char(
             dir.x = 1;
             dir.y = 0;
         }
-        matrix_t m = multiply_matrix_matrix(span->trm, span->ctm);
-        dir = multiply_matrix_point(m, dir);
+        matrix_t m = extract_multiply_matrix_matrix(span->trm, span->ctm);
+        dir = extract_multiply_matrix_point(m, dir);
 
         char_t* char_prev = &span->chars[span->chars_num - 1];
         
@@ -1066,7 +1066,7 @@ int extract_add_char(
                 char_pre_y, offset_y);
     }
     
-    if (span_append_c(extract->alloc, span, 0 /*c*/)) goto end;
+    if (extract_span_append_c(extract->alloc, span, 0 /*c*/)) goto end;
     char_ = &span->chars[ span->chars_num-1];
     
     char_->pre_x = x;// - extract->span_offset_x;
@@ -1269,13 +1269,13 @@ int extract_add_path4(
     if (dx / dy > 5)
     {
         /* Horizontal line. */
-        outf("have found horizontal line: %s", rect_string(&rect));
+        outf("have found horizontal line: %s", extract_rect_string(&rect));
         if (tablelines_append(extract->alloc, &page->tablelines_horizontal, &rect, color)) return -1;
     }
     else if (dy / dx > 5)
     {
         /* Vertical line. */
-        outf("have found vertical line: %s", rect_string(&rect));
+        outf("have found vertical line: %s", extract_rect_string(&rect));
         if (tablelines_append(extract->alloc, &page->tablelines_vertical, &rect, color)) return -1;
     }
     return 0;
@@ -1313,7 +1313,7 @@ int extract_add_line(
             __FUNCTION__,
             width,
             x0, y0, x1, y1,
-            rect_string(&rect)
+            extract_rect_string(&rect)
             );
     if (rect.min.x == rect.max.x && rect.min.y == rect.max.y)
     {
@@ -1495,14 +1495,14 @@ static int extract_write_tables_csv(extract_t* extract)
                     //if (!cell->above || !cell->left) continue;
                     if (y==0)
                     {
-                        outf("y=0 x=%i cell->rect=%s", x, rect_string(&cell->rect));
+                        outf("y=0 x=%i cell->rect=%s", x, extract_rect_string(&cell->rect));
                     }
                     if (have_output) fprintf(f, ",");
                     have_output = 1;
                     extract_astring_t text = {NULL, 0};
                     if (paragraphs_to_text_content(extract->alloc, cell->paragraphs, cell->paragraphs_num, &text)) return -1;
                     /* Reference cvs output trims trailing spaces. */
-                    astring_char_truncate_if(&text, ' ');
+                    extract_astring_char_truncate_if(&text, ' ');
                     fprintf(f, "\"%s\"", text.chars ? text.chars : "");
                     extract_astring_free(extract->alloc, &text);
                 }
@@ -1774,7 +1774,7 @@ void extract_end(extract_t** pextract)
 
 void extract_internal_end(void)
 {
-    span_string(NULL, NULL);
+    extract_span_string(NULL, NULL);
 }
 
 void extract_exp_min(extract_t* extract, size_t size)
@@ -1784,8 +1784,8 @@ void extract_exp_min(extract_t* extract, size_t size)
 
 double extract_matrices_to_font_size(matrix_t* ctm, matrix_t* trm)
 {
-    double font_size = matrix_expansion(*trm)
-            * matrix_expansion(*ctm);
+    double font_size = extract_matrix_expansion(*trm)
+            * extract_matrix_expansion(*ctm);
     /* Round font_size to nearest 0.01. */
     font_size = (double) (int) (font_size * 100.0f + 0.5f) / 100.0f;
     return font_size;

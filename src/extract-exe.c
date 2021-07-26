@@ -171,7 +171,7 @@ int main(int argc, char** argv)
         else if (!strcmp(arg, "-v")) {
             int verbose;
             if (arg_next_int(argv, argc, &i, &verbose)) goto end;
-            outf_verbose_set(verbose);
+            extract_outf_verbose_set(verbose);
             outf("Have changed verbose to %i", verbose);
         }
         else if (!strcmp(arg, "--v-alloc")) {

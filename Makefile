@@ -99,7 +99,7 @@ endif
 
 # Default target - run all tests.
 #
-test: test-buffer test-misc test-src test-exe test-mutool test-gs test-html
+test: test-buffer test-misc test-src test-exe test-mutool test-gs test-html test-obj
 	@echo $@: passed
 
 # Define the main test targets.
@@ -561,6 +561,12 @@ test-src:
 	@echo Checking for variables defined inside for-loop '(...)'.
 	if egrep -wn 'for *[(] *[a-zA-Z0-9]+ [a-zA-Z0-9]' src/*.c src/*.h; then false; else true; fi
 	@echo $@: passed
+
+# Check that all defined global symbols start with 'extract_'.
+#
+test-obj:
+	@echo
+	nm -egP $(exe_obj) | egrep '^[a-zA-Z0-9_]+ T' | grep -vw ^main | ! egrep -v ^extract_
 
 # Compile rule. We always include src/docx_template.c as a prerequisite in case
 # code #includes docx_template.h.

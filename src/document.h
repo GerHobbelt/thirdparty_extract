@@ -9,7 +9,7 @@ typedef struct
     double y;
 } point_t;
 
-const char* point_string(const point_t* point);
+const char* extract_point_string(const point_t* point);
 
 typedef struct
 {
@@ -17,7 +17,7 @@ typedef struct
     point_t max;
 } rect_t;
 
-const char* rect_string(const rect_t* rect);
+const char* extract_rect_string(const rect_t* rect);
 
 typedef struct
 {
@@ -29,15 +29,15 @@ typedef struct
     double  f;
 } matrix_t;
 
-const char* matrix_string(const matrix_t* matrix);
+const char* extract_matrix_string(const matrix_t* matrix);
 
-double      matrix_expansion(matrix_t m);
+double      extract_matrix_expansion(matrix_t m);
 /* Returns a*d - b*c. */
 
-point_t     multiply_matrix_point(matrix_t m, point_t p);
-matrix_t    multiply_matrix_matrix(matrix_t m1, matrix_t m2);
+point_t     extract_multiply_matrix_point(matrix_t m, point_t p);
+matrix_t    extract_multiply_matrix_matrix(matrix_t m1, matrix_t m2);
 
-int matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
+int extract_matrix_cmp4(const matrix_t* lhs, const matrix_t* rhs)
 ;
 /* Returns zero if first four members of *lhs and *rhs are equal, otherwise
 +/-1. */
@@ -64,7 +64,7 @@ typedef struct
     matrix_t    trm;
     char*       font_name;
     
-    /* font size is matrix_expansion(trm). */
+    /* font size is extract_matrix_cmp4(trm). */
     
     struct {
         unsigned font_bold      : 1;
@@ -77,14 +77,14 @@ typedef struct
 } span_t;
 /* List of chars that have same font and are usually adjacent. */
 
-char_t* span_char_last(span_t* span);
+char_t* extract_span_char_last(span_t* span);
 /* Returns last character in span. */
 
-int span_append_c(extract_alloc_t* alloc, span_t* span, int c);
+int extract_span_append_c(extract_alloc_t* alloc, span_t* span, int c);
 /* Appends new char_t to an span_t with .ucs=c and all other
 fields zeroed. */
 
-const char* span_string(extract_alloc_t* alloc, span_t* span);
+const char* extract_span_string(extract_alloc_t* alloc, span_t* span);
 /* Returns static string containing info about span_t. */
 
 typedef struct
@@ -94,10 +94,10 @@ typedef struct
 } line_t;
 /* List of spans that are aligned on same line. */
 
-span_t* line_span_first(line_t* line);
+span_t* extract_line_span_first(line_t* line);
 /* Returns first span in a line. */
 
-span_t* line_span_last(line_t* line);
+span_t* extract_line_span_last(line_t* line);
 /* Returns last span in a line. */
 
 typedef struct
@@ -166,8 +166,8 @@ typedef struct
 } cell_t;
 /* A cell within a table. */
 
-void cell_init(cell_t* cell);
-void cell_free(extract_alloc_t* alloc, cell_t* cell);
+void extract_cell_init(cell_t* cell);
+void extract_cell_free(extract_alloc_t* alloc, cell_t* cell);
 
 typedef struct
 {
