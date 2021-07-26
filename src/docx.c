@@ -408,6 +408,10 @@ static int extract_document_output_rotated_paragraphs(
 
 
 static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content)
+/* Appends table to content.
+
+We do not fix the size of the table or its columns and rows, but instead leave layout up
+to the application. */
 {
     int e = -1;
     int y;
@@ -444,15 +448,15 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
                         "                        <w:end w:val=\"double\" w:sz=\"2\" w:space=\"0\" w:color=\"808080\"/>\n"
                         "                    </w:tcBorders>\n"
                         )) goto end;
-                if (cell->ix_extend > 1)
+                if (cell->extend_right > 1)
                 {
-                    if (extract_astring_catf(alloc, content, "                    <w:gridSpan w:val=\"%i\"/>\n", cell->ix_extend)) goto end;
+                    if (extract_astring_catf(alloc, content, "                    <w:gridSpan w:val=\"%i\"/>\n", cell->extend_right)) goto end;
                 }
                 if (cell->above)
                 {
-                    if (cell->iy_extend > 1)
+                    if (cell->extend_down > 1)
                     {
-                        if (extract_astring_catf(alloc, content, "                    <w:vMerge w:val=\"restart\"/>\n", cell->iy_extend)) goto end;
+                        if (extract_astring_catf(alloc, content, "                    <w:vMerge w:val=\"restart\"/>\n", cell->extend_down)) goto end;
                     }
                 }
                 else

@@ -1326,16 +1326,14 @@ zero. */
 
 void cell_init(cell_t* cell)
 {
-    cell->iy = -1;
-    cell->ix = -1;
     cell->rect.min.x = 0;
     cell->rect.min.y = 0;
     cell->rect.max.x = 0;
     cell->rect.max.y = 0;
     cell->above = 0;
     cell->left = 0;
-    cell->ix_extend = 0;
-    cell->iy_extend = 0;
+    cell->extend_right = 0;
+    cell->extend_down = 0;
     cell->lines = NULL;
     cell->lines_num = 0;
     cell->paragraphs = NULL;
@@ -1430,16 +1428,14 @@ y_min..y_max. */
             cells_num += 1;
             if (i==0)   cells_num_x += 1;
             
-            cell->iy = i;
-            cell->ix = j;
             cell->rect.min.x = tl_v.tablelines[j].rect.min.x;
             cell->rect.min.y = tl_h.tablelines[i].rect.min.y;
             cell->rect.max.x = (j_next < tl_v.tablelines_num) ? tl_v.tablelines[j_next].rect.min.x : cell->rect.min.x;
             cell->rect.max.y = (i_next < tl_h.tablelines_num) ? tl_h.tablelines[i_next].rect.min.y : cell->rect.min.y;
             cell->above = (i==0);
             cell->left = (j==0);
-            cell->ix_extend = 1;
-            cell->iy_extend = 1;
+            cell->extend_right = 1;
+            cell->extend_down = 1;
             cell->lines = NULL;
             cell->lines_num = 0;
             cell->paragraphs = NULL;
@@ -1560,20 +1556,20 @@ y_min..y_max. */
                 {
                     if (cells[y * cells_num_x + xx]->left)  break;
                 }
-                cell->ix_extend = xx - x;
+                cell->extend_right = xx - x;
                 cell->rect.max.x = cells[y * cells_num_x + xx-1]->rect.max.x;
                 for (yy=y+1; yy<cells_num_y; ++yy)
                 {
                     if (cells[yy * cells_num_x + x]->above) break;
                 }
-                cell->iy_extend = yy - y;
+                cell->extend_down = yy - y;
                 cell->rect.max.y = cells[(yy-1) * cells_num_x + x]->rect.max.y;
                 
                 /* Clear .above and .left in enclosed cells. */
-                for (xx = x; xx < x + cell->ix_extend; ++xx)
+                for (xx = x; xx < x + cell->extend_right; ++xx)
                 {
                     int yy;
-                    for (yy = y; yy < y + cell->iy_extend; ++yy)
+                    for (yy = y; yy < y + cell->extend_down; ++yy)
                     {
                         cell_t* cell2 = cells[cells_num_x * yy  + xx];
                         if ( xx==x && yy==y)
@@ -1582,13 +1578,13 @@ y_min..y_max. */
                         {
                             if (xx==x)
                             {
-                                cell2->ix_extend = cell->ix_extend;
+                                cell2->extend_right = cell->extend_right;
                             }
                             cell2->above = 0;
                             /* We set .left to 1 for left-most cells - e.g. F
                             and K in the above diagram; this allows us to
                             generate correct html without lots of recursing
-                            looking for iy_extend in earlier cells. */
+                            looking for extend_down in earlier cells. */
                             cell2->left = (xx == x);
                             outf("xy=(%i %i) xxyy=(%i %i) have set cell2->above=%i left=%i",
                                     x, y, xx, yy, cell2->above, cell2->left
@@ -1638,15 +1634,13 @@ y_min..y_max. */
             for (x=0; x<cells_num_x; ++x)
             {
                 cell_t* cell = cells[cells_num_x * y + x];
-                fprintf(stderr, "    %c%c x=%i y=% 3i ix=%i iy=% 3i w=%i h=%i",
+                fprintf(stderr, "    %c%c x=%i y=% 3i 3i w=%i h=%i",
                         cell->left ? '|' : ' ',
                         cell->above ? '-' : ' ',
                         x,
                         y,
-                        cell->ix,
-                        cell->iy,
-                        cell->ix_extend,
-                        cell->iy_extend
+                        cell->extend_right,
+                        cell->extend_down
                         );
             }
             fprintf(stderr, "\n");

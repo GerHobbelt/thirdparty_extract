@@ -30,7 +30,10 @@ typedef struct
 } matrix_t;
 
 const char* matrix_string(const matrix_t* matrix);
+
 double      matrix_expansion(matrix_t m);
+/* Returns a*d - b*c. */
+
 point_t     multiply_matrix_point(matrix_t m, point_t p);
 matrix_t    multiply_matrix_matrix(matrix_t m1, matrix_t m2);
 
@@ -131,7 +134,7 @@ typedef struct
     float   color;
     rect_t  rect;
 } tableline_t;
-
+/* A line that is part of a table. */
 
 typedef struct
 {
@@ -142,18 +145,19 @@ typedef struct
 
 typedef struct
 {
-    int             ix;
-    int             iy;
     rect_t          rect;
     uint8_t         left;
     uint8_t         above;
-    int             ix_extend;
-    int             iy_extend;
+    int             extend_right;
+    int             extend_down;
+    
+    /* Contents of this cell. */
     line_t**        lines;
     int             lines_num;
     paragraph_t**   paragraphs;
     int             paragraphs_num;
 } cell_t;
+/* A cell within a table. */
 
 void cell_init(cell_t* cell);
 void cell_free(extract_alloc_t* alloc, cell_t* cell);
@@ -161,7 +165,7 @@ void cell_free(extract_alloc_t* alloc, cell_t* cell);
 typedef struct
 {
     point_t     pos;    // top-left.
-    cell_t**    cells;
+    cell_t**    cells;  // Points to cells_num_x*cells_num_y cells.
     int         cells_num_x;
     int         cells_num_y;
 } table_t;

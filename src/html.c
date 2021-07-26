@@ -199,13 +199,13 @@ static int append_table(extract_alloc_t* alloc, content_state_t* state, table_t*
             }
             if (extract_astring_cat(alloc, content, "<td")) goto end;
             
-            if (cell->ix_extend > 1)
+            if (cell->extend_right > 1)
             {
-                if (extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->ix_extend)) goto end;
+                if (extract_astring_catf(alloc, content, " colspan=\"%i\"", cell->extend_right)) goto end;
             }
-            if (cell->iy_extend > 1)
+            if (cell->extend_down > 1)
             {
-                if (extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->iy_extend)) goto end;
+                if (extract_astring_catf(alloc, content, " rowspan=\"%i\"", cell->extend_down)) goto end;
             }
             
             if (extract_astring_cat(alloc, content, ">")) goto end;
