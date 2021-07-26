@@ -146,8 +146,15 @@ typedef struct
 typedef struct
 {
     rect_t          rect;
+    
+    /* If left/above is true, this cell is not obscured by cell to its
+    left/above. */
     uint8_t         left;
     uint8_t         above;
+    
+    /* extend_right and extend_down are 1 for normal cells, 2 for cells which
+    extend right/down to cover an additional column/row, 3 to cover two
+    additional columns/rows etc. */
     int             extend_right;
     int             extend_down;
     
@@ -165,7 +172,11 @@ void cell_free(extract_alloc_t* alloc, cell_t* cell);
 typedef struct
 {
     point_t     pos;    // top-left.
-    cell_t**    cells;  // Points to cells_num_x*cells_num_y cells.
+    
+    /* Array of cells_num_x*cells_num_y cells; cell (x, y) is:
+        cells_num_x * y + x.
+    */
+    cell_t**    cells;
     int         cells_num_x;
     int         cells_num_y;
 } table_t;
