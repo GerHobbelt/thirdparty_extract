@@ -286,6 +286,8 @@ $(exe_tables): $(exe_tables_src)
 	c++ -W -Wall -Werror -g -I /usr/local/include/opencv4 -L /usr/local/lib -l opencv_core -l opencv_imgproc -l opencv_imgcodecs -o $@ $^
 
 ifeq (0,1)
+# Do not commit changes to above line.
+#
 # Special rules for populating .ref directories with current output. Useful to
 # initialise references outputs for new output type.
 #
