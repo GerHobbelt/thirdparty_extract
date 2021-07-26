@@ -28,39 +28,27 @@ docx_paragraph_finish(). */
 #include <sys/stat.h>
 
 
-typedef struct
+static void content_state_init(content_state_t* content_state)
 {
-    const char* font_name;
-    double      font_size;
-    int         font_bold;
-    int         font_italic;
-    matrix_t*   ctm_prev;
-} content_state_t;
-/* Used to keep track of font information when writing paragraphs of docx
-content, e.g. so we know whether a font has changed so need to start a new docx
-span. */
-
-static void content_state_init(content_state_t* state)
-{
-    state->font_name = NULL;
-    state->font_size = 0;
-    state->font_bold = 0;
-    state->font_italic = 0;
-    state->ctm_prev = NULL;
+    content_state->font.name = NULL;
+    content_state->font.size = 0;
+    content_state->font.bold = 0;
+    content_state->font.italic = 0;
+    content_state->ctm_prev = NULL;
 }
 
-static int content_state_reset(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
+static int content_state_reset(extract_alloc_t* alloc, content_state_t* content_state, extract_astring_t* content)
 {
     int e = -1;
-    if (state->font_bold)
+    if (content_state->font.bold)
     {
         if (extract_astring_cat(alloc, content, "</b>")) goto end;
-        state->font_bold = 0;
+        content_state->font.bold = 0;
     }
-    if (state->font_italic)
+    if (content_state->font.italic)
     {
         if (extract_astring_cat(alloc, content, "</i>")) goto end;
-        state->font_italic = 0;
+        content_state->font.italic = 0;
     }
     e = 0;
     
@@ -70,7 +58,7 @@ static int content_state_reset(extract_alloc_t* alloc, content_state_t* state, e
 
 static int paragraph_to_html_content(
         extract_alloc_t*    alloc,
-        content_state_t*    state,
+        content_state_t*    content_state,
         paragraph_t*        paragraph,
         int                 single_line,
         extract_astring_t*  content
@@ -90,21 +78,21 @@ static int paragraph_to_html_content(
             int c;
             span_t* span = line->spans[s];
             double font_size_new;
-            state->ctm_prev = &span->ctm;
+            content_state->ctm_prev = &span->ctm;
             font_size_new = extract_matrices_to_font_size(&span->ctm, &span->trm);
-            if (span->font_bold != state->font_bold)
+            if (span->font_bold != content_state->font.bold)
             {
                 if (extract_astring_cat(alloc, content,
                         span->font_bold ? "<b>" : "</b>"
                         )) goto end;
-                state->font_bold = span->font_bold;
+                content_state->font.bold = span->font_bold;
             }
-            if (span->font_italic != state->font_italic)
+            if (span->font_italic != content_state->font.italic)
             {
                 if ( extract_astring_cat(alloc, content,
                         span->font_italic ? "<i>" : "</i>"
                         )) goto end;
-                state->font_italic = span->font_italic;
+                content_state->font.italic = span->font_italic;
             }
 
             for (c=0; c<span->chars_num; ++c)

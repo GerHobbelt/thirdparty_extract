@@ -40,31 +40,6 @@ static int extract_odt_paragraph_finish(extract_alloc_t* alloc, extract_astring_
     return extract_astring_cat(alloc, content, "</text:p>");
 }
 
-
-typedef struct
-{
-    char*       name;
-    double      size;
-    int         bold;
-    int         italic;
-    /* todo: add extract_odt_styles_t member? */
-} font_t;
-/* Used to keep track of font information when writing paragraphs of odt
-content, e.g. so we know whether a font has changed so need to start a new odt
-span. */
-
-typedef struct
-{
-    font_t      font;
-    matrix_t*   ctm_prev;
-    /* todo: add extract_odt_styles_t member? */
-} content_state_t;
-/* Used to keep track of font information when writing paragraphs of odt
-content, e.g. so we know whether a font has changed so need to start a new odt
-span. */
-
-
-
 /* ODT doesn't seem to support ad-hoc inline font specifications; instead
 we have to define a style at the start of the content.xml file. So when
 writing content we insert a style name and add the required styles to a
