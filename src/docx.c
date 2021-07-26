@@ -30,22 +30,22 @@ docx_paragraph_finish(). */
 #include <sys/stat.h>
 
 
-static int extract_docx_paragraph_start(extract_alloc_t* alloc, extract_astring_t* content)
+static int s_docx_paragraph_start(extract_alloc_t* alloc, extract_astring_t* content)
 {
     return extract_astring_cat(alloc, content, "\n\n<w:p>");
 }
 
-static int extract_docx_paragraph_finish(extract_alloc_t* alloc, extract_astring_t* content)
+static int s_docx_paragraph_finish(extract_alloc_t* alloc, extract_astring_t* content)
 {
     return extract_astring_cat(alloc, content, "\n</w:p>");
 }
 
-static int extract_docx_run_start(
+static int s_docx_run_start(
         extract_alloc_t* alloc,
         extract_astring_t* content,
         content_state_t* content_state
         )
-/* Starts a new run. Caller must ensure that extract_docx_run_finish() was
+/* Starts a new run. Caller must ensure that s_docx_run_finish() was
 called to terminate any previous run. */
 {
     int e = 0;
@@ -74,17 +74,17 @@ called to terminate any previous run. */
 
 }
 
-static int extract_docx_run_finish(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
+static int s_docx_run_finish(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
 {
     if (state) state->font.name = NULL;
     return extract_astring_cat(alloc, content, "</w:t></w:r>");
 }
 
-static int extract_docx_paragraph_empty(extract_alloc_t* alloc, extract_astring_t* content)
+static int s_docx_paragraph_empty(extract_alloc_t* alloc, extract_astring_t* content)
 /* Append an empty paragraph to *content. */
 {
     int e = -1;
-    if (extract_docx_paragraph_start(alloc, content)) goto end;
+    if (s_docx_paragraph_start(alloc, content)) goto end;
     /* It seems like our choice of font size here doesn't make any difference
     to the ammount of vertical space, unless we include a non-space
     character. Presumably something to do with the styles in the template
@@ -95,17 +95,17 @@ static int extract_docx_paragraph_empty(extract_alloc_t* alloc, extract_astring_
     content_state.font.bold = 0;
     content_state.font.italic = 0;
     
-    if (extract_docx_run_start(alloc, content, &content_state)) goto end;
+    if (s_docx_run_start(alloc, content, &content_state)) goto end;
     //docx_char_append_string(content, "&#160;");   /* &#160; is non-break space. */
-    if (extract_docx_run_finish(alloc, NULL /*state*/, content)) goto end;
-    if (extract_docx_paragraph_finish(alloc, content)) goto end;
+    if (s_docx_run_finish(alloc, NULL /*state*/, content)) goto end;
+    if (s_docx_paragraph_finish(alloc, content)) goto end;
     e = 0;
     end:
     return e;
 }
 
 
-static int extract_docx_char_truncate_if(extract_astring_t* content, char c)
+static int s_docx_char_truncate_if(extract_astring_t* content, char c)
 /* Removes last char if it is <c>. */
 {
     if (content->chars_num && content->chars[content->chars_num-1] == c) {
@@ -115,7 +115,7 @@ static int extract_docx_char_truncate_if(extract_astring_t* content, char c)
 }
 
 
-static int extract_document_to_docx_content_paragraph(
+static int s_document_to_docx_content_paragraph(
         extract_alloc_t*    alloc,
         content_state_t*    content_state,
         paragraph_t*        paragraph,
@@ -126,7 +126,7 @@ font. */
 {
     int e = -1;
     int l;
-    if (extract_docx_paragraph_start(alloc, content)) goto end;
+    if (s_docx_paragraph_start(alloc, content)) goto end;
 
     for (l=0; l<paragraph->lines_num; ++l) {
         line_t* line = paragraph->lines[l];
@@ -144,13 +144,13 @@ font. */
                     || font_size_new != content_state->font.size
                     ) {
                 if (content_state->font.name) {
-                    if (extract_docx_run_finish(alloc, content_state, content)) goto end;
+                    if (s_docx_run_finish(alloc, content_state, content)) goto end;
                 }
                 content_state->font.name = span->font_name;
                 content_state->font.bold = span->font_bold;
                 content_state->font.italic = span->font_italic;
                 content_state->font.size = font_size_new;
-                if (extract_docx_run_start(alloc, content, content_state)) goto end;
+                if (s_docx_run_start(alloc, content, content_state)) goto end;
             }
 
             for (si=0; si<span->chars_num; ++si) {
@@ -159,14 +159,14 @@ font. */
                 if (extract_astring_cat_xmlc(alloc, content, c)) goto end;
             }
             /* Remove any trailing '-' at end of line. */
-            if (extract_docx_char_truncate_if(content, '-')) goto end;
+            if (s_docx_char_truncate_if(content, '-')) goto end;
         }
     }
     if (content_state->font.name)
     {
-        if (extract_docx_run_finish(alloc, content_state, content)) goto end;
+        if (s_docx_run_finish(alloc, content_state, content)) goto end;
     }
-    if (extract_docx_paragraph_finish(alloc, content)) goto end;
+    if (s_docx_paragraph_finish(alloc, content)) goto end;
     
     e = 0;
     
@@ -174,7 +174,7 @@ font. */
     return e;
 }
 
-static int extract_document_append_image(
+static int s_docx_append_image(
         extract_alloc_t*    alloc,
         extract_astring_t*  content,
         image_t*            image
@@ -242,7 +242,7 @@ static int extract_document_append_image(
 }
 
 
-static int extract_document_output_rotated_paragraphs(
+static int s_docx_output_rotated_paragraphs(
         extract_alloc_t*    alloc,
         page_t*             page,
         int                 paragraph_begin,
@@ -330,7 +330,7 @@ static int extract_document_output_rotated_paragraphs(
     /* Output paragraphs p0..p2-1. */
     for (p=paragraph_begin; p<paragraph_end; ++p) {
         paragraph_t* paragraph = page->paragraphs[p];
-        if (extract_document_to_docx_content_paragraph(alloc, state, paragraph, content)) goto end;
+        if (s_document_to_docx_content_paragraph(alloc, state, paragraph, content)) goto end;
     }
 
     extract_astring_cat(alloc, content, "\n");
@@ -364,7 +364,7 @@ static int extract_document_output_rotated_paragraphs(
 
     for (p=paragraph_begin; p<paragraph_end; ++p) {
         paragraph_t* paragraph = page->paragraphs[p];
-        if (extract_document_to_docx_content_paragraph(alloc, state, paragraph, content)) goto end;
+        if (s_document_to_docx_content_paragraph(alloc, state, paragraph, content)) goto end;
     }
 
     extract_astring_cat(alloc, content, "\n");
@@ -383,7 +383,7 @@ static int extract_document_output_rotated_paragraphs(
 }
 
 
-static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content)
+static int s_docx_append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content)
 /* Appends table to content.
 
 We do not fix the size of the table or its columns and rows, but instead leave layout up
@@ -452,11 +452,11 @@ to the application. */
                 for (p=0; p<cell->paragraphs_num; ++p)
                 {
                     paragraph_t* paragraph = cell->paragraphs[p];
-                    if (extract_document_to_docx_content_paragraph(alloc, &content_state, paragraph, content)) goto end;
+                    if (s_document_to_docx_content_paragraph(alloc, &content_state, paragraph, content)) goto end;
                 }
                 if (content_state.font.name)
                 {
-                    if (extract_docx_run_finish(alloc, &content_state, content)) goto end;
+                    if (s_docx_run_finish(alloc, &content_state, content)) goto end;
                 }
 
                 /* Need to write out at least an empty paragraph in each cell,
@@ -480,7 +480,7 @@ to the application. */
     return e;
 }
 
-int append_rotated_paragraphs(
+static int s_docx_append_rotated_paragraphs(
         extract_alloc_t*    alloc,
         page_t*             page,
         content_state_t*    state,
@@ -624,7 +624,7 @@ and updates *p. */
         x -= dx;
         y -= -dy;
 
-        if (extract_document_output_rotated_paragraphs(alloc, page, p0, p1, rot, x, y, w, h, *text_box_id, content, state)) goto end;
+        if (s_docx_output_rotated_paragraphs(alloc, page, p0, p1, rot, x, y, w, h, *text_box_id, content, state)) goto end;
     }
     *p = p1 - 1;
     e = 0;
@@ -686,27 +686,27 @@ int extract_document_to_docx_content(
                         ) {
                     /* Extra vertical space between paragraphs that were at
                     different angles in the original document. */
-                    if (extract_docx_paragraph_empty(alloc, content)) goto end;
+                    if (s_docx_paragraph_empty(alloc, content)) goto end;
                 }
 
                 if (spacing) {
                     /* Extra vertical space between paragraphs. */
-                    if (extract_docx_paragraph_empty(alloc, content)) goto end;
+                    if (s_docx_paragraph_empty(alloc, content)) goto end;
                 }
 
                 if (rotation && rotate != 0)
                 {
-                    if (append_rotated_paragraphs(alloc, page, &content_state, &p, &text_box_id, ctm, rotate, content)) goto end;
+                    if (s_docx_append_rotated_paragraphs(alloc, page, &content_state, &p, &text_box_id, ctm, rotate, content)) goto end;
                 }
                 else
                 {
-                    if (extract_document_to_docx_content_paragraph(alloc, &content_state, paragraph, content)) goto end;
+                    if (s_document_to_docx_content_paragraph(alloc, &content_state, paragraph, content)) goto end;
                 }
                 p += 1;
             }
             else
             {
-                if (append_table(alloc, table, content)) goto end;
+                if (s_docx_append_table(alloc, table, content)) goto end;
                 t += 1;
             }
         }
@@ -714,7 +714,7 @@ int extract_document_to_docx_content(
         if (images) {
             int i;
             for (i=0; i<page->images_num; ++i) {
-                extract_document_append_image(alloc, content, &page->images[i]);
+                s_docx_append_image(alloc, content, &page->images[i]);
             }
         }
     }

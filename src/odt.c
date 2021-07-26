@@ -30,12 +30,12 @@ odt_paragraph_finish(). */
 #include <sys/stat.h>
 
 
-static int extract_odt_paragraph_start(extract_alloc_t* alloc, extract_astring_t* content)
+static int s_odt_paragraph_start(extract_alloc_t* alloc, extract_astring_t* content)
 {
     return extract_astring_cat(alloc, content, "\n\n<text:p>");
 }
 
-static int extract_odt_paragraph_finish(extract_alloc_t* alloc, extract_astring_t* content)
+static int s_odt_paragraph_finish(extract_alloc_t* alloc, extract_astring_t* content)
 {
     return extract_astring_cat(alloc, content, "</text:p>");
 }
@@ -58,7 +58,7 @@ struct extract_odt_styles_t
     int                     styles_num;
 };
 
-static int extract_odt_style_compare(extract_odt_style_t* a, extract_odt_style_t*b)
+static int s_odt_style_compare(extract_odt_style_t* a, extract_odt_style_t*b)
 {
     int d;
     double dd;
@@ -69,7 +69,7 @@ static int extract_odt_style_compare(extract_odt_style_t* a, extract_odt_style_t
     return 0;
 }
 
-static int extract_odt_style_append_definition(extract_alloc_t* alloc, extract_odt_style_t* style, extract_astring_t* text)
+static int s_odt_style_append_definition(extract_alloc_t* alloc, extract_odt_style_t* style, extract_astring_t* text)
 {
     const char* font_name = style->font.name;
     /* This improves output e.g. for zlib.3.pdf, but clearly a hack. */
@@ -92,7 +92,7 @@ void extract_odt_styles_free(extract_alloc_t* alloc, extract_odt_styles_t* style
     extract_free(alloc, &styles->styles);
 }
 
-static int extract_odt_styles_definitions(
+static int s_odt_styles_definitions(
         extract_alloc_t*        alloc,
         extract_odt_styles_t*   styles,
         extract_astring_t*      out
@@ -102,7 +102,7 @@ static int extract_odt_styles_definitions(
     if (extract_astring_cat(alloc, out, "<office:automatic-styles>")) return -1;
     for (i=0; i<styles->styles_num; ++i)
     {
-        if (extract_odt_style_append_definition(alloc, &styles->styles[i], out)) return -1;
+        if (s_odt_style_append_definition(alloc, &styles->styles[i], out)) return -1;
     }
     extract_astring_cat(alloc, out, "<style:style style:name=\"gr1\" style:family=\"graphic\">\n");
     extract_astring_cat(alloc, out, "<style:graphic-properties"
@@ -156,7 +156,7 @@ static int extract_odt_styles_definitions(
     return 0;
 }
 
-static int styles_add(
+static int s_odt_styles_add(
         extract_alloc_t*        alloc,
         extract_odt_styles_t*   styles,
         font_t*                 font,
@@ -171,7 +171,7 @@ point to the style_t within <styles>. */
     searching. */
     for (i=0; i<styles->styles_num; ++i)
     {
-        int d = extract_odt_style_compare(&style, &styles->styles[i]);
+        int d = s_odt_style_compare(&style, &styles->styles[i]);
         if (d == 0)
         {
             *o_style = &styles->styles[i];
@@ -198,11 +198,11 @@ static int extract_odt_run_start(
         extract_odt_styles_t*   styles,
         content_state_t*        content_state
         )
-/* Starts a new run. Caller must ensure that extract_odt_run_finish() was
+/* Starts a new run. Caller must ensure that s_odt_run_finish() was
 called to terminate any previous run. */
 {
     extract_odt_style_t* style;
-    if (styles_add(
+    if (s_odt_styles_add(
             alloc,
             styles,
             &content_state->font,
@@ -212,17 +212,17 @@ called to terminate any previous run. */
     return 0;
 }
 
-static int extract_odt_run_finish(extract_alloc_t* alloc, content_state_t* content_state, extract_astring_t* content)
+static int s_odt_run_finish(extract_alloc_t* alloc, content_state_t* content_state, extract_astring_t* content)
 {
     if (content_state)  content_state->font.name = NULL;
     return extract_astring_cat(alloc, content, "</text:span>");
 }
 
-static int extract_odt_paragraph_empty(extract_alloc_t* alloc, extract_astring_t* content, extract_odt_styles_t* styles)
+static int s_odt_append_empty_paragraph(extract_alloc_t* alloc, extract_astring_t* content, extract_odt_styles_t* styles)
 /* Append an empty paragraph to *content. */
 {
     int e = -1;
-    if (extract_odt_paragraph_start(alloc, content)) goto end;
+    if (s_odt_paragraph_start(alloc, content)) goto end;
     /* [This comment is from docx, haven't checked odt.] It seems like our
     choice of font size here doesn't make any difference to the ammount of
     vertical space, unless we include a non-space character. Presumably
@@ -234,15 +234,15 @@ static int extract_odt_paragraph_empty(extract_alloc_t* alloc, extract_astring_t
     content_state.font.italic = 0;
     if (extract_odt_run_start(alloc, content, styles, &content_state)) goto end;
     //docx_char_append_string(content, "&#160;");   /* &#160; is non-break space. */
-    if (extract_odt_run_finish(alloc, NULL /*content_state*/, content)) goto end;
-    if (extract_odt_paragraph_finish(alloc, content)) goto end;
+    if (s_odt_run_finish(alloc, NULL /*content_state*/, content)) goto end;
+    if (s_odt_paragraph_finish(alloc, content)) goto end;
     e = 0;
     end:
     return e;
 }
 
 
-static int extract_document_to_odt_content_paragraph(
+static int s_document_to_odt_content_paragraph(
         extract_alloc_t*        alloc,
         content_state_t*        content_state,
         paragraph_t*            paragraph,
@@ -255,7 +255,7 @@ change font. */
     int e = -1;
     int l;
 
-    if (extract_odt_paragraph_start(alloc, content)) goto end;
+    if (s_odt_paragraph_start(alloc, content)) goto end;
 
     for (l=0; l<paragraph->lines_num; ++l)
     {
@@ -277,7 +277,7 @@ change font. */
             {
                 if (content_state->font.name)
                 {
-                    if (extract_odt_run_finish(alloc, content_state, content)) goto end;
+                    if (s_odt_run_finish(alloc, content_state, content)) goto end;
                 }
                 content_state->font.name = span->font_name;
                 content_state->font.bold = span->font_bold;
@@ -298,9 +298,9 @@ change font. */
     }
     if (content_state->font.name)
     {
-        if (extract_odt_run_finish(alloc, content_state, content)) goto end;
+        if (s_odt_run_finish(alloc, content_state, content)) goto end;
     }
-    if (extract_odt_paragraph_finish(alloc, content)) goto end;
+    if (s_odt_paragraph_finish(alloc, content)) goto end;
     
     e = 0;
     
@@ -308,7 +308,7 @@ change font. */
     return e;
 }
 
-static int extract_document_append_image(
+static int s_odt_append_image(
         extract_alloc_t*    alloc,
         extract_astring_t*  content,
         image_t*            image
@@ -333,7 +333,7 @@ static int extract_document_append_image(
 }
 
 
-static int extract_document_output_rotated_paragraphs(
+static int s_odt_output_rotated_paragraphs(
         extract_alloc_t*    alloc,
         page_t*             page,
         int                 paragraph_begin,
@@ -385,7 +385,7 @@ static int extract_document_output_rotated_paragraphs(
     for (p=paragraph_begin; p<paragraph_end; ++p)
     {
         paragraph_t* paragraph = page->paragraphs[p];
-        if (!e) e = extract_document_to_odt_content_paragraph(alloc, content_state, paragraph, content, styles);
+        if (!e) e = s_document_to_odt_content_paragraph(alloc, content_state, paragraph, content, styles);
     }
     
     if (!e) e = extract_astring_cat(alloc, content, "\n");
@@ -398,7 +398,7 @@ static int extract_document_output_rotated_paragraphs(
 }
 
 
-static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content, extract_odt_styles_t* styles)
+static int s_odt_append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content, extract_odt_styles_t* styles)
 {
     int e = -1;
     int y;
@@ -461,11 +461,11 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
                 for (p=0; p<cell->paragraphs_num; ++p)
                 {
                     paragraph_t* paragraph = cell->paragraphs[p];
-                    if (extract_document_to_odt_content_paragraph(alloc, &content_state, paragraph, content, styles)) goto end;
+                    if (s_document_to_odt_content_paragraph(alloc, &content_state, paragraph, content, styles)) goto end;
                 }
                 if (content_state.font.name)
                 {
-                    if (extract_odt_run_finish(alloc, &content_state, content)) goto end;
+                    if (s_odt_run_finish(alloc, &content_state, content)) goto end;
                 }
                 if (extract_astring_cat(alloc, content, "\n")) goto end;
             }
@@ -481,7 +481,7 @@ static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_
 }
 
 
-static int append_rotated_paragraphs(
+static int s_odt_append_rotated_paragraphs(
         extract_alloc_t*    alloc,
         page_t*             page,
         content_state_t*    content_state,
@@ -588,7 +588,7 @@ and updates *p. */
     /* We need unique id for text box. */
     *text_box_id += 1;
 
-    if (extract_document_output_rotated_paragraphs(
+    if (s_odt_output_rotated_paragraphs(
             alloc,
             page,
             p0,
@@ -663,28 +663,28 @@ int extract_document_to_odt_content(
                 {
                     /* Extra vertical space between paragraphs that were at
                     different angles in the original document. */
-                    if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
+                    if (s_odt_append_empty_paragraph(alloc, content, styles)) goto end;
                 }
 
                 if (spacing)
                 {
                     /* Extra vertical space between paragraphs. */
-                    if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
+                    if (s_odt_append_empty_paragraph(alloc, content, styles)) goto end;
                 }
 
                 if (rotation && rotate != 0)
                 {
-                    if (append_rotated_paragraphs(alloc, page, &content_state, &p, &text_box_id, ctm, rotate, content, styles)) goto end;
+                    if (s_odt_append_rotated_paragraphs(alloc, page, &content_state, &p, &text_box_id, ctm, rotate, content, styles)) goto end;
                 }
                 else
                 {
-                    if (extract_document_to_odt_content_paragraph(alloc, &content_state, paragraph, content, styles)) goto end;
+                    if (s_document_to_odt_content_paragraph(alloc, &content_state, paragraph, content, styles)) goto end;
                 }
                 p += 1;
             }
             else
             {
-                if (append_table(alloc, table, content, styles)) goto end;
+                if (s_odt_append_table(alloc, table, content, styles)) goto end;
                 t += 1;
             }
         }
@@ -696,7 +696,7 @@ int extract_document_to_odt_content(
             outf("page->images_num=%i", page->images_num);
             for (i=0; i<page->images_num; ++i)
             {
-                extract_document_append_image(alloc, content, &page->images[i]);
+                s_odt_append_image(alloc, content, &page->images[i]);
             }
         }
     }
@@ -764,7 +764,7 @@ int extract_odt_content_item(
         outf("text_intermediate: %s", text_intermediate);
         
         /* Convert <styles> to text. */
-        if (extract_odt_styles_definitions(alloc, styles, &styles_definitions)) goto end;
+        if (s_odt_styles_definitions(alloc, styles, &styles_definitions)) goto end;
         
         /* To make tables work, we seem to need to specify table and column
         styles, and these can be empty. todo: maybe specify exact sizes based
