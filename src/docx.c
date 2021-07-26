@@ -78,8 +78,22 @@ called to terminate any previous run. */
 
 }
 
-static int extract_docx_run_finish(extract_alloc_t* alloc, extract_astring_t* content)
+typedef struct
 {
+    const char* font_name;
+    double      font_size;
+    int         font_bold;
+    int         font_italic;
+    matrix_t*   ctm_prev;
+} content_state_t;
+/* Used to keep track of font information when writing paragraphs of docx
+content, e.g. so we know whether a font has changed so need to start a new docx
+span. */
+
+
+static int extract_docx_run_finish(extract_alloc_t* alloc, content_state_t* state, extract_astring_t* content)
+{
+    if (state) state->font_name = NULL;
     return extract_astring_cat(alloc, content, "</w:t></w:r>");
 }
 
@@ -101,7 +115,7 @@ static int extract_docx_paragraph_empty(extract_alloc_t* alloc, extract_astring_
             0 /*font_italic*/
             )) goto end;
     //docx_char_append_string(content, "&#160;");   /* &#160; is non-break space. */
-    if (extract_docx_run_finish(alloc, content)) goto end;
+    if (extract_docx_run_finish(alloc, NULL /*state*/, content)) goto end;
     if (extract_docx_paragraph_finish(alloc, content)) goto end;
     e = 0;
     end:
@@ -117,19 +131,6 @@ static int extract_docx_char_truncate_if(extract_astring_t* content, char c)
     }
     return 0;
 }
-
-
-typedef struct
-{
-    const char* font_name;
-    double      font_size;
-    int         font_bold;
-    int         font_italic;
-    matrix_t*   ctm_prev;
-} content_state_t;
-/* Used to keep track of font information when writing paragraphs of docx
-content, e.g. so we know whether a font has changed so need to start a new docx
-span. */
 
 
 static int extract_document_to_docx_content_paragraph(
@@ -161,7 +162,7 @@ font. */
                     || font_size_new != state->font_size
                     ) {
                 if (state->font_name) {
-                    if (extract_docx_run_finish(alloc, content)) goto end;
+                    if (extract_docx_run_finish(alloc, state, content)) goto end;
                 }
                 state->font_name = span->font_name;
                 state->font_bold = span->font_bold;
@@ -186,9 +187,9 @@ font. */
             if (extract_docx_char_truncate_if(content, '-')) goto end;
         }
     }
-    if (state->font_name) {
-        if (extract_docx_run_finish(alloc, content)) goto end;
-        state->font_name = NULL;
+    if (state->font_name)
+    {
+        if (extract_docx_run_finish(alloc, state, content)) goto end;
     }
     if (extract_docx_paragraph_finish(alloc, content)) goto end;
     
@@ -480,8 +481,7 @@ to the application. */
                 }
                 if (state.font_name)
                 {
-                    if (extract_docx_run_finish(alloc, content)) goto end;
-                    state.font_name = NULL;
+                    if (extract_docx_run_finish(alloc, &state, content)) goto end;
                 }
 
                 /* Need to write out at least an empty paragraph in each cell,
