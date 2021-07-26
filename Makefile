@@ -294,11 +294,13 @@ test/%.docx.dir.ref/: test/generated/%.docx.dir/
 test/%.odt.dir.ref/: test/generated/%.odt.dir/
 	rsync -ai $< $@
 
+_update_tables_leafs = $(patsubst test/%, %, $(test_tables_pdfs))
 # Update all table docx reference outputs.
 #
-_update_tables_leafs = $(patsubst test/%, %, $(test_tables_pdfs))
 _update-docx-tables:
 	for i in $(_update_tables_leafs); do rsync -ai test/generated/$$i.mutool.docx.dir/ test/$$i.mutool.docx.dir.ref/; done
+# Update all table odt reference outputs.
+#
 _update-odt-tables:
 	for i in $(_update_tables_leafs); do rsync -ai test/generated/$$i.mutool.odt.dir/ test/$$i.mutool.odt.dir.ref/; done
 endif

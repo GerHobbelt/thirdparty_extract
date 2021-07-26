@@ -4,60 +4,6 @@
 <w:p>
 <w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">The sample size required for each State for various investigations among different target groups of individuals are given below:</w:t></w:r>
 </w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="19.000000"/><w:szCs w:val="14.250000"/></w:rPr><w:t xml:space="preserve">*CI: Confidence Interval       # Design effect 2</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.4.2. Measurement of blood pressure</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">Earlier studies have revealed that the prevalence of hypertension among the rural</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="13.400000"/><w:szCs w:val="10.050000"/></w:rPr><w:t xml:space="preserve">3 </w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">adults of </w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">&#x2265;</w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">18 years in the State of Gujarat was 10% which was lowest compared to other NNMB States. Assuming 10% prevalence of hypertension among rural adults, with 95% confidence interval, 20% relative precision and design effect of 2, the sample size computed for each State was 1,728 adults in each gender.</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.4.3. Estimation of fasting blood glucose</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">Earlier studies have revealed that the overall prevalence of diabetes among the</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="13.400000"/><w:szCs w:val="10.050000"/></w:rPr><w:t xml:space="preserve">3 </w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">rural adults of </w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">&#x2265;</w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">18 years was about 5% . Assuming 5% prevalence of diabetes among rural adults, with 95% confidence interval and 20% relative precision, the sample size computed was 1,825 adults in each gender.</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.5. Investigations</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">The following investigations were carried out in the selected HHs:</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.5.1. Socioeconomic and demographic particulars of households</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">Socioeconomic and demographic particulars, such as age, sex, occupation, annual family income, family size, type of family, literacy level of individuals, information about possession of agricultural land, types of crops raised, their yield during previous year, live stock, type of dwelling, environmental sanitation etc. from all the selected 20 HHs were collected using pretested questionnaires.</w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="20.000000"/><w:szCs w:val="15.000000"/></w:rPr><w:t xml:space="preserve">NNMB 3 RuralThird Repeat Survey 201112</w:t></w:r>
-</w:p>
     <w:tbl>
         <w:tblLayout w:type="autofit"/>
         <w:tr>
@@ -947,4 +893,58 @@
 </w:p>            </w:tc>
         </w:tr>
     </w:tbl>
-</w:body></w:document>
+
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="19.000000"/><w:szCs w:val="14.250000"/></w:rPr><w:t xml:space="preserve">*CI: Confidence Interval       # Design effect 2</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.4.2. Measurement of blood pressure</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">Earlier studies have revealed that the prevalence of hypertension among the rural</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="13.400000"/><w:szCs w:val="10.050000"/></w:rPr><w:t xml:space="preserve">3 </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">adults of </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">&#x2265;</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">18 years in the State of Gujarat was 10% which was lowest compared to other NNMB States. Assuming 10% prevalence of hypertension among rural adults, with 95% confidence interval, 20% relative precision and design effect of 2, the sample size computed for each State was 1,728 adults in each gender.</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.4.3. Estimation of fasting blood glucose</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">Earlier studies have revealed that the overall prevalence of diabetes among the</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="13.400000"/><w:szCs w:val="10.050000"/></w:rPr><w:t xml:space="preserve">3 </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">rural adults of </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol"/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">&#x2265;</w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">18 years was about 5% . Assuming 5% prevalence of diabetes among rural adults, with 95% confidence interval and 20% relative precision, the sample size computed was 1,825 adults in each gender.</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.5. Investigations</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">The following investigations were carried out in the selected HHs:</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">3.5.1. Socioeconomic and demographic particulars of households</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="23.000000"/><w:szCs w:val="17.250000"/></w:rPr><w:t xml:space="preserve">Socioeconomic and demographic particulars, such as age, sex, occupation, annual family income, family size, type of family, literacy level of individuals, information about possession of agricultural land, types of crops raised, their yield during previous year, live stock, type of dwelling, environmental sanitation etc. from all the selected 20 HHs were collected using pretested questionnaires.</w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:i/><w:sz w:val="20.000000"/><w:szCs w:val="15.000000"/></w:rPr><w:t xml:space="preserve">NNMB 3 RuralThird Repeat Survey 201112</w:t></w:r>
+</w:p></w:body></w:document>

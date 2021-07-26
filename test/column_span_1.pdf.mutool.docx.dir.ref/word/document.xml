@@ -6,10 +6,6 @@
 <w:r><w:rPr><w:rFonts w:ascii="ArialNarrow-Bold" w:hAnsi="ArialNarrow-Bold"/><w:b/><w:sz w:val="24.500000"/><w:szCs w:val="18.375000"/></w:rPr><w:t xml:space="preserve">Rate of Accidental Deaths &amp; Suicides and Population Growth During 1967 to 2013 </w:t></w:r>
 <w:r><w:rPr><w:rFonts w:ascii="TimesNewRomanPSMT" w:hAnsi="TimesNewRomanPSMT"/><w:sz w:val="18.860000"/><w:szCs w:val="14.145000"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>
 </w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="ArialMT" w:hAnsi="ArialMT"/><w:sz w:val="18.860000"/><w:szCs w:val="14.145000"/></w:rPr><w:t xml:space="preserve"> (xx) </w:t></w:r>
-</w:p>
     <w:tbl>
         <w:tblLayout w:type="autofit"/>
         <w:tr>
@@ -6933,4 +6929,8 @@
             </w:tc>
         </w:tr>
     </w:tbl>
-</w:body></w:document>
+
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="ArialMT" w:hAnsi="ArialMT"/><w:sz w:val="18.860000"/><w:szCs w:val="14.145000"/></w:rPr><w:t xml:space="preserve"> (xx) </w:t></w:r>
+</w:p></w:body></w:document>

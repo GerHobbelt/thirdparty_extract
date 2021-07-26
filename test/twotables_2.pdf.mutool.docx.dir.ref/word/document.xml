@@ -4,14 +4,6 @@
 <w:p>
 <w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="20.700000"/><w:szCs w:val="15.525000"/></w:rPr><w:t xml:space="preserve">Table 6 : DISTRIBUTION (%) OF HOUSEHOLDS BY LITERACY STATUS OF  MALE HEAD OF THE HOUSEHOLD </w:t></w:r>
 </w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="20.700000"/><w:szCs w:val="15.525000"/></w:rPr><w:t xml:space="preserve">Table 7 : DISTRIBUTION (%) OF HOUSEHOLDS BY LITERACY STATUS OF  ADULT WOMEN </w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:sz w:val="18.840000"/><w:szCs w:val="14.130000"/></w:rPr><w:t xml:space="preserve">NNMB                                                                       75                                 Rural-Third Repeat Survey 2011-12 </w:t></w:r>
-</w:p>
     <w:tbl>
         <w:tblLayout w:type="autofit"/>
         <w:tr>
@@ -1438,6 +1430,10 @@
         </w:tr>
     </w:tbl>
 
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica-Bold" w:hAnsi="Helvetica-Bold"/><w:b/><w:sz w:val="20.700000"/><w:szCs w:val="15.525000"/></w:rPr><w:t xml:space="preserve">Table 7 : DISTRIBUTION (%) OF HOUSEHOLDS BY LITERACY STATUS OF  ADULT WOMEN </w:t></w:r>
+</w:p>
     <w:tbl>
         <w:tblLayout w:type="autofit"/>
         <w:tr>
@@ -2863,4 +2859,8 @@
 </w:p>            </w:tc>
         </w:tr>
     </w:tbl>
-</w:body></w:document>
+
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="Helvetica" w:hAnsi="Helvetica"/><w:sz w:val="18.840000"/><w:szCs w:val="14.130000"/></w:rPr><w:t xml:space="preserve">NNMB                                                                       75                                 Rural-Third Repeat Survey 2011-12 </w:t></w:r>
+</w:p></w:body></w:document>

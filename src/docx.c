@@ -21,6 +21,7 @@ docx_paragraph_finish(). */
 
 #include <assert.h>
 #include <errno.h>
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -510,6 +511,8 @@ int append_rotated_paragraphs(
         double              rotate,
         extract_astring_t*  content
         )
+/* Appends paragraphs with same rotation, starting with page->paragraphs[*p]
+and updates *p. */
 {
     /* Find extent of paragraphs with this same rotation. extent
     will contain max width and max height of paragraphs, in units
@@ -668,7 +671,10 @@ int extract_document_to_docx_content(
     /* Write paragraphs into <content>. */
     for (p=0; p<document->pages_num; ++p) {
         page_t* page = document->pages[p];
-        int p;
+        
+        int p = 0;
+        int t = 0;
+        
         content_state_t state;
         state.font_name = NULL;
         state.font_size = 0;
@@ -676,55 +682,60 @@ int extract_document_to_docx_content(
         state.font_italic = 0;
         state.ctm_prev = NULL;
         
-        for (p=0; p<page->paragraphs_num; ++p) {
-            paragraph_t* paragraph = page->paragraphs[p];
-            const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
-            double rotate = atan2(ctm->b, ctm->a);
+        /* Output paragraphs and tables in order of y coordinate. */
+        for(;;)
+        {
+            paragraph_t* paragraph = (p == page->paragraphs_num) ? NULL : page->paragraphs[p];
+            table_t* table = (t == page->tables_num) ? NULL : page->tables[t];
+            if (!paragraph && !table)   break;
+            double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
+            double y_table = (table) ? table->pos.y : DBL_MAX;
             
-            if (spacing
-                    && state.ctm_prev
-                    && paragraph->lines_num
-                    && paragraph->lines[0]->spans_num
-                    && matrix_cmp4(
-                            state.ctm_prev,
-                            &paragraph->lines[0]->spans[0]->ctm
-                            )
-                    ) {
-                /* Extra vertical space between paragraphs that were at
-                different angles in the original document. */
-                if (extract_docx_paragraph_empty(alloc, content)) goto end;
-            }
-
-            if (spacing) {
-                /* Extra vertical space between paragraphs. */
-                if (extract_docx_paragraph_empty(alloc, content)) goto end;
-            }
-            
-            if (rotation && rotate != 0)
+            if (y_paragraph < y_table)
             {
-                if (append_rotated_paragraphs(alloc, page, &state, &p, &text_box_id, ctm, rotate, content)) goto end;
+                const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
+                double rotate = atan2(ctm->b, ctm->a);
+
+                if (spacing
+                        && state.ctm_prev
+                        && paragraph->lines_num
+                        && paragraph->lines[0]->spans_num
+                        && matrix_cmp4(
+                                state.ctm_prev,
+                                &paragraph->lines[0]->spans[0]->ctm
+                                )
+                        ) {
+                    /* Extra vertical space between paragraphs that were at
+                    different angles in the original document. */
+                    if (extract_docx_paragraph_empty(alloc, content)) goto end;
+                }
+
+                if (spacing) {
+                    /* Extra vertical space between paragraphs. */
+                    if (extract_docx_paragraph_empty(alloc, content)) goto end;
+                }
+
+                if (rotation && rotate != 0)
+                {
+                    if (append_rotated_paragraphs(alloc, page, &state, &p, &text_box_id, ctm, rotate, content)) goto end;
+                }
+                else
+                {
+                    if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
+                }
+                p += 1;
             }
             else
             {
-                if (extract_document_to_docx_content_paragraph(alloc, &state, paragraph, content)) goto end;
+                if (append_table(alloc, table, content)) goto end;
+                t += 1;
             }
-        
         }
         
         if (images) {
             int i;
             for (i=0; i<page->images_num; ++i) {
                 extract_document_append_image(alloc, content, &page->images[i]);
-            }
-        }
-        
-        /* Output tables. todo: interleave these with paragraphs using y coordinate. */
-        {
-            int i;
-            for (i=0; i<page->tables_num; ++i)
-            {
-                table_t* table = page->tables[i];
-                if (append_table(alloc, table, content)) goto end;
             }
         }
     }

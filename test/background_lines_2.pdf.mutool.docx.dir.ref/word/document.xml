@@ -16,10 +16,6 @@
 <w:p>
 <w:r><w:rPr><w:rFonts w:ascii="TimesNewRoman,Bold" w:hAnsi="TimesNewRoman,Bold"/><w:b/><w:sz w:val="17.600000"/><w:szCs w:val="13.200000"/></w:rPr><w:t xml:space="preserve">ANDHRA PRADESH DISTRICT : PAGE NO.</w:t></w:r>
 </w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="TimesNewRoman,Bold" w:hAnsi="TimesNewRoman,Bold"/><w:b/><w:sz w:val="17.600000"/><w:szCs w:val="13.200000"/></w:rPr><w:t xml:space="preserve">NOTE: I-IRRIGATED           UI-UNIRRIGATED           T = TOTAL OF I &amp; UI IN CASE OF COLUMNS 3 AND 4 </w:t></w:r>
-</w:p>
     <w:tbl>
         <w:tblLayout w:type="autofit"/>
         <w:tr>
@@ -1025,4 +1021,8 @@
             </w:tc>
         </w:tr>
     </w:tbl>
-</w:body></w:document>
+
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="TimesNewRoman,Bold" w:hAnsi="TimesNewRoman,Bold"/><w:b/><w:sz w:val="17.600000"/><w:szCs w:val="13.200000"/></w:rPr><w:t xml:space="preserve">NOTE: I-IRRIGATED           UI-UNIRRIGATED           T = TOTAL OF I &amp; UI IN CASE OF COLUMNS 3 AND 4 </w:t></w:r>
+</w:p></w:body></w:document>

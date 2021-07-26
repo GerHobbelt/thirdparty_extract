@@ -60,15 +60,6 @@
 <w:p>
 <w:r><w:rPr><w:rFonts w:ascii="Arial-BoldMT" w:hAnsi="Arial-BoldMT"/><w:b/><w:sz w:val="20.040000"/><w:szCs w:val="15.030000"/></w:rPr><w:t xml:space="preserve">Table 2-1. Simulated fuel savings from isolated cycle improvements </w:t></w:r>
 </w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="ArialMT" w:hAnsi="ArialMT"/><w:sz w:val="21.960000"/><w:szCs w:val="16.470000"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>
-<w:r><w:rPr><w:rFonts w:ascii="TimesNewRomanPSMT" w:hAnsi="TimesNewRomanPSMT"/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve">Figure 2-1 extends the analysis from eliminating stops for the five example cycles and examines the additional benefit from avoiding slow-and-go driving below various speed thresholds. </w:t></w:r>
-</w:p>
-
-<w:p>
-<w:r><w:rPr><w:rFonts w:ascii="TimesNewRomanPSMT" w:hAnsi="TimesNewRomanPSMT"/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve">3  </w:t></w:r>
-</w:p>
     <w:tbl>
         <w:tblLayout w:type="autofit"/>
         <w:tr>
@@ -735,4 +726,13 @@
 </w:p>            </w:tc>
         </w:tr>
     </w:tbl>
-</w:body></w:document>
+
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="ArialMT" w:hAnsi="ArialMT"/><w:sz w:val="21.960000"/><w:szCs w:val="16.470000"/></w:rPr><w:t xml:space="preserve"> </w:t></w:r>
+<w:r><w:rPr><w:rFonts w:ascii="TimesNewRomanPSMT" w:hAnsi="TimesNewRomanPSMT"/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve">Figure 2-1 extends the analysis from eliminating stops for the five example cycles and examines the additional benefit from avoiding slow-and-go driving below various speed thresholds. </w:t></w:r>
+</w:p>
+
+<w:p>
+<w:r><w:rPr><w:rFonts w:ascii="TimesNewRomanPSMT" w:hAnsi="TimesNewRomanPSMT"/><w:sz w:val="24.000000"/><w:szCs w:val="18.000000"/></w:rPr><w:t xml:space="preserve">3  </w:t></w:r>
+</w:p></w:body></w:document>
