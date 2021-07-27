@@ -18,6 +18,9 @@
 #       to docx. We require that $(gs) was built with --with-extract-dir=... We
 #       also do a simple test of output-file-per-page.
 #
+#   make test-tables
+#       Tests handling of tables, using mutool with docx device's html output.
+#
 #   make test-buffer test-misc test-src
 #       Runs unit tests etc.
 #
@@ -96,7 +99,7 @@ endif
 
 # Default target - run all tests.
 #
-test: test-buffer test-misc test-src test-exe test-mutool test-gs
+test: test-buffer test-misc test-src test-exe test-mutool test-gs test-html
 	@echo $@: passed
 
 # Define the main test targets.
@@ -193,7 +196,43 @@ test_gs_fpp: $(gs)
 	ls test/generated/text_graphic_image.pdf.gs.*.docx | wc -l | grep '^ *1$$'
 	ls test/generated/Python2.pdf.gs.*.docx | wc -l | grep '^ *1$$'
 	ls test/generated/zlib.3.pdf.gs.*.docx | wc -l | grep '^ *2$$'
-	
+
+
+test-html: test/generated/table.pdf.mutool.html.diff
+
+test_tables_pdfs = \
+        test/agstat.pdf \
+        test/background_lines_1.pdf \
+        test/background_lines_2.pdf \
+        test/column_span_1.pdf \
+        test/column_span_2.pdf \
+        test/electoral_roll.pdf \
+        test/rotated.pdf \
+        test/row_span.pdf \
+        test/table.pdf \
+        test/twotables_1.pdf \
+        test/twotables_2.pdf \
+
+test_tables_generated = $(patsubst test/%, test/generated/%, $(test_tables_pdfs))
+
+test_tables_html = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.html.diff, $(test_tables_pdfs))
+test_tables_docx = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.docx.diff, $(test_tables_pdfs))
+test_tables_odt  = $(patsubst test/%.pdf, test/generated/%.pdf.mutool.odt.diff,  $(test_tables_pdfs))
+
+test_tables = $(test_tables_html) $(test_tables_docx) $(test_tables_odt)
+test-tables-html: $(test_tables_html)
+test-tables-docx: $(test_tables_docx)
+test-tables-odt:  $(test_tables_odt)
+test-tables: $(test_tables) 
+
+test/generated/%.pdf.mutool.html.diff: test/generated/%.pdf.mutool.html test/%.pdf.mutool.html.ref
+	@echo
+	@echo == Checking $<
+	diff -u $^
+
+test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+	$(mutool) convert -F docx -O html -o $@ $<
+
 
 # Main executable.
 #
@@ -206,6 +245,7 @@ exe_src = \
         src/docx_template.c \
         src/extract-exe.c \
         src/extract.c \
+        src/html.c \
         src/join.c \
         src/mem.c \
         src/odt.c \
@@ -245,12 +285,26 @@ exe_tables_src = src/tables.c++
 $(exe_tables): $(exe_tables_src)
 	c++ -W -Wall -Werror -g -I /usr/local/include/opencv4 -L /usr/local/lib -l opencv_core -l opencv_imgproc -l opencv_imgcodecs -o $@ $^
 
-ifeq ($(create_ref),yes)
-# Special rule for populating .ref directories with current output. Useful to
+ifeq (0,1)
+# Do not commit changes to above line.
+#
+# Special rules for populating .ref directories with current output. Useful to
 # initialise references outputs for new output type.
 #
+test/%.docx.dir.ref/: test/generated/%.docx.dir/
+	rsync -ai $< $@
 test/%.odt.dir.ref/: test/generated/%.odt.dir/
 	rsync -ai $< $@
+
+_update_tables_leafs = $(patsubst test/%, %, $(test_tables_pdfs))
+# Update all table docx reference outputs.
+#
+_update-docx-tables:
+	for i in $(_update_tables_leafs); do rsync -ai test/generated/$$i.mutool.docx.dir/ test/$$i.mutool.docx.dir.ref/; done
+# Update all table odt reference outputs.
+#
+_update-odt-tables:
+	for i in $(_update_tables_leafs); do rsync -ai test/generated/$$i.mutool.odt.dir/ test/$$i.mutool.odt.dir.ref/; done
 endif
 
 # Rules that make the various intermediate targets required by $(tests).
@@ -302,6 +356,12 @@ test/generated/%.diff: test/generated/%.dir/ test/%.dir.ref/
 	@echo
 	@echo == Checking $<
 	diff -ru $^
+#if diff -ruq $^; then true; else echo "@@@ failure... fix with: rsync -ai" $^; false; fi
+
+test/generated/%.html.diff: test/generated/%.html test/%.html.ref
+	@echo
+	@echo == Checking $<
+	diff -u $^
 
 # This checks that -t src/template.docx gives identical results.
 #
@@ -389,6 +449,18 @@ test/generated/%.pdf.mutool.odt: test/%.pdf $(mutool)
 	@mkdir -p test/generated
 	$(mutool) convert -O mediabox-clip=no -o $@ $<
 
+# Converts .pdf directly to .odt using mutool 
+test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+	@echo
+	@echo == Converting .pdf directly to .html using mutool.
+	@mkdir -p test/generated
+	$(mutool) convert -F docx -O html -o $@ $<
+
+#test/generated/%.pdf.mutool.html: test/%.pdf $(mutool)
+#	@echo
+#	@echo == Converting .pdf directly to .html using mutool.
+#	@mkdir -p test/generated
+#	$(mutool) convert -F docx -O mediabox-clip=no,html -o $@ $<
 
 # Valgrind test
 #
