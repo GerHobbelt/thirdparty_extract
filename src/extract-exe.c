@@ -139,6 +139,7 @@ int main(int argc, char** argv)
             if (arg_next_string(argv, argc, &i, &format_name)) goto end;
             if (!strcmp(format_name, "odt")) format = extract_format_ODT;
             else if (!strcmp(format_name, "docx")) format = extract_format_DOCX;
+            else if (!strcmp(format_name, "html")) format = extract_format_HTML;
             else
             {
                 printf("-f value should be 'odt' or 'docx', not '%s'.\n", format_name);
