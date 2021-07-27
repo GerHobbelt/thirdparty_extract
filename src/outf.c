@@ -5,11 +5,11 @@
 #include <stdio.h>
 #include <string.h>
 
-static int s_verbose = 0;
+int extract_outf_verbose = 0;
 
 void outf_verbose_set(int verbose)
 {
-    s_verbose = verbose;
+    extract_outf_verbose = verbose;
 }
 
 void (outf)(
@@ -23,7 +23,7 @@ void (outf)(
         )
 {
     va_list va;
-    if (level > s_verbose) {
+    if (level > extract_outf_verbose) {
         return;
     }
     
