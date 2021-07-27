@@ -21,6 +21,7 @@ odt_paragraph_finish(). */
 
 #include <assert.h>
 #include <errno.h>
+#include <float.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -427,6 +428,220 @@ static int extract_document_output_rotated_paragraphs(
 }
 
 
+static int append_table(extract_alloc_t* alloc, table_t* table, extract_astring_t* content, extract_odt_styles_t* styles)
+{
+    int e = -1;
+    int y;
+    
+    {
+        int x;
+        static int table_number = 0;
+        table_number += 1;
+        if (extract_astring_catf(alloc, content,
+                "\n"
+                "    <table:table text:style-name=\"extract.table\" table:name=\"extract.table.%i\">\n"
+                "        <table:table-columns>\n"
+                ,
+                table_number
+                )) goto end;
+
+        for (x=0; x<table->cells_num_x; ++x)
+        {
+            if (extract_astring_cat(alloc, content,
+                    "            <table:table-column table:style-name=\"extract.table.column\"/>\n"
+                    )) goto end;
+        }
+        if (extract_astring_cat(alloc, content,
+                "        </table:table-columns>\n"
+                )) goto end;
+  }
+  for (y=0; y<table->cells_num_y; ++y)
+    {
+        int x;
+        if (extract_astring_cat(alloc, content,
+                "        <table:table-row>\n"
+                )) goto end;
+        
+        for (x=0; x<table->cells_num_x; ++x)
+        {
+            cell_t* cell = table->cells[y*table->cells_num_x + x];
+            if (!cell->above || !cell->left)
+            {
+                if (extract_astring_cat(alloc, content, "            <table:covered-table-cell/>\n")) goto end;
+                continue;
+            }
+            
+            if (extract_astring_cat(alloc, content, "            <table:table-cell")) goto end;
+            if (cell->extend_right > 1)
+            {
+                if (extract_astring_catf(alloc, content, " table:number-columns-spanned=\"%i\"", cell->extend_right)) goto end;
+            }
+            if (cell->extend_down > 1)
+            {
+                if (extract_astring_catf(alloc, content, " table:number-rows-spanned=\"%i\"", cell->extend_down)) goto end;
+            }
+            if (extract_astring_catf(alloc, content, ">\n")) goto end;
+            
+            /* Write contents of this cell. */
+            {
+                int p;
+                content_state_t state;
+                state.font_name = NULL;
+                state.ctm_prev = NULL;
+                for (p=0; p<cell->paragraphs_num; ++p)
+                {
+                    paragraph_t* paragraph = cell->paragraphs[p];
+                    if (extract_document_to_odt_content_paragraph(alloc, &state, paragraph, content, styles)) goto end;
+                }
+                if (state.font_name)
+                {
+                    if (extract_odt_run_finish(alloc, content)) goto end;
+                    state.font_name = NULL;
+                }
+                if (extract_astring_cat(alloc, content, "\n")) goto end;
+            }
+            if (extract_astring_cat(alloc, content, "            </table:table-cell>\n")) goto end;
+        }
+        if (extract_astring_cat(alloc, content, "        </table:table-row>\n")) goto end;
+    }
+    if (extract_astring_cat(alloc, content, "    </table:table>\n")) goto end;
+    e = 0;
+    
+    end:
+    return e;
+}
+
+
+static int append_rotated_paragraphs(
+        extract_alloc_t*    alloc,
+        page_t*             page,
+        content_state_t*    state,
+        int*                p,
+        int*                text_box_id,
+        const matrix_t*     ctm,
+        double              rotate,
+        extract_astring_t*  content,
+        extract_odt_styles_t* styles
+        )
+/* Appends paragraphs with same rotation, starting with page->paragraphs[*p]
+and updates *p. */
+{
+    /* Find extent of paragraphs with this same rotation. extent
+    will contain max width and max height of paragraphs, in units
+    before application of ctm, i.e. before rotation. */
+    int e = -1;
+    point_t extent = {0, 0};
+    int p0 = *p;
+    int p1;
+    paragraph_t* paragraph = page->paragraphs[*p];
+
+    outf("rotate=%.2frad=%.1fdeg ctm: ef=(%f %f) abcd=(%f %f %f %f)",
+            rotate, rotate * 180 / pi,
+            ctm->e,
+            ctm->f,
+            ctm->a,
+            ctm->b,
+            ctm->c,
+            ctm->d
+            );
+
+    {
+        /* We assume that first span is at origin of text
+        block. This assumes left-to-right text. */
+        double rotate0 = rotate;
+        const matrix_t* ctm0 = ctm;
+        point_t origin =
+        {
+                paragraph->lines[0]->spans[0]->chars[0].x,
+                paragraph->lines[0]->spans[0]->chars[0].y
+        };
+        matrix_t ctm_inverse = {1, 0, 0, 1, 0, 0};
+        double ctm_det = ctm->a*ctm->d - ctm->b*ctm->c;
+        if (ctm_det != 0)
+        {
+            ctm_inverse.a = +ctm->d / ctm_det;
+            ctm_inverse.b = -ctm->b / ctm_det;
+            ctm_inverse.c = -ctm->c / ctm_det;
+            ctm_inverse.d = +ctm->a / ctm_det;
+        }
+        else
+        {
+            outf("cannot invert ctm=(%f %f %f %f)",
+                    ctm->a, ctm->b, ctm->c, ctm->d);
+        }
+
+        for (*p=p0; *p<page->paragraphs_num; ++*p)
+        {
+            paragraph = page->paragraphs[*p];
+            ctm = &paragraph->lines[0]->spans[0]->ctm;
+            rotate = atan2(ctm->b, ctm->a);
+            if (rotate != rotate0)
+            {
+                break;
+            }
+
+            /* Update <extent>. */
+            {
+                int l;
+                for (l=0; l<paragraph->lines_num; ++l)
+                {
+                    line_t* line = paragraph->lines[l];
+                    span_t* span = line_span_last(line);
+                    char_t* char_ = span_char_last(span);
+                    double adv = char_->adv * matrix_expansion(span->trm);
+                    double x = char_->x + adv * cos(rotate);
+                    double y = char_->y + adv * sin(rotate);
+
+                    double dx = x - origin.x;
+                    double dy = y - origin.y;
+
+                    /* Position relative to origin and before box rotation. */
+                    double xx = ctm_inverse.a * dx + ctm_inverse.b * dy;
+                    double yy = ctm_inverse.c * dx + ctm_inverse.d * dy;
+                    yy = -yy;
+                    if (xx > extent.x) extent.x = xx;
+                    if (yy > extent.y) extent.y = yy;
+                    if (0) outf("rotate=%f *p=%i: origin=(%f %f) xy=(%f %f) dxy=(%f %f) xxyy=(%f %f) span: %s",
+                            rotate, *p, origin.x, origin.y, x, y, dx, dy, xx, yy, span_string(alloc, span));
+                }
+            }
+        }
+        p1 = *p;
+        rotate = rotate0;
+        ctm = ctm0;
+        outf("rotate=%f p0=%i p1=%i. extent is: (%f %f)",
+                rotate, p0, p1, extent.x, extent.y);
+    }
+
+    /* Paragraphs p0..p1-1 have same rotation. We output them into
+    a single rotated text box. */
+
+    /* We need unique id for text box. */
+    *text_box_id += 1;
+
+    if (extract_document_output_rotated_paragraphs(
+            alloc,
+            page,
+            p0,
+            p1,
+            rotate,
+            ctm->e,
+            ctm->f,
+            extent.x,
+            extent.y,
+            *text_box_id,
+            content,
+            styles,
+            state
+            )) goto end;
+    *p = p1 - 1;
+    e = 0;
+    
+    end:
+    return e;
+}
+
+
 int extract_document_to_odt_content(
         extract_alloc_t*    alloc,
         document_t*         document,
@@ -445,7 +660,8 @@ int extract_document_to_odt_content(
     for (p=0; p<document->pages_num; ++p)
     {
         page_t* page = document->pages[p];
-        int p;
+        int p = 0;
+        int t = 0;
         content_state_t state;
         state.font_name = NULL;
         state.font_size = 0;
@@ -453,148 +669,55 @@ int extract_document_to_odt_content(
         state.font_italic = 0;
         state.ctm_prev = NULL;
         
-        for (p=0; p<page->paragraphs_num; ++p)
+        for(;;)
         {
-            paragraph_t* paragraph = page->paragraphs[p];
-            const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
-            double rotate = atan2(ctm->b, ctm->a);
+            paragraph_t* paragraph = (p == page->paragraphs_num) ? NULL : page->paragraphs[p];
+            table_t* table = (t == page->tables_num) ? NULL : page->tables[t];
+            if (!paragraph && !table)   break;
+            double y_paragraph = (paragraph) ? paragraph->lines[0]->spans[0]->chars[0].y : DBL_MAX;
+            double y_table = (table) ? table->pos.y : DBL_MAX;
             
-            if (spacing
-                    && state.ctm_prev
-                    && paragraph->lines_num
-                    && paragraph->lines[0]->spans_num
-                    && matrix_cmp4(
-                            state.ctm_prev,
-                            &paragraph->lines[0]->spans[0]->ctm
-                            )
-                    )
+            if (y_paragraph < y_table)
             {
-                /* Extra vertical space between paragraphs that were at
-                different angles in the original document. */
-                if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
-            }
+                const matrix_t* ctm = &paragraph->lines[0]->spans[0]->ctm;
+                double rotate = atan2(ctm->b, ctm->a);
 
-            if (spacing)
-            {
-                /* Extra vertical space between paragraphs. */
-                if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
-            }
-            
-            if (rotation && rotate != 0)
-            {
-                /* Find extent of paragraphs with this same rotation. extent
-                will contain max width and max height of paragraphs, in units
-                before application of ctm, i.e. before rotation. */
-                point_t extent = {0, 0};
-                int p0 = p;
-                int p1;
-                
-                outf("rotate=%.2frad=%.1fdeg ctm: ef=(%f %f) abcd=(%f %f %f %f)",
-                        rotate, rotate * 180 / pi,
-                        ctm->e,
-                        ctm->f,
-                        ctm->a,
-                        ctm->b,
-                        ctm->c,
-                        ctm->d
-                        );
-                
+                if (spacing
+                        && state.ctm_prev
+                        && paragraph->lines_num
+                        && paragraph->lines[0]->spans_num
+                        && matrix_cmp4(
+                                state.ctm_prev,
+                                &paragraph->lines[0]->spans[0]->ctm
+                                )
+                        )
                 {
-                    /* We assume that first span is at origin of text
-                    block. This assumes left-to-right text. */
-                    double rotate0 = rotate;
-                    const matrix_t* ctm0 = ctm;
-                    point_t origin =
-                    {
-                            paragraph->lines[0]->spans[0]->chars[0].x,
-                            paragraph->lines[0]->spans[0]->chars[0].y
-                    };
-                    matrix_t ctm_inverse = {1, 0, 0, 1, 0, 0};
-                    double ctm_det = ctm->a*ctm->d - ctm->b*ctm->c;
-                    if (ctm_det != 0)
-                    {
-                        ctm_inverse.a = +ctm->d / ctm_det;
-                        ctm_inverse.b = -ctm->b / ctm_det;
-                        ctm_inverse.c = -ctm->c / ctm_det;
-                        ctm_inverse.d = +ctm->a / ctm_det;
-                    }
-                    else
-                    {
-                        outf("cannot invert ctm=(%f %f %f %f)",
-                                ctm->a, ctm->b, ctm->c, ctm->d);
-                    }
-
-                    for (p=p0; p<page->paragraphs_num; ++p)
-                    {
-                        paragraph = page->paragraphs[p];
-                        ctm = &paragraph->lines[0]->spans[0]->ctm;
-                        rotate = atan2(ctm->b, ctm->a);
-                        if (rotate != rotate0)
-                        {
-                            break;
-                        }
-
-                        /* Update <extent>. */
-                        {
-                            int l;
-                            for (l=0; l<paragraph->lines_num; ++l)
-                            {
-                                line_t* line = paragraph->lines[l];
-                                span_t* span = line_span_last(line);
-                                char_t* char_ = span_char_last(span);
-                                double adv = char_->adv * matrix_expansion(span->trm);
-                                double x = char_->x + adv * cos(rotate);
-                                double y = char_->y + adv * sin(rotate);
-
-                                double dx = x - origin.x;
-                                double dy = y - origin.y;
-
-                                /* Position relative to origin and before box rotation. */
-                                double xx = ctm_inverse.a * dx + ctm_inverse.b * dy;
-                                double yy = ctm_inverse.c * dx + ctm_inverse.d * dy;
-                                yy = -yy;
-                                if (xx > extent.x) extent.x = xx;
-                                if (yy > extent.y) extent.y = yy;
-                                if (0) outf("rotate=%f p=%i: origin=(%f %f) xy=(%f %f) dxy=(%f %f) xxyy=(%f %f) span: %s",
-                                        rotate, p, origin.x, origin.y, x, y, dx, dy, xx, yy, span_string(alloc, span));
-                            }
-                        }
-                    }
-                    p1 = p;
-                    rotate = rotate0;
-                    ctm = ctm0;
-                    outf("rotate=%f p0=%i p1=%i. extent is: (%f %f)",
-                            rotate, p0, p1, extent.x, extent.y);
+                    /* Extra vertical space between paragraphs that were at
+                    different angles in the original document. */
+                    if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
                 }
-                
-                /* Paragraphs p0..p1-1 have same rotation. We output them into
-                a single rotated text box. */
-                
-                /* We need unique id for text box. */
-                text_box_id += 1;
-                
-                if (extract_document_output_rotated_paragraphs(
-                        alloc,
-                        page,
-                        p0,
-                        p1,
-                        rotate,
-                        ctm->e,
-                        ctm->f,
-                        extent.x,
-                        extent.y,
-                        text_box_id,
-                        content,
-                        styles,
-                        &state
-                        )) goto end;
-                p = p1 - 1;
+
+                if (spacing)
+                {
+                    /* Extra vertical space between paragraphs. */
+                    if (extract_odt_paragraph_empty(alloc, content, styles)) goto end;
+                }
+
+                if (rotation && rotate != 0)
+                {
+                    if (append_rotated_paragraphs(alloc, page, &state, &p, &text_box_id, ctm, rotate, content, styles)) goto end;
+                }
+                else
+                {
+                    if (extract_document_to_odt_content_paragraph(alloc, &state, paragraph, content, styles)) goto end;
+                }
+                p += 1;
             }
             else
             {
-                if (extract_document_to_odt_content_paragraph(alloc, &state, paragraph, content, styles)) goto end;
+                if (append_table(alloc, table, content, styles)) goto end;
+                t += 1;
             }
-        
         }
         
         outf("images=%i", images);
@@ -658,26 +781,39 @@ int extract_odt_content_item(
         char* text_intermediate = NULL;
         extract_astring_t   styles_definitions = {0};
 
+        /* Insert content before '</office:text>'. */
         if (extract_content_insert(
                 alloc,
                 text,
                 NULL /*single*/,
-                NULL,
-                "</office:text>",
+                NULL /*mid_begin_name*/,
+                "</office:text>" /*mid_end_name*/,
                 contentss,
                 contentss_num,
                 &text_intermediate
                 )) goto end;
         outf("text_intermediate: %s", text_intermediate);
         
+        /* Convert <styles> to text. */
         if (extract_odt_styles_definitions(alloc, styles, &styles_definitions)) goto end;
         
+        /* To make tables work, we seem to need to specify table and column
+        styles, and these can be empty. todo: maybe specify exact sizes based
+        on the pdf table and cell dimensions. */
+        if (extract_astring_cat(alloc, &styles_definitions,
+                "\n"
+                "<style:style style:name=\"extract.table\" style:family=\"table\"/>\n"
+                "<style:style style:name=\"extract.table.column\" style:family=\"table-column\"/>\n"
+                )) goto end;
+        
+        /* Replace '<office:automatic-styles/>' with text from
+        <styles_definitions>. */
         e = extract_content_insert(
                 alloc,
                 text_intermediate,
                 "<office:automatic-styles/>" /*single*/,
-                NULL,
-                NULL, //"</office:automatic-styles>",
+                NULL /*mid_begin_name*/,
+                NULL /*mid_end_name*/,
                 &styles_definitions,
                 1,
                 text2
