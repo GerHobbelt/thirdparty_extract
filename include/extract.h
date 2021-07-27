@@ -25,7 +25,8 @@ typedef struct extract_t extract_t;
 typedef enum
 {
     extract_format_ODT,
-    extract_format_DOCX
+    extract_format_DOCX,
+    extract_format_HTML
 } extract_format_t;
 
 
@@ -37,6 +38,11 @@ int extract_begin(
 /* Creates a new extract_t* for use by other extract_*() functions. All
 allocation will be done with <alloc> (which can be NULL in which case we use
 malloc/free, or from extract_alloc_create()). */
+
+int extract_tables_csv_format(extract_t* extract, const char* path_format);
+/* Causes extract_process() to also write each tableas CSV to a file with path
+asprintf(path_format, n) where <n> is the table number, starting from 0. */
+
 
 
 int extract_read_intermediate(
@@ -111,7 +117,7 @@ ucs
 adv
     Advance of this character.
 autosplit
-    If non-zero, we do additional splitting to stress the join algorithm.
+    Ignored as of 2021-07-02.
 */
 
 
@@ -148,6 +154,46 @@ data_free
     with <data>. Otherwise the lifetime of <data> is the responsibility of the
     caller and it must persist for at least the lifetime of <extract>.
 */
+
+
+int extract_add_path4(
+        extract_t*  extract,
+        double ctm_a,
+        double ctm_b,
+        double ctm_c,
+        double ctm_d,
+        double ctm_e,
+        double ctm_f,
+        double x0,
+        double y0,
+        double x1,
+        double y1,
+        double x2,
+        double y2,
+        double x3,
+        double y3,
+        double color
+        );
+/* Adds a four-element path. Paths that define thin vertical/horizontal
+rectangles are used to find tables. */
+
+
+int extract_add_line(
+        extract_t*  extract,
+        double ctm_a,
+        double ctm_b,
+        double ctm_c,
+        double ctm_d,
+        double ctm_e,
+        double ctm_f,
+        double width,
+        double x0,
+        double y0,
+        double x1,
+        double y1,
+        double color
+        );
+/* Adds a stroked line. Vertical/horizontal lines are used to find tables. */
 
 
 int extract_page_end(extract_t* extract);
