@@ -76,7 +76,7 @@ int astring_char_truncate_if(extract_astring_t* content, char c)
 int extract_astring_cat_xmlc(extract_alloc_t* alloc, extract_astring_t* string, int c)
 {
     int ret = -1;
-    
+
     if (0) {}
 
     /* Escape XML special characters. */
@@ -109,7 +109,7 @@ int extract_astring_cat_xmlc(extract_alloc_t* alloc, extract_astring_t* string, 
     }
 
     /* Output ASCII verbatim. */
-    else if (c >= 32 && c <= 127)
+    else if (c >= 32 && c < 127)
     {
         if (extract_astring_catc(alloc, string, (char) c)) goto end;
     }
@@ -130,9 +130,9 @@ int extract_astring_cat_xmlc(extract_alloc_t* alloc, extract_astring_t* string, 
         snprintf(buffer, sizeof(buffer), "&#x%x;", c);
         if (extract_astring_cat(alloc, string, buffer)) goto end;
     }
-    
+
     ret = 0;
-    
+
     end:
     return ret;
 }
