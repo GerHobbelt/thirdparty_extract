@@ -1,6 +1,13 @@
 #ifndef ARTIFEX_EXTRACT_DOCUMENT_H
 #define ARTIFEX_EXTRACT_DOCUMENT_H
 
+#ifdef _MSC_VER
+    #include "compat_stdint.h"
+#else
+    #include <stdint.h>
+#endif
+
+
 static const double pi = 3.141592653589793;
 
 typedef struct

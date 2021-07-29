@@ -1195,12 +1195,12 @@ static point_t transform(double x, double y,
     return ret;
 }
 
-static double min(double a, double b)
+static double s_min(double a, double b)
 {
     return (a < b) ? a : b;
 }
 
-static double max(double a, double b)
+static double s_max(double a, double b)
 {
     return (a > b) ? a : b;
 }
@@ -1304,10 +1304,10 @@ int extract_add_line(
     double width2 = width * sqrt( fabs( ctm_a * ctm_d - ctm_b * ctm_c));
     rect_t  rect;
     (void) color;
-    rect.min.x = min(p0.x, p1.x);
-    rect.min.y = min(p0.y, p1.y);
-    rect.max.x = max(p0.x, p1.x);
-    rect.max.y = max(p0.y, p1.y);
+    rect.min.x = s_min(p0.x, p1.x);
+    rect.min.y = s_min(p0.y, p1.y);
+    rect.max.x = s_max(p0.x, p1.x);
+    rect.max.y = s_max(p0.y, p1.y);
     
     outf("%s: width=%f ((%f %f)(%f %f)) rect=%s",
             __FUNCTION__,
