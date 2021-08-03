@@ -166,7 +166,7 @@ def main():
         for filename in sorted(filenames):
             num_items += 1
             path = os.path.join(dirpath, filename)
-            print(f'looking at path={path}')
+            #print(f'looking at path={path}')
             name = path[ len(path_temp)+1: ]
             out_c.write(f'    {{\n')
             out_c.write(f'        "{name}",\n')
