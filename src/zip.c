@@ -79,7 +79,7 @@ int extract_zip_open(extract_buffer_t* buffer, extract_zip_t** o_zip)
     {
         time_t t = time(NULL);
         struct tm*  tm;
-        #ifdef _POSIX_SOURCE
+        #if defined(_POSIX_SOURCE) && !defined(_MSC_VER)
             struct tm   tm_local;
             tm = gmtime_r(&t, &tm_local);
         #else
