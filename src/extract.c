@@ -1082,7 +1082,7 @@ int extract_add_char(
     subpage_t* subpage = page->subpages[page->subpages_num-1];
     span_t* span = subpage->spans[subpage->spans_num - 1];
 
-    outf("(%f %f) ucs=% 5i=%c adv=%f", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : ' ', adv);
+    outf("(%f %f) ucs=% 5i=%c adv=%f", x, y, ucs, (ucs >=32 && ucs< 127) ? ucs : '?', adv);
     /* Ignore the specified <autosplit> - there seems no advantage to not
     splitting spans on multiple lines, and not doing so causes problems with
     missing spaces in the output. */

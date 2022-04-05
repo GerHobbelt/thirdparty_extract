@@ -1,5 +1,7 @@
 /* Crude programme to show detailed information about a zip file. */
 
+#include "../include/extract_alloc.h"
+
 #include "memento.h"
 #include "outf.h"
 
@@ -7,6 +9,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 
 
@@ -31,8 +34,10 @@ static int s_show(const char* filename)
     assert(s_native_little_endinesss());
     FILE* f = fopen(filename, "r");
     assert(f);
+	extract_alloc_t* alloc = NULL; // dummy
     size_t  datasize = 10*1000*1000;
-    char* data = extract_malloc(datasize);
+	char* data = NULL;
+	extract_malloc(alloc, &data, datasize);
     assert(data);
     size_t n = fread(data, 1, datasize, f);
     assert(n < datasize);
@@ -56,7 +61,8 @@ static int s_show(const char* filename)
     uint32_t size_cd = *(uint32_t*)(pos+12);
     uint32_t offset_cd = *(uint32_t*)(pos+16);
     uint16_t comment_length = *(uint16_t*)(pos+20);
-    char* comment = extract_malloc(comment_length + 1);
+	char* comment = NULL;
+	extract_malloc(alloc, &comment, comment_length + 1);
     assert(comment);
     memcpy(comment, pos+22, comment_length);
     comment[comment_length] = 0;
@@ -106,12 +112,14 @@ static int s_show(const char* filename)
         uint16_t internal_attributes = *(uint16_t*)(pos+36);
         uint32_t external_attributes = *(uint32_t*)(pos+38);
         uint32_t offset = *(uint32_t*)(pos+42);
-        char* filename = extract_malloc(filename_length + 1);
+		char* filename = NULL;
+		extract_malloc(alloc, &filename, filename_length + 1);
         assert(filename);
         memcpy(filename, pos+46, filename_length);
         filename[filename_length] = 0;
         
-        char* comment = extract_malloc(filecomment_length + 1);
+		char* comment = NULL;
+		extract_malloc(alloc, &comment, filecomment_length + 1);
         assert(comment);
         memcpy(comment, pos+46+filename_length+extrafield_length, filecomment_length);
         comment[filecomment_length] = 0;
@@ -165,7 +173,8 @@ static int s_show(const char* filename)
             uint16_t filename_length = *(uint16_t*)(local_pos+26);
             uint16_t extrafield_length = *(uint16_t*)(local_pos+28);
             
-            char* filename = extract_malloc(filename_length + 1);
+			char* filename = NULL;
+			extract_malloc(alloc, &filename, filename_length + 1);
             assert(filename);
             memcpy(filename, local_pos+30, filename_length);
             filename[filename_length] = 0;
@@ -199,7 +208,6 @@ static int s_show(const char* filename)
                 }
                 fputc('\n', stderr);
             }
-
         }
         
         outf("        comment=%s", comment);
@@ -208,14 +216,14 @@ static int s_show(const char* filename)
     }
     
     outf("finished");
-    extract_free(&data);
+    extract_free(alloc, &data);
     
     return 0;
 }
 
-int main(int argc, char** argv)
+int main(int argc, const char** argv)
 {
-    outf_level_set(1);
+	extract_outf_verbose_set(1);
     int i;
     for (i=1; i<argc; ++i) {
         s_show(argv[i]);

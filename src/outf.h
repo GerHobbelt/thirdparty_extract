@@ -34,7 +34,7 @@ void (extract_outf)(
         #endif
         ;
 /* Outputs text if <level> is less than or equal to verbose value set by
-outf_level_set(). */
+extract_outf_verbose_set(). */
 
 void extract_outf_verbose_set(int verbose);
 /* Set verbose value. Higher values are more verbose. Initial value is 0. */
