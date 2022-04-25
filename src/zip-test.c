@@ -221,6 +221,11 @@ static int s_show(const char* filename)
     return 0;
 }
 
+
+#if defined(BUILD_MONOLITHIC)
+#define main      extract_zip_test_main
+#endif
+
 int main(int argc, const char** argv)
 {
 	extract_outf_verbose_set(1);

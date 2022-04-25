@@ -15,7 +15,7 @@
 
 /* Error-detecting equivalent to *out = argv[++i].
 */
-static int arg_next_string(char** argv, int argc, int* i, const char** out)
+static int arg_next_string(const char** argv, int argc, int* i, const char** out)
 {
     if (*i + 1 >= argc) {
         printf("Expected arg after: %s\n", argv[*i]);
@@ -29,7 +29,7 @@ static int arg_next_string(char** argv, int argc, int* i, const char** out)
 
 /* Error-detecting equivalent to *out = atoi(argv[++i]).
 */
-static int arg_next_int(char** argv, int argc, int* i, int* out)
+static int arg_next_int(const char** argv, int argc, int* i, int* out)
 {
     if (*i + 1 >= argc) {
         printf("Expected integer arg after: %s\n", argv[*i]);
@@ -47,7 +47,12 @@ static void* s_realloc(void* state, void* prev, size_t size)
     return realloc(prev, size);
 }
 
-int main(int argc, char** argv)
+
+#if defined(BUILD_MONOLITHIC)
+#define main      extract_tool_main
+#endif
+
+int main(int argc, const char** argv)
 {
     int e = -1;
     const char* docx_out_path       = NULL;

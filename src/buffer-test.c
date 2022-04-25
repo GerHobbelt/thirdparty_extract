@@ -296,6 +296,11 @@ static void test_file(void)
     outf("file buffer tests passed.\n");
 }
 
+
+#if defined(BUILD_MONOLITHIC)
+#define main      extract_buffer_test_main
+#endif
+
 int main(void)
 {
     extract_outf_verbose_set(1);
