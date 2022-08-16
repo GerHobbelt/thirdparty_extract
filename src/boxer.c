@@ -149,8 +149,8 @@ static int boxer_feed(boxer_t *boxer, rect_t *bbox)
         return -1;
 
 #ifdef DEBUG_WRITE_AS_PS
-    printf("0 0 1 setrgbcolor\n");
-    printf("%g %g moveto %g %g lineto %g %g lineto %g %g lineto closepath fill\n",
+    fz_info(NULL, "0 0 1 setrgbcolor\n");
+    fz_info(NULL, "%g %g moveto %g %g lineto %g %g lineto %g %g lineto closepath fill\n",
            bbox->min.x, bbox->min.y,
            bbox->min.x, bbox->max.y,
            bbox->max.x, bbox->max.y,
@@ -410,7 +410,7 @@ analyse_sub(extract_page_t *page, subpage_t *subpage, boxer_t *big_boxer, split_
 
     margins = boxer_margins(big_boxer);
 #ifdef DEBUG_WRITE_AS_PS
-    printf("\n\n%% MARGINS %g %g %g %g\n", margins.min.x, margins.min.y, margins.max.x, margins.max.y);
+    fz_info(NULL, "\n\n%% MARGINS %g %g %g %g\n", margins.min.x, margins.min.y, margins.max.x, margins.max.y);
 #endif
 
     boxer = boxer_subset(big_boxer, margins);
@@ -465,23 +465,23 @@ fail_mid_split:
         boxer_sort(boxer);
         n = boxer_results(boxer, &list);
 
-        printf("%% SUBDIVISION\n");
+        fz_info(NULL, "%% SUBDIVISION\n");
         for (i = 0; i < n; i++) {
-            printf("%% %g %g %g %g\n",
+            fz_info(NULL, "%% %g %g %g %g\n",
                    list[i].min.x, list[i].min.y, list[i].max.x, list[i].max.y);
         }
 
-        printf("0 0 0 setrgbcolor\n");
+        fz_info(NULL, "0 0 0 setrgbcolor\n");
         for (i = 0; i < n; i++) {
-            printf("%g %g moveto\n%g %g lineto\n%g %g lineto\n%g %g lineto\nclosepath\nstroke\n\n",
+            fz_info(NULL, "%g %g moveto\n%g %g lineto\n%g %g lineto\n%g %g lineto\nclosepath\nstroke\n\n",
                    list[i].min.x, list[i].min.y,
                    list[i].min.x, list[i].max.y,
                    list[i].max.x, list[i].max.y,
                    list[i].max.x, list[i].min.y);
         }
 
-        printf("1 0 0 setrgbcolor\n");
-        printf("%g %g moveto\n%g %g lineto\n%g %g lineto\n%g %g lineto\nclosepath\nstroke\n\n",
+        fz_info(NULL, "1 0 0 setrgbcolor\n");
+        fz_info(NULL, "%g %g moveto\n%g %g lineto\n%g %g lineto\n%g %g lineto\nclosepath\nstroke\n\n",
                margins.min.x, margins.min.y,
                margins.min.x, margins.max.y,
                margins.max.x, margins.max.y,
@@ -578,7 +578,7 @@ int extract_page_analyse(extract_alloc_t *alloc, extract_page_t *page)
     extract_free(alloc, &page->subpages);
 
 #ifdef DEBUG_WRITE_AS_PS
-    printf("1 -1 scale 0 -%g translate\n", page->mediabox.max.y-page->mediabox.min.y);
+    fz_info(NULL, "1 -1 scale 0 -%g translate\n", page->mediabox.max.y-page->mediabox.min.y);
 #endif
 
     boxer = boxer_create(alloc, (rect_t *)&subpage->mediabox);
@@ -604,7 +604,7 @@ int extract_page_analyse(extract_alloc_t *alloc, extract_page_t *page)
     }
 
 #ifdef DEBUG_WRITE_AS_PS
-    printf("showpage\n");
+    fz_info(NULL, "showpage\n");
 #endif
 
     boxer_destroy(boxer);
