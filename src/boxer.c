@@ -1,7 +1,9 @@
+#include "mupdf/fitz.h"
+
+#include "mupdf/assert.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
-#include <assert.h>
 
 #include "document.h"
 #include "outf.h"
