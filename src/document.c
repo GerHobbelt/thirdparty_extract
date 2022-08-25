@@ -100,7 +100,7 @@ content_clear(extract_alloc_t *alloc, content_t *proot)
         {
             default:
             case content_root:
-                assert("This never happens" == NULL);
+                assert(!"This never happens");
                 break;
             case content_span:
                 extract_span_free(alloc, (span_t **)&content);
@@ -510,7 +510,7 @@ content_dump_aux(const content_t *content, int depth)
                 printf("<image/>\n");
                 break;
             default:
-                assert("Unexpected type found while dumping content list." == NULL);
+                assert(!"Unexpected type found while dumping content list.");
                 break;
         }
     }
@@ -594,7 +594,7 @@ content_dump_brief_aux(const content_t *content, int depth)
             case content_image:
                 break;
             default:
-                assert("Unexpected type found while dumping content list." == NULL);
+                assert(!"Unexpected type found while dumping content list.");
                 break;
         }
     }
