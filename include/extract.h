@@ -27,9 +27,9 @@ extract_format_HTML:
     Uses <p> for paragraphs, and <b> and <i> for bold and italic text.
 
 extract_format_TEXT:
-    Outputs one line per paragraph, encoding text as utf8. Ligatures and and
+    Outputs one line per paragraph, encoding text as utf8. Ligatures and
     some unicode characters such as dash (0x2212) are converted into ascii
-    equvalents.
+    equivalents.
 */
 typedef enum
 {
@@ -287,7 +287,7 @@ int extract_read_intermediate(extract_t        *extract,
                               extract_buffer_t *buffer);
 
 
-/* Cleans up internal singelton state that can look like a memory leak when
+/* Cleans up internal singleton state that can look like a memory leak when
 running under Memento or valgrind. */
 void extract_internal_end(void);
 
