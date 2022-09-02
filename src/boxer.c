@@ -1,6 +1,6 @@
 #include "mupdf/fitz.h"
 
-#include "mupdf/assert.h"
+#include "mupdf/assertions.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
