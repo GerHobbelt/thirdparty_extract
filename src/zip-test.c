@@ -1,6 +1,6 @@
 /* Crude programme to show detailed information about a zip file. */
 
-#include "../include/extract_alloc.h"
+#include "extract/alloc.h"
 
 #include "memento.h"
 #include "outf.h"

@@ -4,8 +4,9 @@
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#include "../include/extract.h"
-#include "../include/extract_alloc.h"
+#include "extract/extract.h"
+#include "extract/buffer.h"
+#include "extract/alloc.h"
 
 #include "memento.h"
 #include "outf.h"

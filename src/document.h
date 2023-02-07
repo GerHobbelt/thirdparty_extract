@@ -719,7 +719,7 @@ static inline content_t *content_tree_iterator_next(content_tree_iterator *it)
 	{
 	default:
 	case content_root:
-		assert("Never happens!" == NULL);
+		assert(!"Never happens!");
 		break;
 	case content_span:
 		it->next = next->next;
