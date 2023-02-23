@@ -150,7 +150,7 @@ int extract_document_to_json_content(
 					 // Nothing to do for the others for now.
 					 break;
 				default:
-					 assert("This should never happen\n" == NULL);
+					 assert(!"This should never happen\n");
 					 break;
 				}
 			}
