@@ -2084,6 +2084,24 @@ const char *extract_struct_string(extract_struct_t type)
 		return "FORM";
 	case extract_struct_ARTIFACT:
 		return "ARTIFACT";
+	case extract_struct_ABSTRACT:
+		return "ABSTRACT";
+	case extract_struct_EQUATION:
+		return "EQUATION";
+	case extract_struct_AUTHOR:
+		return "AUTHOR";
+	case extract_struct_DATE:
+		return "DATE";
+	case extract_struct_COLUMN:
+		return "COLUMN";
+	case extract_struct_ROW:
+		return "ROW";
+	case extract_struct_COLUMN_HEADER:
+		return "COLUMN_HEADER";
+	case extract_struct_PROJECTED_ROW_HEADER:
+		return "PROJECTED_ROW_HEADER";
+	case extract_struct_SPANNING_CELL:
+		return "SPANNING_CELL";
 	}
 }
 
@@ -2430,7 +2448,7 @@ int extract_write(extract_t *extract, extract_buffer_t *buffer)
 	case extract_format_JSON:
 	{
 		int first = 1;
-		if (extract_buffer_cat(buffer, "{\n\"elements\" : "))
+		if (extract_buffer_cat(buffer, "{\n\"elements\" : [\n"))
 			goto end;
 		for (i=0; i<extract->contentss_num; ++i)
 		{
@@ -2440,7 +2458,7 @@ int extract_write(extract_t *extract, extract_buffer_t *buffer)
 				first = 0;
 			if (extract_buffer_write(buffer, extract->contentss[i].chars, extract->contentss[i].chars_num, NULL)) goto end;
 		}
-		if (extract_buffer_cat(buffer, "\n}\n"))
+		if (extract_buffer_cat(buffer, "]\n\n}\n"))
 			goto end;
 		break;
 	}
@@ -2715,4 +2733,95 @@ rect_t extract_block_pre_rotation_bounds(block_t *block, double angle)
 double extract_baseline_angle(const matrix4_t *ctm)
 {
 	return atan2(ctm->b, ctm->a);
+}
+
+static rect_t
+extract_span_rect(span_t *span)
+{
+	int    i;
+	rect_t rect = extract_rect_empty;
+
+	for (i = 0; i < span->chars_num; i++)
+		rect = extract_rect_union(rect, span->chars[i].bbox);
+
+	return rect;
+}
+
+static void
+map_classify(
+	content_root_t *root,
+	structure_t    *structure,
+	double          x0,
+	double          y0,
+	double          x1,
+	double          y1)
+{
+	content_iterator  it;
+	content_t        *content;
+
+	for (content = content_iterator_init(&it, root); content != NULL; content = content_iterator_next(&it))
+	{
+		content_root_t *sub = NULL;
+		switch (content->type)
+		{
+		case content_root:
+			return;
+		case content_line:
+			break;
+		case content_paragraph:
+			sub = &((paragraph_t *)content)->content;
+			break;
+		case content_image:
+			break;
+		case content_table:
+			break;
+		case content_block:
+			break;
+		case content_span:
+		{
+			span_t *span = (span_t *)content;
+			rect_t rect = extract_span_rect(span);
+			rect_t intersect;
+			intersect.min.x = max(rect.min.x, x0);
+			intersect.min.y = max(rect.min.y, y0);
+			intersect.max.x = min(rect.max.x, x1);
+			intersect.max.y = min(rect.max.y, y1);
+			if (intersect.min.x < intersect.max.x && intersect.min.y < intersect.max.y)
+			{
+				float iarea = (intersect.max.x - intersect.min.x) * (intersect.max.y - intersect.min.y);
+				float area = (rect.max.x - rect.min.x) * (rect.max.y - rect.min.y);
+				if (iarea / area > 0.8)
+				{
+					/* At least 80% of the region intersects. */
+					span->structure = structure;
+				}
+			}
+			break;
+		}
+		}
+		if (sub)
+			map_classify(sub, structure, x0, y0, x1, y1);
+	}
+}
+
+void
+extract_classify_region(
+		extract_t *extract,
+		double     x0,
+		double     y0,
+		double     x1,
+		double     y1)
+{
+	extract_alloc_t *alloc = extract->alloc;
+	document_t *doc = &extract->document;
+	extract_page_t *page = doc->pages[doc->pages_num-1];
+	int c;
+	structure_t *structure = doc->current;
+
+	for (c=0; c<page->subpages_num; ++c)
+	{
+		subpage_t *subpage = page->subpages[c];
+
+		map_classify(&subpage->content, structure, x0, y0, x1, y1);
+	}
 }

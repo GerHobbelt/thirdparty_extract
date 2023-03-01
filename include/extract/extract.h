@@ -418,6 +418,24 @@ void extract_end(extract_t **pextract);
 /* Enables/Disables the layout analysis phase. */
 int extract_set_layout_analysis(extract_t *extract, int enable);
 
+typedef enum
+{
+	EXTRACT_CLASSIFY_UNKNOWN = 0,
+	EXTRACT_CLASSIFY_TEXT,
+	EXTRACT_CLASSIFY_TITLE,
+	EXTRACT_CLASSIFY_LIST,
+	EXTRACT_CLASSIFY_TABLE,
+	EXTRACT_CLASSIFY_FIGURE
+} extract_classification_t;
+
+void extract_classify_region(
+			extract_t *extract,
+			double     x0,
+			double     y0,
+			double     x1,
+			double     y1);
+
+
 /* Things below are not generally used. */
 
 /*

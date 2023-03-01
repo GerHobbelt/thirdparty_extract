@@ -134,7 +134,9 @@ int extract_document_to_json_content(
 				case content_span:
 				{
 					int j;
+					int do_flush = 0;
 					span_t *span = (span_t *)cont;
+					rect_t span_bbox;
 
 					if (span->chars_num == 0)
 						continue;
@@ -145,6 +147,27 @@ int extract_document_to_json_content(
 						 last_span->flags.font_italic != span->flags.font_italic ||
 						 last_span->flags.wmode != span->flags.wmode ||
 						 strcmp(last_span->font_name, span->font_name)))
+					{
+						do_flush = 1;
+					}
+					span_bbox = extract_rect_empty;
+					for (j = 0; j < span->chars_num; j++)
+					{
+						if (span->chars[j].ucs == (unsigned int)-1)
+							continue;
+						span_bbox = extract_rect_union(span_bbox, span->chars[j].bbox);
+					}
+#if 0 // Enable this to keep lines separate, which aids debugging
+					{
+						double mid_y = (span_bbox.min.y+span_bbox.max.y)/2;
+
+						/* If the midpoint of this spans bbox does not fall within the bbox
+						 * so far, then we're a new line. */
+						if (last_span && (bbox.min.y > mid_y || bbox.max.y < mid_y))
+							do_flush = 1;
+					}
+#endif
+					if (do_flush)
 					{
 						// flush stored text.
 						flush(alloc, content, last_span, structure, &text, &bbox);
@@ -157,8 +180,8 @@ int extract_document_to_json_content(
 							continue;
 						if (extract_astring_catc_unicode(alloc, &text, span->chars[j].ucs, 1, 0, 0, 0))
 							goto end;
-						bbox = extract_rect_union(bbox, span->chars[j].bbox);
 					}
+					bbox = extract_rect_union(bbox, span_bbox);
 					break;
 				}
 				case content_image:
