@@ -2099,6 +2099,24 @@ const char *extract_struct_string(extract_struct_t type)
 		return "FORM";
 	case extract_struct_ARTIFACT:
 		return "ARTIFACT";
+	case extract_struct_ABSTRACT:
+		return "ABSTRACT";
+	case extract_struct_EQUATION:
+		return "EQUATION";
+	case extract_struct_AUTHOR:
+		return "AUTHOR";
+	case extract_struct_DATE:
+		return "DATE";
+	case extract_struct_COLUMN:
+		return "COLUMN";
+	case extract_struct_ROW:
+		return "ROW";
+	case extract_struct_COLUMN_HEADER:
+		return "COLUMN_HEADER";
+	case extract_struct_PROJECTED_ROW_HEADER:
+		return "PROJECTED_ROW_HEADER";
+	case extract_struct_SPANNING_CELL:
+		return "SPANNING_CELL";
 	}
 }
 
@@ -2445,7 +2463,7 @@ int extract_write(extract_t *extract, extract_buffer_t *buffer)
 	case extract_format_JSON:
 	{
 		int first = 1;
-		if (extract_buffer_cat(buffer, "{\n\"elements\" : "))
+		if (extract_buffer_cat(buffer, "{\n\"elements\" : [\n"))
 			goto end;
 		for (i=0; i<extract->contentss_num; ++i)
 		{
@@ -2455,7 +2473,7 @@ int extract_write(extract_t *extract, extract_buffer_t *buffer)
 				first = 0;
 			if (extract_buffer_write(buffer, extract->contentss[i].chars, extract->contentss[i].chars_num, NULL)) goto end;
 		}
-		if (extract_buffer_cat(buffer, "\n}\n"))
+		if (extract_buffer_cat(buffer, "]\n\n}\n"))
 			goto end;
 		break;
 	}
@@ -2818,9 +2836,20 @@ map_classify(
 		{
 			span_t *span = (span_t *)content;
 			rect_t rect = extract_span_rect(span);
-			if (rect.min.x >= x0 && rect.min.y >= y0 && rect.max.x <= x1 && rect.max.y <= y1)
+			rect_t intersect;
+			intersect.min.x = max(rect.min.x, x0);
+			intersect.min.y = max(rect.min.y, y0);
+			intersect.max.x = min(rect.max.x, x1);
+			intersect.max.y = min(rect.max.y, y1);
+			if (intersect.min.x < intersect.max.x && intersect.min.y < intersect.max.y)
 			{
-				span->structure = structure;
+				float iarea = (intersect.max.x - intersect.min.x) * (intersect.max.y - intersect.min.y);
+				float area = (rect.max.x - rect.min.x) * (rect.max.y - rect.min.y);
+				if (iarea / area > 0.8)
+				{
+					/* At least 80% of the region intersects. */
+					span->structure = structure;
+				}
 			}
 			break;
 		}
