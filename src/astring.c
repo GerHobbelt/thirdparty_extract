@@ -131,7 +131,7 @@ int extract_astring_catc_unicode(extract_alloc_t  *alloc,
 	}
 
 	/* Output ASCII verbatim. */
-    else if (c >= 32 && c < 127)
+	else if (c >= 32 && c < 127)
 	{
 		if (extract_astring_catc(alloc, string, (char) c)) goto end;
 	}

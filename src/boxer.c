@@ -153,8 +153,8 @@ static int boxer_feed(boxer_t *boxer, rect_t *bbox)
 		return -1;
 
 #ifdef DEBUG_WRITE_AS_PS
-    fz_info(NULL, "0 0 1 setrgbcolor\n");
-    fz_info(NULL, "%g %g moveto %g %g lineto %g %g lineto %g %g lineto closepath fill\n",
+	fz_info(NULL, "0 0 1 setrgbcolor\n");
+	fz_info(NULL, "%g %g moveto %g %g lineto %g %g lineto %g %g lineto closepath fill\n",
 		bbox->min.x, bbox->min.y,
 		bbox->min.x, bbox->max.y,
 		bbox->max.x, bbox->max.y,
@@ -414,7 +414,7 @@ analyse_sub(extract_page_t *page, subpage_t *subpage, boxer_t *big_boxer, split_
 
 	margins = boxer_margins(big_boxer);
 #ifdef DEBUG_WRITE_AS_PS
-    fz_info(NULL, "\n\n%% MARGINS %g %g %g %g\n", margins.min.x, margins.min.y, margins.max.x, margins.max.y);
+	fz_info(NULL, "\n\n%% MARGINS %g %g %g %g\n", margins.min.x, margins.min.y, margins.max.x, margins.max.y);
 #endif
 
 	boxer = boxer_subset(big_boxer, margins);

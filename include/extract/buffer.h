@@ -82,7 +82,7 @@ extract_buffer_write(extract_buffer_t *buffer,
 
 static inline int
 extract_buffer_cat(extract_buffer_t *buffer,
-                   const char       *string);
+			const char  *string);
 
 
 /* Return number of bytes read or written so far. */
