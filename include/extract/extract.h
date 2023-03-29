@@ -329,7 +329,18 @@ typedef enum
 	extract_struct_FORM,
 
 	/* Artifact structure type (PDF 2.0 - Table 375) */
-	extract_struct_ARTIFACT
+	extract_struct_ARTIFACT,
+
+	/* Extra ones from ML categories. */
+	extract_struct_ABSTRACT,
+	extract_struct_EQUATION,
+	extract_struct_AUTHOR,
+	extract_struct_DATE,
+	extract_struct_COLUMN,
+	extract_struct_ROW,
+	extract_struct_COLUMN_HEADER,
+	extract_struct_PROJECTED_ROW_HEADER,
+	extract_struct_SPANNING_CELL
 } extract_struct_t;
 
 int extract_begin_struct(extract_t *extract, extract_struct_t type, int uid, int score);
