@@ -735,6 +735,12 @@ static inline content_t *content_tree_iterator_next(content_tree_iterator *it)
 	case content_paragraph:
 		it->next = ((paragraph_t *)next)->content.base.next;
 		break;
+	case content_image:
+		it->next = next->next;
+		break;
+	case content_block:
+		it->next = ((block_t *)next)->content.base.next;
+		break;
 	}
 
 	return next;
