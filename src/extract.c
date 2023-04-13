@@ -1953,7 +1953,11 @@ int extract_end_struct(extract_t *extract)
 {
 	document_t *document = &extract->document;
 
-	assert(document->current != NULL);
+	if (document->current == NULL)
+	{
+		fprintf(stderr, "Unbalanced end struct!\n");
+		return 0;
+	}
 
 	document->current = document->current->parent;
 
