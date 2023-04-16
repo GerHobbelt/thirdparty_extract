@@ -1,2 +1,4 @@
-# thirdparty_extract
-clone of git://git.ghostscript.com/extract.git
+# thirdparty/extract
+
+Clone of Artifex' `extract` library at git://git.ghostscript.com/extract.git
+
