@@ -123,7 +123,7 @@ content_clear(extract_alloc_t *alloc, content_root_t *proot)
 		{
 		default:
 		case content_root:
-			assert("!This never happens");
+			assert(!"This never happens");
 			break;
 		case content_span:
 			extract_span_free(alloc, (span_t **)&content);
