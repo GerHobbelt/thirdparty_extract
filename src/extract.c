@@ -1748,7 +1748,8 @@ int extract_moveto(extract_t *extract, double x, double y)
 		if (extract->path.fill.n == -1) return 0;
 		if (extract->path.fill.n != 0)
 		{
-			outf0("returning error. extract->path.fill.n=%i", extract->path.fill.n);
+			/* This code is broken, really. Certainly don't give an error here,
+			 * cos it's just confusing noise. Refactor this when I get a chance. */
 			extract->path.fill.n = -1;
 			return 0;
 		}
@@ -1783,7 +1784,8 @@ int extract_lineto(extract_t *extract, double x, double y)
 		if (extract->path.fill.n == -1)	return 0;
 		if (extract->path.fill.n == 0 || extract->path.fill.n >= 4)
 		{
-			outf0("returning error. extract->path.fill.n=%i", extract->path.fill.n);
+			/* This code is broken, really. Certainly don't give an error here,
+			 * cos it's just confusing noise. Refactor this when I get a chance. */
 			extract->path.fill.n = -1;
 			return 0;
 		}
