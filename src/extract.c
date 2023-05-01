@@ -170,6 +170,19 @@ char_t *extract_span_char_last(span_t *span)
 	return &span->chars[span->chars_num-1];
 }
 
+char_t *extract_span_char_last_adv(span_t *span)
+{
+	int i = span->chars_num;
+
+	while (i > 0)
+	{
+		if (span->chars[--i].adv != 0)
+			return &span->chars[i];
+	}
+
+	return NULL;
+}
+
 /* Returns first span in a line. */
 span_t *extract_line_span_last(line_t *line)
 {
@@ -1276,7 +1289,7 @@ int extract_add_char(
 
 		/* Arbitrary fractions here; ideally we should consult the font bbox, but we don't currently
 		 * have that. */
-		if (fabs(perp) > 3*space_guess/2 || fabs(dist) > space_guess * 8)
+		if (fabs(perp) > 3*space_guess/2 || fabs(dist) > space_guess * 4)
 		{
 			/* Create new span. */
 			if (span->chars_num > 0)
