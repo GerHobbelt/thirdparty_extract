@@ -425,6 +425,10 @@ void extract_span_free(extract_alloc_t *alloc, span_t **pspan);
 /* Returns last character in span. */
 char_t *extract_span_char_last(span_t *span);
 
+/* Returns last character in span with a non-zero advance (or NULL
+ * if there is no one with a non-zero advance). */
+char_t *extract_span_char_last_adv(span_t *span);
+
 /* Appends new char_t to an span_t with .ucs=c and all other
 fields zeroed. Returns pointer to new char_t record, or NULL if allocation
 failed. */
