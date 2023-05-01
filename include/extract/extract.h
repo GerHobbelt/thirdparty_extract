@@ -134,8 +134,10 @@ typedef void (extract_image_data_free)(void *handle, void *image_data);
 
 	type
 		E.g. 'png'. Is copied so no need to persist after we return.
-	x y w h
-		Location and size of image.
+	a b c d x y
+		Matrix and Location of image.
+	w h
+		Size of image.
 	data data_size
 		The raw image data.
 	data_free
@@ -146,6 +148,10 @@ typedef void (extract_image_data_free)(void *handle, void *image_data);
 int extract_add_image(
 		extract_t               *extract,
 		const char              *type,
+		double                   a,
+		double                   b,
+		double                   c,
+		double                   d,
 		double                   x,
 		double                   y,
 		double                   w,

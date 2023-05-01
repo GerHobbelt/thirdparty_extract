@@ -961,6 +961,10 @@ int extract_read_intermediate(extract_t *extract, extract_buffer_t *buffer)
 					if (extract_add_image(
 							extract,
 							type,
+							0 /*a*/,
+							0 /*b*/,
+							0 /*c*/,
+							0 /*d*/,
 							0 /*x*/,
 							0 /*y*/,
 							0 /*w*/,
@@ -1380,6 +1384,10 @@ int extract_span_end(extract_t *extract)
 int extract_add_image(
 		extract_t               *extract,
 		const char              *type,
+		double                   a,
+		double                   b,
+		double                   c,
+		double                   d,
 		double                   x,
 		double                   y,
 		double                   w,
@@ -1396,6 +1404,10 @@ int extract_add_image(
 
 	extract->image_n += 1;
 	if (content_append_new_image(extract->alloc, &subpage->content, &image)) goto end;
+	image->a = a;
+	image->b = b;
+	image->c = c;
+	image->d = d;
 	image->x = x;
 	image->y = y;
 	image->w = w;

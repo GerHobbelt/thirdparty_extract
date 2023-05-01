@@ -506,12 +506,17 @@ struct image_t
 	char                    *type;   /* jpg, png etc. */
 	char                    *name;   /* Name of image file within docx. */
 	char                    *id;     /* ID of image within docx. */
+	double                   a;
+	double                   b;
+	double                   c;
+	double                   d;
 	double                   x;
 	double                   y;
 	double                   w;
 	double                   h;
 	void                    *data;
 	size_t                   data_size;
+	structure_t             *structure;
 
 	extract_image_data_free *data_free;
 	void                    *data_free_handle;
