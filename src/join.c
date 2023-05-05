@@ -248,22 +248,25 @@ make_lines(
 
 				if (last_a == NULL)
 					continue;
-				/* Predict the end of span_a. */
-				dir.x = last_a->adv * (1 - span_a->flags.wmode);
-				dir.y = last_a->adv * span_a->flags.wmode;
+				/* Predict the end of span_a (after ctm). */
+				dir.x = (1 - span_a->flags.wmode);
+				dir.y = span_a->flags.wmode;
 				tdir = extract_matrix4_transform_point(span_a->ctm, dir);
-				span_a_end.x = last_a->x + tdir.x;
-				span_a_end.y = last_a->y + tdir.y;
-				/* Find the difference between the end of span_a and the start of span_b. */
+				span_a_end.x = last_a->x + tdir.x * last_a->adv;
+				span_a_end.y = last_a->y + tdir.y * last_a->adv;
+				/* Find the difference between the end of span_a and the start of span_b (after ctm). */
 				first_b = span_char_first(span_b);
 				diff.x = first_b->x - span_a_end.x;
 				diff.y = first_b->y - span_a_end.y;
+				/* Transforming by by ctm effectively scales diff. We want to undo that scaling, so
+				 * get a value for the scale. */
 				scale_squared = ((span_a->flags.wmode) ?
 							(span_a->ctm.c * span_a->ctm.c + span_a->ctm.d * span_a->ctm.d) :
 							(span_a->ctm.a * span_a->ctm.a + span_a->ctm.b * span_a->ctm.b));
-				/* Now find the differences in position, both colinear and perpendicular. */
-				colinear = (diff.x * tdir.x + diff.y * tdir.y) / last_a->adv / scale_squared;
-				perp     = (diff.x * tdir.y - diff.y * tdir.x) / last_a->adv / scale_squared;
+				/* Now find the differences in position, both colinear and perpendicular (pre ctm). */
+				/* diff is post ctm, so is tdir. So the cross products are scaled by scaled_squared. */
+				colinear = (diff.x * tdir.x + diff.y * tdir.y) / scale_squared;
+				perp     = (diff.x * tdir.y - diff.y * tdir.x) / scale_squared;
 				/* colinear and perp are now both pre-transform space distances, to match adv etc. */
 				space_guess = (last_a->adv + first_b->adv)/4;
 
