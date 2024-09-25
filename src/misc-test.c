@@ -70,7 +70,7 @@ static void s_check_uint(const char* text, unsigned expected_value, int expected
 	s_check(value == expected_value, text, ret, value_s, errno, value_expected_s, expected_errno);
 }
 
-static void s_check_xml_parse()
+static void s_check_xml_parse(void)
 {
 	int e;
 	extract_buffer_t* buffer;
