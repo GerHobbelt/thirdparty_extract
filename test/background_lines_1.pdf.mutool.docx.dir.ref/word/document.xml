@@ -14,7 +14,7 @@
             <wp:positionV relativeFrom="page">
               <wp:posOffset>175143</wp:posOffset>
             </wp:positionV>
-            <wp:extent cx="1157674" cy="275480"/>
+            <wp:extent cx="1157626" cy="275480"/>
             <wp:wrapNone/>
             <wp:docPr id="1" name="Text Box 1"/>
             <wp:cNvGraphicFramePr/>
@@ -1008,7 +1008,7 @@
             <wp:positionV relativeFrom="page">
               <wp:posOffset>10290653</wp:posOffset>
             </wp:positionV>
-            <wp:extent cx="119833" cy="275481"/>
+            <wp:extent cx="119786" cy="275481"/>
             <wp:wrapNone/>
             <wp:docPr id="2" name="Text Box 2"/>
             <wp:cNvGraphicFramePr/>

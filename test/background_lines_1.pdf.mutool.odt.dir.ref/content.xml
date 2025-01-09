@@ -11,7 +11,7 @@
 <style:style style:name="extract.table.column" style:family="table-column"/>
 <office:body><office:text><text:sequence-decls><text:sequence-decl text:display-outline-level="0" text:name="Illustration"/><text:sequence-decl text:display-outline-level="0" text:name="Table"/><text:sequence-decl text:display-outline-level="0" text:name="Text"/><text:sequence-decl text:display-outline-level="0" text:name="Drawing"/><text:sequence-decl text:display-outline-level="0" text:name="Figure"/></text:sequence-decls><text:p text:style-name="Standard"/>
 <text:p text:style-name="Standard">
-<draw:frame text:anchor-type="paragraph" draw:z-index="5" draw:name="Shape1" draw:style-name="gr1" draw:text-style-name="Standard" svg:width="0.140672in" svg:height="0.000000in" draw:transform="rotate (-0.000003) translate (6.254059in 0.342172in)">
+<draw:frame text:anchor-type="paragraph" draw:z-index="5" draw:name="Shape1" draw:style-name="gr1" draw:text-style-name="Standard" svg:width="0.140667in" svg:height="0.000000in" draw:transform="rotate (-0.000003) translate (6.254059in 0.342172in)">
 <draw:text-box>
 
 
@@ -356,7 +356,7 @@
 
 <text:p><w:pPr><w:jc w:val="both"/></w:pPr><text:span text:style-name="T12">the communities. The SACS also produce and air </text:span></text:p>
 <text:p text:style-name="Standard">
-<draw:frame text:anchor-type="paragraph" draw:z-index="5" draw:name="Shape2" draw:style-name="gr1" draw:text-style-name="Standard" svg:width="0.014561in" svg:height="0.000000in" draw:transform="rotate (-0.000003) translate (4.039335in 11.404630in)">
+<draw:frame text:anchor-type="paragraph" draw:z-index="5" draw:name="Shape2" draw:style-name="gr1" draw:text-style-name="Standard" svg:width="0.014556in" svg:height="0.000000in" draw:transform="rotate (-0.000003) translate (4.039335in 11.404630in)">
 <draw:text-box>
 
 
