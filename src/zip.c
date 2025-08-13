@@ -243,6 +243,7 @@ s_write_compressed(
 				if (e == -1)    zip->errno_ = errno;
 				if (e ==  +1)   zip->eof = 1;
 				outf("extract_buffer_write() failed e=%i errno=%i", e, errno);
+                (void)deflateEnd(&zstream);
 				return e;
 			}
 		}
