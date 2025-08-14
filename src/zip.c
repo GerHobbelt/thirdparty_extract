@@ -228,6 +228,7 @@ s_write_compressed(
 			outf("deflate() failed ze=%i", ze);
 			errno = EIO;
 			zip->errno_ = errno;
+            (void)deflateEnd(&zstream);
 			return -1;
 		}
 		{
