@@ -6,7 +6,7 @@
 #include "document.h"
 #include "outf.h"
 
-#define DEBUG_WRITE_AS_PS
+/* #define DEBUG_WRITE_AS_PS */
 /* #define DEBUG_PRINT */
 
 typedef struct boxer_s boxer_t;
@@ -194,6 +194,8 @@ static int boxer_feed(boxer_t *boxer, rect_t *bbox)
 	return 0;
 }
 
+#ifdef DEBUG_WRITE_AS_PS
+
 static int
 compare_areas(const void *a_, const void *b_)
 {
@@ -224,6 +226,8 @@ static int boxer_results(boxer_t *boxer, rect_t **list)
 	*list = boxer->list->list;
 	return boxer->list->len;
 }
+
+#endif
 
 /* Destroy a boxer. */
 static void boxer_destroy(boxer_t *boxer)
